@@ -1,0 +1,106 @@
+# For more information about using CMake with Android Studio, read the
+# documentation: https://d.android.com/studio/projects/add-native-code.html
+
+# Sets the minimum version of CMake required to build the native library.
+
+cmake_minimum_required(VERSION 3.4.1)
+
+# Creates and names a library, sets it as either STATIC
+# or SHARED, and provides the relative paths to its source code.
+# You can define multiple libraries, and CMake builds them for you.
+# Gradle automatically packages shared libraries with your APK.
+string(TOLOWER ${CMAKE_BUILD_TYPE} THIS_BUILD_TYPE)
+
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -Os -Oz -ffunction-sections -fdata-sections  -fvisibility=hidden -fvisibility-inlines-hidden -Werror")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Os -Oz -fno-rtti -fno-exceptions -ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden -Werror")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}  -Werror")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}  -Werror")
+
+if (${CMAKE_ANDROID_ARCH_ABI} STREQUAL "arm64-v8a" OR ${CMAKE_ANDROID_ARCH_ABI} STREQUAL "x86_64")
+	add_definitions(-DUSE_RELA)
+else ()
+	add_definitions(-D__work_around_b_24465209__)
+endif ()
+
+if (${CMAKE_ANDROID_ARCH_ABI} STREQUAL "arm64-v8a" OR ${CMAKE_ANDROID_ARCH_ABI} STREQUAL "armeabi-v7a")
+	SET(NEON_SRC linker/linker_gnu_hash_neon.cpp)
+else ()
+	SET(NEON_SRC)
+endif ()
+
+include_directories(common)
+include_directories(export)
+
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../libs/${THIS_BUILD_TYPE}/${CMAKE_ANDROID_ARCH_ABI})
+message(WARNING "当前版本:${ANDROID_PLATFORM},输出目录:${CMAKE_LIBRARY_OUTPUT_DIRECTORY}, 编译类型:${THIS_BUILD_TYPE},模块名:${LINKER_MODULE_NAME},安装模块${HOOK_INSTALL_MODULE_NAME}")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/module_config.h.in" "${CMAKE_CURRENT_SOURCE_DIR}/common/module_config.h")
+
+add_library( # Sets the name of the library.
+		${LINKER_MODULE_NAME}-${ANDROID_PLATFORM}
+
+		# Sets the library as a shared library.
+		SHARED
+
+		# Provides a relative path to your source file(s).
+		linker_main.cpp
+
+		linker/fake_linker.cpp
+		linker/linker_globals.cpp
+		linker/linker_namespaces.cpp
+		linker/linker_soinfo.cpp
+		linker/linker_util.cpp
+		linker/linker_common_types.cpp
+		linker/linker_block_allocator.cpp
+		linker/local_block_allocator.cpp
+		linker/linker_export.cpp
+		${NEON_SRC}
+
+		# JNI Hook
+		linker/art/hook_jni_native_interface_impl.cpp
+		# JNI Common
+		common/jni_helper.cpp
+		common/maps_util.cpp
+		)
+
+add_executable(
+		${HOOK_INSTALL_MODULE_NAME}
+
+		installer/hook_installer.cpp
+)
+
+# Searches for a specified prebuilt library and stores the path as a
+# variable. Because CMake includes system libraries in the search path by
+# default, you only need to specify the name of the public NDK library
+# you want to add. CMake verifies that the library exists before
+# completing its build.
+
+find_library( # Sets the name of the path variable.
+		log-lib
+
+		# Specifies the name of the NDK library that
+		# you want CMake to locate.
+		log)
+
+
+# Specifies libraries CMake should link to your target library. You
+# can link multiple libraries, such as libraries you define in this
+# build script, prebuilt third-party libraries, or system libraries.
+
+target_link_libraries( # Specifies the target library.
+		${LINKER_MODULE_NAME}-${ANDROID_PLATFORM}
+
+		# Links the target library to the log library
+		# included in the NDK.
+		${log-lib})
+# 设置 CMAKE_LIBRARY_OUTPUT_DIRECTORY 不生效,不知为何,设置RUNTIME_OUTPUT_DIRECTORY生效
+set_target_properties(${LINKER_MODULE_NAME}-${ANDROID_PLATFORM} PROPERTIES
+		RUNTIME_OUTPUT_DIRECTORY
+		${CMAKE_CURRENT_SOURCE_DIR}/../libs/${THIS_BUILD_TYPE}/${CMAKE_ANDROID_ARCH_ABI})
+
+target_link_libraries(
+		${HOOK_INSTALL_MODULE_NAME}
+		${log-lib})
+
+set_target_properties(${HOOK_INSTALL_MODULE_NAME} PROPERTIES
+		RUNTIME_OUTPUT_DIRECTORY
+		${CMAKE_CURRENT_SOURCE_DIR}/../assets/${CMAKE_ANDROID_ARCH_ABI})
