@@ -31,7 +31,7 @@ static void Init() {
                                                                 "__dl__ZL21g_namespace_allocator",
                                                                 "__dl__ZL26g_namespace_list_allocator"));
     if (symbols.data == nullptr) {
-        LOGD("find symbol g_soinfo_allocator/g_soinfo_links_allocator/g_namespace_allocator/g_namespace_list_allocator failed");
+        LOGE("find symbol g_soinfo_allocator/g_soinfo_links_allocator/g_namespace_allocator/g_namespace_list_allocator failed");
         return;
     }
     g_soinfo_allocator = static_cast<LinkerTypeAllocator<struct soinfo> *>(GSIZE_TO_POINTER(symbols.data->elements[0]));

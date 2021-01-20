@@ -144,7 +144,7 @@ enum SoinfoFunType {
     kSFCallDlopen
 };
 
-//API_PUBLIC void *call_soinfo_function(SoinfoFunType fun_type, SoinfoParamType find_type, const void *find_param, SoinfoParamType param_type, const void *param, int *error_code);
+//C_API API_PUBLIC void *call_soinfo_function(SoinfoFunType fun_type, SoinfoParamType find_type, const void *find_param, SoinfoParamType param_type, const void *param, int *error_code);
 
 enum CommonFunType {
     // 添加一个soinfo到全局库
@@ -164,7 +164,7 @@ enum CommonFunType {
     kCFCallManualRelinks,
 };
 
-//API_PUBLIC void *call_common_function(CommonFunType fun_type, SoinfoParamType find_type, const void *find_param, SoinfoParamType param_type, const void *param, int *error_code);
+//C_API API_PUBLIC void *call_common_function(CommonFunType fun_type, SoinfoParamType find_type, const void *find_param, SoinfoParamType param_type, const void *param, int *error_code);
 
 #if __ANDROID_API__ >= __ANDROID_API_N__
 
@@ -231,7 +231,7 @@ enum NamespaceFunType {
  * 调用相关命名空间函数
  * @return 若返回值是多个集合,则都包装成VarLengthObject对象
  * */
-//API_PUBLIC void *
+//C_API API_PUBLIC void *
 //call_namespace_function(NamespaceFunType fun_type, NamespaceParamType find_type, const void *find_param, NamespaceParamType param_type, const void *param, int *error_code);
 
 #endif

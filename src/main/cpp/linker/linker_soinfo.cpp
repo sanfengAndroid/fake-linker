@@ -601,7 +601,7 @@ static bool process_relocation(soinfo *so, const rel_t &reloc, symbol_relocation
             if (Mode == RelocMode::JumpTable) {
                 if (r_type == R_GENERIC_JUMP_SLOT) {
                     *static_cast<ElfW(Addr) *>(rel_target) = sym_addr + get_addend_norel();
-                    LOGD("Relocation symbol JumpTable: %s, original address: %p, new address: %p", sym_name, reinterpret_cast<void *>(orig),
+                    LOGV("Relocation symbol JumpTable: %s, original address: %p, new address: %p", sym_name, reinterpret_cast<void *>(orig),
                          reinterpret_cast<void *>(*static_cast<ElfW(Addr) *>(rel_target)));
                     return true;
                 }
@@ -609,12 +609,12 @@ static bool process_relocation(soinfo *so, const rel_t &reloc, symbol_relocation
             if (Mode == RelocMode::Typical) {
                 if (r_type == R_GENERIC_ABSOLUTE) {
                     *static_cast<ElfW(Addr) *>(rel_target) = sym_addr + get_addend_rel();
-                    LOGD("Relocation symbol Typical ABSOLUTE: %s, original address: %16p,  new address: %16p", sym_name, reinterpret_cast<void *>(orig),
+                    LOGV("Relocation symbol Typical ABSOLUTE: %s, original address: %16p,  new address: %16p", sym_name, reinterpret_cast<void *>(orig),
                          reinterpret_cast<void *>(*static_cast<ElfW(Addr) *>(rel_target)));
                     return true;
                 } else if (r_type == R_GENERIC_GLOB_DAT) {
                     *static_cast<ElfW(Addr) *>(rel_target) = sym_addr + get_addend_norel();
-                    LOGD("Relocation symbol Typical GLOB_DAT: %s, original address: %16p,  new address: %16p", sym_name, reinterpret_cast<void *>(orig),
+                    LOGV("Relocation symbol Typical GLOB_DAT: %s, original address: %16p,  new address: %16p", sym_name, reinterpret_cast<void *>(orig),
                          reinterpret_cast<void *>(*static_cast<ElfW(Addr) *>(rel_target)));
                     return true;
                 }
@@ -739,7 +739,7 @@ bool soinfo::again_process_relocation(symbol_relocations *rels) {
         LOGE("cannot change soinfo: %s memory protect", get_soname() == nullptr ? "(null)" : get_soname());
         return false;
     }
-    LOGD("again relocation library: %s", get_soname());
+    LOGV("again relocation library: %s", get_soname());
 #if defined(USE_RELA)
     if (rela_ != nullptr) {
         plain_relocate_impl<RelocMode::Typical>(this, rela_, rela_count_, rels);

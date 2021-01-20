@@ -372,7 +372,7 @@ static int ResolveInnerSymbolsAddress(const char *library_name, symbols_address 
         for (int i = 0; i < ret->len; ++i) {
             if (ret->elements[i] != 0) {
                 ret->elements[i] += base;
-                LOGD("found symbol: %s, library: %s, address: %" PRIx64, symbols[i], library_name, ret->elements[i]);
+                LOGV("found symbol: %s, library: %s, address: %" PRIx64, symbols[i], library_name, ret->elements[i]);
             }
         }
         return 0;

@@ -61,7 +61,7 @@ static soinfo *find_soinfo_by_type(SoinfoParamType type, const void *p, void *ca
     return result;
 }
 
-API_PUBLIC void *call_soinfo_function(SoinfoFunType fun_type, SoinfoParamType find_type, const void *find_param,
+C_API API_PUBLIC void *call_soinfo_function(SoinfoFunType fun_type, SoinfoParamType find_type, const void *find_param,
                                       SoinfoParamType param_type, const void *param, int *error_code) {
     void *result = nullptr;
     soinfo *so;
@@ -178,7 +178,7 @@ API_PUBLIC void *call_soinfo_function(SoinfoFunType fun_type, SoinfoParamType fi
     return result;
 }
 
-API_PUBLIC void *call_common_function(CommonFunType fun_type, SoinfoParamType find_type, const void *find_param,
+C_API API_PUBLIC void *call_common_function(CommonFunType fun_type, SoinfoParamType find_type, const void *find_param,
                                       SoinfoParamType param_type, const void *param, int *error_code) {
     void *result = nullptr;
     soinfo *so;
@@ -362,7 +362,7 @@ static soinfo *find_soinfo(NamespaceParamType type, const void *param, void *cal
     return result;
 }
 
-API_PUBLIC void *call_namespace_function(NamespaceFunType fun_type, NamespaceParamType find_type, const void
+C_API API_PUBLIC void *call_namespace_function(NamespaceFunType fun_type, NamespaceParamType find_type, const void
 *find_param, NamespaceParamType param_type, const void *param, int *error_code) {
     void *result = nullptr;
     android_namespace_t *np = nullptr;

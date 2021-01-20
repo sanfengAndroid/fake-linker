@@ -11,11 +11,6 @@ cmake_minimum_required(VERSION 3.4.1)
 # Gradle automatically packages shared libraries with your APK.
 string(TOLOWER ${CMAKE_BUILD_TYPE} THIS_BUILD_TYPE)
 
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -Os -Oz -ffunction-sections -fdata-sections  -fvisibility=hidden -fvisibility-inlines-hidden -Werror")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Os -Oz -fno-rtti -fno-exceptions -ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden -Werror")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}  -Werror")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}  -Werror")
-
 if (${CMAKE_ANDROID_ARCH_ABI} STREQUAL "arm64-v8a" OR ${CMAKE_ANDROID_ARCH_ABI} STREQUAL "x86_64")
 	add_definitions(-DUSE_RELA)
 else ()
@@ -32,7 +27,7 @@ include_directories(common)
 include_directories(export)
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../libs/${THIS_BUILD_TYPE}/${CMAKE_ANDROID_ARCH_ABI})
-message(WARNING "当前版本:${ANDROID_PLATFORM},输出目录:${CMAKE_LIBRARY_OUTPUT_DIRECTORY}, 编译类型:${THIS_BUILD_TYPE},模块名:${LINKER_MODULE_NAME},安装模块${HOOK_INSTALL_MODULE_NAME}")
+message(STATUS "current version:${ANDROID_PLATFORM}, output dir:${CMAKE_LIBRARY_OUTPUT_DIRECTORY}, build type:${THIS_BUILD_TYPE}, linker module name:${LINKER_MODULE_NAME}, install module name:${HOOK_INSTALL_MODULE_NAME}")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/module_config.h.in" "${CMAKE_CURRENT_SOURCE_DIR}/common/module_config.h")
 
 add_library( # Sets the name of the library.
@@ -96,6 +91,10 @@ target_link_libraries( # Specifies the target library.
 set_target_properties(${LINKER_MODULE_NAME}-${ANDROID_PLATFORM} PROPERTIES
 		RUNTIME_OUTPUT_DIRECTORY
 		${CMAKE_CURRENT_SOURCE_DIR}/../libs/${THIS_BUILD_TYPE}/${CMAKE_ANDROID_ARCH_ABI})
+
+set_target_properties(${LINKER_MODULE_NAME}-${ANDROID_PLATFORM} PROPERTIES
+		LINK_FLAGS_RELEASE
+		"${LINK_FLAGS_RELEASE} -Wl,--gc-sections,-S,--version-script=\"${CMAKE_CURRENT_SOURCE_DIR}/symbol.map.txt\"")
 
 target_link_libraries(
 		${HOOK_INSTALL_MODULE_NAME}

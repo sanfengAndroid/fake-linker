@@ -6,7 +6,7 @@
 
 #include <algorithm>
 #include <sys/mman.h>
-#include <sstream>
+#include <cinttypes>
 
 #include <maps_util.h>
 #include <macros.h>
@@ -17,174 +17,192 @@
                                       MAYBE_MAP_FLAG((x), PF_R, PROT_READ) | \
                                       MAYBE_MAP_FLAG((x), PF_W, PROT_WRITE))
 
+#define MAX_OUT 8192
+
+#define STRCAT_MES(msg) \
+    do{                 \
+        if (msg != nullptr) \
+            strncat(out, msg, MAX_OUT); \
+        else            \
+            strncat(out, "null", MAX_OUT);\
+    }while (0)
+
+#define STRCAT_BOOLEAN(msg, cond) STRCAT_MES(msg); strncat(out, cond ? "true" : "false", MAX_OUT)
+#define STRCAT_STRING(msg, str) STRCAT_MES(msg); STRCAT_MES(str);
+#define STRCAT_HEX(msg, value) \
+    do {                       \
+        STRCAT_MES(msg);       \
+        size_t len_ = strlen(out);\
+        snprintf(&out[len_], (size_t)(MAX_OUT - len_), "0x%" SCNx64, (uint64_t)value);\
+    } while (0)
 
 std::string android_namespace_to_string(android_namespace_t *np) {
-	if (np == nullptr){
-		return "android_namespace_t is null.";
-	}
-	std::stringstream sstream;
-	size_t len;
+    if (np == nullptr) {
+        return "android_namespace_t is null.";
+    }
+    char out[MAX_OUT];
+    out[0] = '\0';
+    size_t len;
 
-	sstream << "namespace name: " << np->get_name() << ", isolated: " << std::boolalpha << np->is_isolated_;
+    STRCAT_STRING("namespace name: ", np->get_name());
+    STRCAT_BOOLEAN(", isolated: ", np->is_isolated_);
+
 #if __ANDROID_API__ >= __ANDROID_API_O__
-	sstream << ", greylist enabled: " << std::boolalpha << np->is_greylist_enabled_;
+    STRCAT_BOOLEAN(", greylist enabled: ", np->is_greylist_enabled_);
 #endif
 #if __ANDROID_API__ >= __ANDROID_API_R__
-	sstream << ", use anonymous: " << std::boolalpha << np->is_also_used_as_anonymous_;
+    STRCAT_BOOLEAN(", use anonymous: ", np->is_also_used_as_anonymous_);
 #endif
-	auto format = [&sstream](const std::vector<std::string> &input, const char *name) {
-		sstream << name << "{";
-		size_t len = input.size();
-		for (size_t i = 0; i < len; i++) {
-			sstream << input[i];
-			if (i != len - 1) {
-				sstream << ", ";
-			}
-		}
-		sstream << "}";
-	};
-	sstream << ", \n";
-	format(np->ld_library_paths_, "ld_library");
-	sstream << ", \n";
-	format(np->default_library_paths_, "default_library_paths");
-	sstream << ", \n";
-	format(np->permitted_paths_, "permitted_paths");
+    auto format = [&](const std::vector<std::string> &input, const char *name) {
+        STRCAT_STRING(name, "{");
+        size_t len = input.size();
+        for (size_t i = 0; i < len; i++) {
+            STRCAT_MES(input[i].c_str());
+            if (i != len - 1) {
+                STRCAT_MES(", ");
+            }
+        }
+        STRCAT_MES("}");
+    };
+    STRCAT_MES(", \n");
+    format(np->ld_library_paths_, "ld_library");
+    STRCAT_MES(", \n");
+    format(np->default_library_paths_, "default_library_paths");
+    STRCAT_MES(", \n");
+    format(np->permitted_paths_, "permitted_paths");
 
 #if __ANDROID_API__ >= __ANDROID_API_Q__
-	sstream << ", \n";
-	format(np->whitelisted_libs_, "whitelisted_libs");
+    STRCAT_MES(", \n");
+    format(np->whitelisted_libs_, "whitelisted_libs");
 #endif
 
 #if __ANDROID_API__ >= __ANDROID_API_O__
-	sstream << ", \n";
-	sstream << "linked_namespaces{";
-	len = np->linked_namespaces_.size();
-	for (size_t i = 0; i < len; i++) {
-		sstream << np->linked_namespaces_[i].linked_namespace_->get_name();
-		if (i != len - 1) {
-			sstream << ", ";
-		}
-	}
-	sstream << "}";
+    STRCAT_MES(", \nlinked_namespaces{");
+    len = np->linked_namespaces_.size();
+    for (size_t i = 0; i < len; i++) {
+        STRCAT_MES(np->linked_namespaces_[i].linked_namespace_->get_name());
+        if (i != len - 1) {
+            STRCAT_MES(", ");
+        }
+    }
+    STRCAT_MES("}");
 #endif
-	sstream << ",solist{\n";
-	for (auto si : np->soinfo_list_) {
-		sstream << si->get_realpath() << "\n";
-	}
-	sstream << "}";
-	sstream.flush();
-	return sstream.str();
+    STRCAT_MES(",solist{\n");
+    for (auto si : np->soinfo_list_) {
+        STRCAT_STRING(si->get_realpath(), "\n");
+    }
+    STRCAT_MES("}");
+    return out;
 }
 
 std::string soinfo_to_string(soinfo *si) {
-	if (si == nullptr) {
-		return "soinfo is null.";
-	}
-	std::stringstream sstream;
+    if (si == nullptr) {
+        return "soinfo is null.";
+    }
+    char out[MAX_OUT];
+    out[0] = '\0';
 
-	sstream << "soinfo name: " << (si->get_soname() == nullptr ? "null" : si->get_soname());
-	sstream << ", base address: " << std::hex << si->base;
-	sstream << ", flags: " << std::hex << si->flags_ << ", load bias: " << std::hex << si->load_bias;
+    STRCAT_STRING("soinfo name: ", si->get_soname());
+    STRCAT_HEX(", base address: ", si->base);
+    STRCAT_HEX(", flags: ", si->flags_);
+    STRCAT_HEX(", load bias: ", si->load_bias);
 
-	auto format = [&sstream](soinfo_list_t &list, const char *name) {
-		sstream << name << "{";
-		size_t size = list.size();
-		list.for_each([&](soinfo *so) {
-			sstream << (so->get_soname() == nullptr ? "(null)" : so->get_soname());
-			if (--size != 0) {
-				sstream << ", ";
-			}
-		});
-		sstream << "}";
-	};
-	sstream << ", ";
-	format(si->children_, "children");
-	sstream << ", ";
-	format(si->parents_, "parents");
+    auto format = [&](soinfo_list_t &list, const char *name) {
+        STRCAT_STRING(name, "{");
+        size_t size = list.size();
+        list.for_each([&](soinfo *so) {
+            STRCAT_MES(so->get_soname());
+            if (--size != 0) {
+                STRCAT_MES(", ");
+            }
+        });
+        STRCAT_MES("}");
+    };
+    STRCAT_MES(", ");
+    format(si->children_, "children");
+    STRCAT_MES(", ");
+    format(si->parents_, "parents");
 
 #if __ANDROID_API__ >= __ANDROID_API_L_MR1__
-	sstream << ", rtld_flags: " << std::hex << si->rtld_flags_;
+    STRCAT_HEX(", rtld_flags: ", si->rtld_flags_);
 #endif
 #if __ANDROID_API__ >= __ANDROID_API_M__        // 6.0以上
-	sstream << ", dt_flags_1: " << std::hex << si->dt_flags_1_;
-	sstream << ", realpath: " << si->realpath_;
+    STRCAT_HEX(", dt_flags_1: ", si->dt_flags_1_);
+    STRCAT_STRING(", realpath: ", si->realpath_.c_str());
 #endif
 #if __ANDROID_API__ >= __ANDROID_API_N__
-	size_t len = si->dt_runpath_.size();
-	sstream << ", dt_runpath:{";
-	for (int i = 0; i < len; ++i) {
-		sstream << si->dt_runpath_[i];
-		if (i != len - 1) {
-			sstream << ", ";
-		}
-	}
-	sstream << "}";
-	sstream << ", primary namespace: " << si->primary_namespace_->get_name();
-	sstream << ", secondary_namespaces{";
-	len = si->secondary_namespaces_.size();
-	si->get_secondary_namespaces().for_each([&](android_namespace_t *np) {
-		sstream << np->get_name();
-		if (--len != 0) {
-			sstream << ", ";
-		}
-	});
-	sstream << "}";
-	sstream << ", handle: " << std::hex << si->get_handle();
+    size_t len = si->dt_runpath_.size();
+    STRCAT_MES(", dt_runpath:{");
+    for (int i = 0; i < len; ++i) {
+        STRCAT_MES(si->dt_runpath_[i].c_str());
+        if (i != len - 1) {
+            STRCAT_MES(", ");
+        }
+    }
+    STRCAT_STRING("}, primary namespace: " ,si->primary_namespace_->get_name());
+    STRCAT_MES(", secondary_namespaces{");
+    len = si->secondary_namespaces_.size();
+    si->get_secondary_namespaces().for_each([&](android_namespace_t *np) {
+        STRCAT_MES(np->get_name());
+        if (--len != 0) {
+            STRCAT_MES(", ");
+        }
+    });
+    STRCAT_HEX("}, handle: ", si->get_handle());
 #endif
-	sstream.flush();
-	return sstream.str();
+    return out;
 }
 
 bool file_is_in_dir(const std::string &file, const std::string &dir) {
-	const char *needle = dir.c_str();
-	const char *haystack = file.c_str();
-	size_t needle_len = strlen(needle);
+    const char *needle = dir.c_str();
+    const char *haystack = file.c_str();
+    size_t needle_len = strlen(needle);
 
-	return strncmp(haystack, needle, needle_len) == 0 &&
-		   haystack[needle_len] == '/' &&
-		   strchr(haystack + needle_len + 1, '/') == nullptr;
+    return strncmp(haystack, needle, needle_len) == 0 &&
+           haystack[needle_len] == '/' &&
+           strchr(haystack + needle_len + 1, '/') == nullptr;
 }
 
 bool file_is_under_dir(const std::string &file, const std::string &dir) {
-	const char *needle = dir.c_str();
-	const char *haystack = file.c_str();
-	size_t needle_len = strlen(needle);
+    const char *needle = dir.c_str();
+    const char *haystack = file.c_str();
+    size_t needle_len = strlen(needle);
 
-	return strncmp(haystack, needle, needle_len) == 0 &&
-		   haystack[needle_len] == '/';
+    return strncmp(haystack, needle, needle_len) == 0 &&
+           haystack[needle_len] == '/';
 }
 
 static int _phdr_table_set_load_prot(const ElfW(Phdr) *phdr_table, size_t phdr_count,
-									 ElfW(Addr) load_bias, int extra_prot_flags) {
-	const ElfW(Phdr) *phdr = phdr_table;
-	const ElfW(Phdr) *phdr_limit = phdr + phdr_count;
+                                     ElfW(Addr) load_bias, int extra_prot_flags) {
+    const ElfW(Phdr) *phdr = phdr_table;
+    const ElfW(Phdr) *phdr_limit = phdr + phdr_count;
 
-	for (; phdr < phdr_limit; phdr++) {
-		if (phdr->p_type != PT_LOAD || (phdr->p_flags & PF_W) != 0) {
-			continue;
-		}
+    for (; phdr < phdr_limit; phdr++) {
+        if (phdr->p_type != PT_LOAD || (phdr->p_flags & PF_W) != 0) {
+            continue;
+        }
 
-		ElfW(Addr) seg_page_start = PAGE_START(phdr->p_vaddr) + load_bias;
-		ElfW(Addr) seg_page_end = PAGE_END(phdr->p_vaddr + phdr->p_memsz) + load_bias;
+        ElfW(Addr) seg_page_start = PAGE_START(phdr->p_vaddr) + load_bias;
+        ElfW(Addr) seg_page_end = PAGE_END(phdr->p_vaddr + phdr->p_memsz) + load_bias;
 
-		int prot = PFLAGS_TO_PROT(phdr->p_flags);
-		if ((extra_prot_flags & PROT_WRITE) != 0) {
-			// make sure we're never simultaneously writable / executable
-			prot &= ~PROT_EXEC;
-		}
+        int prot = PFLAGS_TO_PROT(phdr->p_flags);
+        if ((extra_prot_flags & PROT_WRITE) != 0) {
+            // make sure we're never simultaneously writable / executable
+            prot &= ~PROT_EXEC;
+        }
 
-		int ret = mprotect(reinterpret_cast<void *>(seg_page_start),
-						   seg_page_end - seg_page_start,
-						   prot | extra_prot_flags);
-		if (ret < 0) {
-			return -1;
-		}
-	}
-	return 0;
+        int ret = mprotect(reinterpret_cast<void *>(seg_page_start),
+                           seg_page_end - seg_page_start,
+                           prot | extra_prot_flags);
+        if (ret < 0) {
+            return -1;
+        }
+    }
+    return 0;
 }
 
 int phdr_table_protect_segments(const ElfW(Phdr) *phdr_table, size_t phdr_count, ElfW(Addr) load_bias) {
-	return _phdr_table_set_load_prot(phdr_table, phdr_count, load_bias, 0);
+    return _phdr_table_set_load_prot(phdr_table, phdr_count, load_bias, 0);
 }
 
 /* Change the protection of all loaded segments in memory to writable.
@@ -204,28 +222,28 @@ int phdr_table_protect_segments(const ElfW(Phdr) *phdr_table, size_t phdr_count,
  *   0 on error, -1 on failure (error code in errno).
  */
 int phdr_table_unprotect_segments(const ElfW(Phdr) *phdr_table, size_t phdr_count, ElfW(Addr) load_bias) {
-	return _phdr_table_set_load_prot(phdr_table, phdr_count, load_bias, PROT_WRITE);
+    return _phdr_table_set_load_prot(phdr_table, phdr_count, load_bias, PROT_WRITE);
 }
 
 uint32_t calculate_elf_hash(const char *name) {
-	const uint8_t *name_bytes = (const uint8_t *) name;
-	uint32_t h = 0, g;
+    const uint8_t *name_bytes = (const uint8_t *) name;
+    uint32_t h = 0, g;
 
-	while (*name_bytes) {
-		h = (h << 4) + *name_bytes++;
-		g = h & 0xf0000000;
-		h ^= g;
-		h ^= g >> 24;
-	}
-	return h;
+    while (*name_bytes) {
+        h = (h << 4) + *name_bytes++;
+        g = h & 0xf0000000;
+        h ^= g;
+        h ^= g >> 24;
+    }
+    return h;
 }
 
 uint32_t calculate_gnu_hash(const char *name) {
-	const uint8_t *name_bytes = (const uint8_t *) name;
-	uint32_t h = 5381;
+    const uint8_t *name_bytes = (const uint8_t *) name;
+    uint32_t h = 5381;
 
-	while (*name_bytes != 0) {
-		h += (h << 5) + *name_bytes++;
-	}
-	return h;
+    while (*name_bytes != 0) {
+        h += (h << 5) + *name_bytes++;
+    }
+    return h;
 }

@@ -434,7 +434,7 @@ void *ProxyLinker::FindSymbolByDlsym(soinfo *si, const char *name) {
 #else
     result = CallDoDlsym(si, name);
 #endif
-    LOGD("dlsym soinfo name: %s, symbol: %s, address: %p", si->get_soname() == nullptr ? "(null)" : si->get_soname(), name, result);
+    LOGV("dlsym soinfo name: %s, symbol: %s, address: %p", si->get_soname() == nullptr ? "(null)" : si->get_soname(), name, result);
     return result;
 }
 
@@ -724,6 +724,7 @@ bool ProxyLinker::ManualRelinkLibraries(soinfo *global, const VarLengthObject<co
 
     if (rels.data == nullptr) {
         LOGW("Function symbols not exported by the global library : %s", global->get_soname() == nullptr ? "(null)" : global->get_soname());
+        return false;
     }
     bool success = true;
     for (int i = 0; i < vars->len; ++i) {
@@ -766,7 +767,9 @@ bool ProxyLinker::ManualRelinkLibrary(symbol_relocations *rels, soinfo *child) {
     return child->again_process_relocation(rels);
 }
 
-
+/*
+ * 调用系统重定位会出现各种问题,废弃使用
+ * */
 bool ProxyLinker::SystemRelinkLibrary(soinfo *so) {
     bool success;
     if (so == nullptr) {
@@ -780,7 +783,6 @@ bool ProxyLinker::SystemRelinkLibrary(soinfo *so) {
     linker_block_protect_all(PROT_READ | PROT_WRITE);
     so->set_unlinked();
     std::string str = soinfo_to_string(so);
-    LOGD("system relink soinfo: %s", str.c_str());
     // 重新dlopen出错,因为目前进程已经存在该so就不会在走ElfRead
     // 5.0查找会修改linker的数据段,因此还要解保护linker
     MapsUtil util(so->get_realpath());
@@ -797,7 +799,7 @@ bool ProxyLinker::SystemRelinkLibrary(soinfo *so) {
         so->set_linked();
     }
     util.RecoveryPageProtect();
-    LOGD("The system relink library: %s, result: %s", so->get_soname(), success ? "true" : "false");
+    LOGV("The system relink library: %s, result: %s", so->get_soname(), success ? "true" : "false");
     linker_block_protect_all(PROT_READ);
     return success;
 }
@@ -868,14 +870,14 @@ void ProxyLinker::Init() {
 
     CHECK(g_default_namespace_ptr);
     CHECK(g_soinfo_handles_map_ptr);
-    LOGD("find linker soinfo: %p, g_ld_debug_verbosity:%p, g_default_namespace: %p, g_soinfo_handles_map: %p, link_image: %p",
+    LOGV("find linker soinfo: %p, g_ld_debug_verbosity:%p, g_default_namespace: %p, g_soinfo_handles_map: %p, link_image: %p",
          solist_ptr, g_ld_debug_verbosity_ptr, g_default_namespace_ptr, g_soinfo_handles_map_ptr, link_image_ptr);
 
 #elif __ANDROID_API__ == __ANDROID_API_M__
 #else
     g_ld_preloads_ptr = (soinfo **) symbols.data->elements[5];
     CHECK(g_ld_preloads_ptr);
-    LOGD("find soinfo: %p, g_ld_preloads: %p, link_image: %p", solist_ptr, g_ld_preloads_ptr, link_image_ptr);
+    LOGV("find soinfo: %p, g_ld_preloads: %p, link_image: %p", solist_ptr, g_ld_preloads_ptr, link_image_ptr);
 #endif
 
 #if __ANDROID_API__ >= __ANDROID_API_O__
@@ -886,7 +888,7 @@ void ProxyLinker::Init() {
     dlsym_ptr = reinterpret_cast<void *(*)(void *, const char *, const void *)>(linker_soinfo_ptr->find_export_symbol_address("__loader_dlsym"));
     create_namespace_ptr = reinterpret_cast<android_namespace_t *(*)(const char *, const char *, const char *, uint64_t, const char *, android_namespace_t *, const void *)>
     (linker_soinfo_ptr->find_export_symbol_address("__loader_android_create_namespace"));
-    LOGD("linker __loader_android_dlopen_ext: %p, __loader_dlsym: %p, __loader_android_create_namespace: %p", dlopen_ptr, dlsym_ptr, create_namespace_ptr);
+    LOGV("linker __loader_android_dlopen_ext: %p, __loader_dlsym: %p, __loader_android_create_namespace: %p", dlopen_ptr, dlsym_ptr, create_namespace_ptr);
     CHECK(create_namespace_ptr);
 #else
     linker_soinfo_ptr = ProxyLinker::FindSoinfoByName("libdl.so");

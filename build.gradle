@@ -18,7 +18,7 @@ plugins {
     id 'com.android.library'
 }
 
-def buildApi = rootProject.ext.buildApi
+def buildApi = project.hasProperty("specialApi") ? specialApi: rootProject.ext.buildApi
 def linkerModuleName = 'fake-linker'
 def hookInstallModuleName = 'hook-install'
 def mVersionCode = 1000
@@ -39,8 +39,8 @@ android {
 
         externalNativeBuild {
             cmake {
-                cppFlags ""
-                cFlags ""
+                cppFlags "-Werror"
+                cFlags "-Werror"
                 abiFilters 'armeabi-v7a', 'x86', 'arm64-v8a', 'x86_64'
                 arguments "-DANDROID_PLATFORM=${buildApi}", "-DLINKER_MODULE_NAME=${linkerModuleName}",
                         "-DHOOK_INSTALL_MODULE_NAME=${hookInstallModuleName}",
@@ -57,8 +57,15 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            externalNativeBuild {
+                cmake {
+                    cppFlags "-fvisibility=hidden -fvisibility-inlines-hidden -Os -fomit-frame-pointer -fno-rtti -fno-exceptions"
+                    cFlags "-fvisibility=hidden -fvisibility-inlines-hidden -Os -fomit-frame-pointer"
+                }
+            }
         }
     }
     compileOptions {
@@ -88,7 +95,7 @@ tasks.whenTaskAdded { task ->
             it.outputs.files.files.each { File dir ->
                 dir.eachFileRecurse {
                     if (it.name == "lib${linkerModuleName}-${buildApi}.so") {
-                        println '找到当前正在编译的fake-linker模块版本,需要删除'
+                        println 'delete current fake-linker version module'
                         it.delete()
                     }
                 }
@@ -96,12 +103,6 @@ tasks.whenTaskAdded { task ->
         }
     }
 }
-dependencies {
 
-    implementation 'androidx.appcompat:appcompat:1.2.0'
-    implementation 'com.google.android.material:material:1.2.1'
-    testImplementation 'junit:junit:4.13.1'
-    implementation 'eu.chainfire:libsuperuser:1.0.0.201811281328'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.2'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
+dependencies {
 }

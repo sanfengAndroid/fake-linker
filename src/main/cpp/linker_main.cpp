@@ -64,7 +64,7 @@ Java_com_sanfengandroid_fakelinker_FakeLinker_entrance(JNIEnv *env, jclass clazz
 #if __ANDROID_API__ >= __ANDROID_API_N__
     soinfo *so = ProxyLinker::SoinfoFromHandle(hookHandle);
     std::string value = android_namespace_to_string(so->get_primary_namespace());
-    LOGD("This handle: %p, namespace: %s", hookHandle, value.c_str());
+    LOGV("This handle: %p, namespace: %s", hookHandle, value.c_str());
 #endif
     InitHookModule(env, hookHandle, cache.c_str(), config.c_str(), process_.c_str());
     return JNI_TRUE;
@@ -74,7 +74,6 @@ extern "C" JNIEXPORT jint JNICALL Java_com_sanfengandroid_fakelinker_FakeLinker_
     ScopedUtfChars symbol(env, symbol_name);
     int error_code;
 
-    LOGD("Java invoke %s relink symbol '%s'", add ? "add" : "remove", symbol.c_str());
     gRemoteInvokeInterface.CallCommonFunction(add ? kCFAddRelinkFilterSymbol : kCFRemoveRelinkFilterSymbol, kSPSymbol, symbol.c_str(), kSPNull, nullptr, &error_code);
     if (error_code != kErrorNo) {
         LOGE("Add or remove relink symbol '%s' failed, error code: %d", symbol.c_str(), error_code);
