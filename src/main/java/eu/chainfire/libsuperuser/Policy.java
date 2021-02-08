@@ -1,19 +1,3 @@
-/*
- * Copyright (C) 2012-2015 Jorrit "Chainfire" Jongma
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package eu.chainfire.libsuperuser;
 
 import java.util.ArrayList;
@@ -21,7 +5,7 @@ import java.util.List;
 
 /**
  * Helper class for modifying SELinux policies, reducing the number of calls to a minimum.
- *
+ * <p>
  * Example usage:
  *
  * <pre>
@@ -74,13 +58,6 @@ public abstract class Policy {
     }
 
     /**
-     * Override this method to return a array of strings containing the policies you want to inject.
-     *
-     * @return Policies to inject
-     */
-    protected abstract String[] getPolicies();
-
-    /**
      * Detects availability of the supolicy tool. Only useful if Shell.SU.isSELinuxEnforcing()
      * returns true.
      *
@@ -96,7 +73,7 @@ public abstract class Policy {
             // it will return output (such as a usage notice) on STDOUT (not STDERR) that contains
             // at least the word "supolicy". This is true at least for SuperSU.
 
-            List<String> result = Shell.run("sh", new String[] { "supolicy" }, null, false);
+            List<String> result = Shell.run("sh", new String[]{"supolicy"}, null, false);
             if (result != null) {
                 for (String line : result) {
                     if (line.contains("supolicy")) {
@@ -118,6 +95,13 @@ public abstract class Policy {
             canInject = null;
         }
     }
+
+    /**
+     * Override this method to return a array of strings containing the policies you want to inject.
+     *
+     * @return Policies to inject
+     */
+    protected abstract String[] getPolicies();
 
     /**
      * Transform the policies defined by getPolicies() into a set of shell commands
@@ -197,7 +181,7 @@ public abstract class Policy {
      * however, it cannot be guaranteed the command was executed and the policies injected
      * upon return.
      *
-     * @param shell Interactive shell to execute commands on
+     * @param shell       Interactive shell to execute commands on
      * @param waitForIdle wait for the command to complete before returning ?
      */
     public void inject(Shell.Interactive shell, boolean waitForIdle) {

@@ -1,17 +1,18 @@
 /*
- * Copyright (c) 2021 XpFilter by beich.
+ * Copyright (c) 2021 fake-linker by sanfengAndroid.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package com.sanfengandroid.fakelinker;
@@ -49,7 +50,7 @@ public class FileInstaller {
     private static int uid = Process.myUid();
     private static int gid = uid;
     private static String libXattr = "u:object_r:system_file:s0";
-    private static String fileXattr = "u:object_r:system_data_file:s0";
+    private static String fileXattr = libXattr;
 
     static {
         boolean temp = false;
@@ -124,7 +125,18 @@ public class FileInstaller {
         executeSuccess(list, root);
     }
 
-    public static void installFile(final Context context, String[] files, boolean root) throws Exception {
+    public static void installFile(final Context context, String[] names, boolean root) throws Exception {
+        if (names == null) {
+            return;
+        }
+        File[] files = new File[names.length];
+        for (int i = 0; i < files.length; i++) {
+            files[i] = new File(context.getCacheDir(), names[i]);
+        }
+        installFile(context, files, root);
+    }
+
+    public static void installFile(final Context context, File[] files, boolean root) throws Exception {
         if (execName == null) {
             extractInstallFile(context);
         }
@@ -139,9 +151,9 @@ public class FileInstaller {
         list.add("file");
         list.add(fileXattr);
         list.add(configPath);
-        for (String file : files) {
+        for (File file : files) {
             list.add(configPath);
-            list.add(context.getCacheDir() + File.separator + file);
+            list.add(file.getAbsolutePath());
         }
         executeSuccess(list, root);
     }
@@ -163,7 +175,18 @@ public class FileInstaller {
         executeSuccess(list, root);
     }
 
-    public static void uninstallFile(Context context, String[] files, boolean root) throws Exception {
+    public static void uninstallFile(Context context, String[] names, boolean root) throws Exception {
+        if (names == null) {
+            return;
+        }
+        File[] files = new File[names.length];
+        for (int i = 0; i < files.length; i++) {
+            files[i] = new File(context.getCacheDir(), names[i]);
+        }
+        uninstallFile(context, files, root);
+    }
+
+    public static void uninstallFile(Context context, File[] files, boolean root) throws Exception {
         if (TextUtils.isEmpty(configPath)) {
             throw new FileNotFoundException("Please set the installation path first, invoke 'setConfigPath' method");
         }
@@ -176,8 +199,8 @@ public class FileInstaller {
         List<String> list = new ArrayList<>();
         list.add(context.getCacheDir() + File.separator + execName);
         list.add("remove");
-        for (String file : files) {
-            list.add(configPath + File.separator + file);
+        for (File file : files) {
+            list.add(file.getAbsolutePath());
         }
         executeSuccess(list, root);
     }
@@ -238,12 +261,16 @@ public class FileInstaller {
         return RUNNING_ABI;
     }
 
-    public static boolean isIsX86() {
+    public static boolean isX86() {
         return isX86;
     }
 
     public static boolean isSupport64Bit() {
         return support64Bit;
+    }
+
+    public static boolean isRunning64Bit() {
+        return support64Bit && (RUNNING_ABI.equals("x86_64") || RUNNING_ABI.equals("arm64-v8a"));
     }
 
     private static void executeSuccess(List<String> cmds, boolean root) throws Exception {
@@ -273,7 +300,7 @@ public class FileInstaller {
             }
             if (!file.getParentFile().exists()) {
                 if (!file.getParentFile().mkdirs()) {
-                    throw new IOException("create dir error: " + file.getParentFile().getAbsolutePath());
+                    throw new IOException("FileInstaller.releaseFile create dir error: " + file.getParentFile().getAbsolutePath());
                 }
             }
             ZipFile zip = new ZipFile(context.getPackageResourcePath());

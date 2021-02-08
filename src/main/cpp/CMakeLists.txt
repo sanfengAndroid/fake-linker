@@ -30,8 +30,18 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../libs/${THIS_BU
 message(STATUS "current version:${ANDROID_PLATFORM}, output dir:${CMAKE_LIBRARY_OUTPUT_DIRECTORY}, build type:${THIS_BUILD_TYPE}, linker module name:${LINKER_MODULE_NAME}, install module name:${HOOK_INSTALL_MODULE_NAME}")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/module_config.h.in" "${CMAKE_CURRENT_SOURCE_DIR}/common/module_config.h")
 
+set(COPY_DIR ${CMAKE_ANDROID_ARCH_ABI})
+set(LINKER_LIBRARY_NAME ${LINKER_MODULE_NAME}-${ANDROID_PLATFORM})
+if (${MERGE_BUILD} AND ${CMAKE_ANDROID_ARCH_ABI} STREQUAL "arm64-v8a")
+	set(COPY_DIR "armeabi-v7a")
+	set(LINKER_LIBRARY_NAME ${LINKER_LIBRARY_NAME}64)
+elseif (${MERGE_BUILD} AND ${CMAKE_ANDROID_ARCH_ABI} STREQUAL "x86_64")
+	set(COPY_DIR "x86")
+	set(LINKER_LIBRARY_NAME ${LINKER_LIBRARY_NAME}64)
+endif ()
+
 add_library( # Sets the name of the library.
-		${LINKER_MODULE_NAME}-${ANDROID_PLATFORM}
+		${LINKER_LIBRARY_NAME}
 
 		# Sets the library as a shared library.
 		SHARED
@@ -82,17 +92,17 @@ find_library( # Sets the name of the path variable.
 # build script, prebuilt third-party libraries, or system libraries.
 
 target_link_libraries( # Specifies the target library.
-		${LINKER_MODULE_NAME}-${ANDROID_PLATFORM}
+		${LINKER_LIBRARY_NAME}
 
 		# Links the target library to the log library
 		# included in the NDK.
 		${log-lib})
-# 设置 CMAKE_LIBRARY_OUTPUT_DIRECTORY 不生效,不知为何,设置RUNTIME_OUTPUT_DIRECTORY生效
-set_target_properties(${LINKER_MODULE_NAME}-${ANDROID_PLATFORM} PROPERTIES
-		RUNTIME_OUTPUT_DIRECTORY
-		${CMAKE_CURRENT_SOURCE_DIR}/../libs/${THIS_BUILD_TYPE}/${CMAKE_ANDROID_ARCH_ABI})
 
-set_target_properties(${LINKER_MODULE_NAME}-${ANDROID_PLATFORM} PROPERTIES
+set_target_properties(${LINKER_LIBRARY_NAME} PROPERTIES
+		RUNTIME_OUTPUT_DIRECTORY
+		${CMAKE_CURRENT_SOURCE_DIR}/../libs/${THIS_BUILD_TYPE}/${COPY_DIR})
+
+set_target_properties(${LINKER_LIBRARY_NAME} PROPERTIES
 		LINK_FLAGS_RELEASE
 		"${LINK_FLAGS_RELEASE} -Wl,--gc-sections,-S,--version-script=\"${CMAKE_CURRENT_SOURCE_DIR}/symbol.map.txt\"")
 

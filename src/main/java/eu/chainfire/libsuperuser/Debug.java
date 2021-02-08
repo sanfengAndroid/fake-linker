@@ -1,19 +1,3 @@
-/*
- * Copyright (C) 2012-2015 Jorrit "Chainfire" Jongma
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package eu.chainfire.libsuperuser;
 
 import android.os.Looper;
@@ -28,7 +12,27 @@ public class Debug {
 
     // ----- DEBUGGING -----
 
+    public static final String TAG = "libsuperuser";
+    public static final int LOG_GENERAL = 0x0001;
+    public static final int LOG_COMMAND = 0x0002;
+
+    // ----- LOGGING -----
+    public static final int LOG_OUTPUT = 0x0004;
+    public static final int LOG_NONE = 0x0000;
+    public static final int LOG_ALL = 0xFFFF;
     private static boolean debug = BuildConfig.DEBUG;
+    private static int logTypes = LOG_ALL;
+    private static OnLogListener logListener = null;
+    private static boolean sanityChecks = true;
+
+    /**
+     * <p>Is debug mode enabled ?</p>
+     *
+     * @return Debug mode enabled
+     */
+    public static boolean getDebug() {
+        return debug;
+    }
 
     /**
      * <p>Enable or disable debug mode</p>
@@ -42,34 +46,6 @@ public class Debug {
     public static void setDebug(boolean enable) {
         debug = enable;
     }
-
-    /**
-     * <p>Is debug mode enabled ?</p>
-     *
-     * @return Debug mode enabled
-     */
-    public static boolean getDebug() {
-        return debug;
-    }
-
-    // ----- LOGGING -----
-
-    public interface OnLogListener {
-        void onLog(int type, String typeIndicator, String message);
-    }
-
-    public static final String TAG = "libsuperuser";
-
-    public static final int LOG_GENERAL = 0x0001;
-    public static final int LOG_COMMAND = 0x0002;
-    public static final int LOG_OUTPUT = 0x0004;
-
-    public static final int LOG_NONE = 0x0000;
-    public static final int LOG_ALL = 0xFFFF;
-
-    private static int logTypes = LOG_ALL;
-
-    private static OnLogListener logListener = null;
 
     /**
      * <p>Log a message (internal)</p>
@@ -172,6 +148,15 @@ public class Debug {
     }
 
     /**
+     * <p>Get the currently registered custom log handler</p>
+     *
+     * @return Current custom log handler or NULL if none is present
+     */
+    public static OnLogListener getOnLogListener() {
+        return logListener;
+    }
+
+    /**
      * <p>Register a custom log handler</p>
      *
      * <p>Replaces the log method (write to logcat) with your own
@@ -184,30 +169,7 @@ public class Debug {
         logListener = onLogListener;
     }
 
-    /**
-     * <p>Get the currently registered custom log handler</p>
-     *
-     * @return Current custom log handler or NULL if none is present
-     */
-    public static OnLogListener getOnLogListener() {
-        return logListener;
-    }
-
     // ----- SANITY CHECKS -----
-
-    private static boolean sanityChecks = true;
-
-    /**
-     * <p>Enable or disable sanity checks</p>
-     *
-     * <p>Enables or disables the library crashing when su is called
-     * from the main thread.</p>
-     *
-     * @param enable Enable or disable
-     */
-    public static void setSanityChecksEnabled(boolean enable) {
-        sanityChecks = enable;
-    }
 
     /**
      * <p>Are sanity checks enabled ?</p>
@@ -219,6 +181,18 @@ public class Debug {
      */
     public static boolean getSanityChecksEnabled() {
         return sanityChecks;
+    }
+
+    /**
+     * <p>Enable or disable sanity checks</p>
+     *
+     * <p>Enables or disables the library crashing when su is called
+     * from the main thread.</p>
+     *
+     * @param enable Enable or disable
+     */
+    public static void setSanityChecksEnabled(boolean enable) {
+        sanityChecks = enable;
     }
 
     /**
@@ -239,6 +213,10 @@ public class Debug {
      */
     public static boolean onMainThread() {
         return ((Looper.myLooper() != null) && (Looper.myLooper() == Looper.getMainLooper()));
+    }
+
+    public interface OnLogListener {
+        void onLog(int type, String typeIndicator, String message);
     }
 
 }

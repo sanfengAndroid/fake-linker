@@ -19,8 +19,8 @@
 
 static uid_t set_uid = 1000;
 static gid_t set_gid = 1000;
-const char* lib_xattr = "u:object_r:system_file:s0";
-const char* file_xattr= "u:object_r:system_data_file:s0";
+const char *lib_xattr = "u:object_r:system_file:s0";
+const char *file_xattr = "u:object_r:system_file:s0";
 
 int g_log_level = 5;
 
@@ -35,7 +35,7 @@ static bool CreateDir(const char *dir) {
     if (opendir(dir) == nullptr) {
         int ret = mkdir(dir, 00777);
         if (ret == -1) {
-            LOGE("create dir error: %s", dir);
+            LOGE("native install file create dir error: %s", dir);
             return false;
         }
         chown(dir, set_uid, set_gid);
@@ -132,17 +132,19 @@ C_API API_PUBLIC int main(int argc, char **argv) {
     }
     if (strcmp(argv[index], "copy") != 0) {
         LOGE("error operation type: %s", argv[index]);
+        printf("exit code -1");
         return -1;
     }
     set_uid = strtol(argv[++index], nullptr, 0);
     set_gid = strtol(argv[++index], nullptr, 0);
     bool lib = strcmp(argv[++index], "lib") == 0;
-    if (lib){
+    if (lib) {
         lib_xattr = argv[++index];
-    } else{
+    } else {
         file_xattr = argv[++index];
     }
     if (!CreateDir(argv[++index])) {
+        printf("exit code -1");
         return -1;
     }
     char path[PATH_MAX];
@@ -163,18 +165,22 @@ C_API API_PUBLIC int main(int argc, char **argv) {
         }
         LOGD("copy file %s -> %s", argv[i + 1], path);
         if (!CopyFile(path, argv[++i])) {
+            printf("exit code -2");
             return -2;
         }
-        if (chmod(path, lib ? 00755 : 00666)) {
+        if (chmod(path, lib ? 00755 : 00644)) {
             LOGE("set file chmod error: %s", path);
+            printf("exit code -3");
             return -3;
         }
         if (chown(path, set_uid, set_gid)) {
             LOGE("set file owner error: %s", path);
+            printf("exit code -4");
             return -4;
         }
         if (SetFileXattr(path, lib ? lib_xattr : file_xattr) != 0) {
             LOGE("set file xattr failed, file: %s", path);
+            printf("exit code -5");
             return -5;
         }
     }
