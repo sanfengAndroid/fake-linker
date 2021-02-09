@@ -38,7 +38,7 @@ elseif (${MERGE_BUILD} AND ${CMAKE_ANDROID_ARCH_ABI} STREQUAL "x86_64")
 	set(LINKER_LIBRARY_NAME ${LINKER_LIBRARY_NAME}64)
 endif ()
 
-message(WARNING "cmake version:${CMAKE_VERSION} api:${ANDROID_PLATFORM}, build type:${THIS_BUILD_TYPE}, linker module:${LINKER_LIBRARY_NAME}, install module:${HOOK_INSTALL_MODULE_NAME} copy dir:${COPY_DIR}")
+message(STATUS "cmake version:${CMAKE_VERSION} api:${ANDROID_PLATFORM}, build type:${THIS_BUILD_TYPE}, linker module:${LINKER_LIBRARY_NAME}, install module:${HOOK_INSTALL_MODULE_NAME} copy dir:${COPY_DIR}")
 
 
 add_library( # Sets the name of the library.
