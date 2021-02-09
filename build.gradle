@@ -96,7 +96,7 @@ tasks.whenTaskAdded { task ->
             it.outputs.files.files.each { File dir ->
                 dir.eachFileRecurse {
                     if (it.name == "lib${linkerModuleName}-${rootProject.buildApi}.so") {
-                        println 'delete current fake-linker version module'
+                        println "delete current fake-linker version module: ${it.name}"
                         it.delete()
                     }
 //                    if (rootProject.mergeBuild && it.name == "lib${linkerModuleName}-${rootProject.buildApi}64.so"){

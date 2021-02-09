@@ -27,7 +27,6 @@ include_directories(common)
 include_directories(export)
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../libs/${THIS_BUILD_TYPE}/${CMAKE_ANDROID_ARCH_ABI})
-message(STATUS "current version:${ANDROID_PLATFORM}, output dir:${CMAKE_LIBRARY_OUTPUT_DIRECTORY}, build type:${THIS_BUILD_TYPE}, linker module name:${LINKER_MODULE_NAME}, install module name:${HOOK_INSTALL_MODULE_NAME}")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/module_config.h.in" "${CMAKE_CURRENT_SOURCE_DIR}/common/module_config.h")
 
 set(COPY_DIR ${CMAKE_ANDROID_ARCH_ABI})
@@ -39,6 +38,9 @@ elseif (${MERGE_BUILD} AND ${CMAKE_ANDROID_ARCH_ABI} STREQUAL "x86_64")
 	set(COPY_DIR "x86")
 	set(LINKER_LIBRARY_NAME ${LINKER_LIBRARY_NAME}64)
 endif ()
+
+message(WARNING "current version:${ANDROID_PLATFORM}, output dir:${CMAKE_LIBRARY_OUTPUT_DIRECTORY}, build type:${THIS_BUILD_TYPE}, linker module name:${LINKER_MODULE_NAME}, install module name:${HOOK_INSTALL_MODULE_NAME} copy dir:${COPY_DIR}")
+
 
 add_library( # Sets the name of the library.
 		${LINKER_LIBRARY_NAME}
