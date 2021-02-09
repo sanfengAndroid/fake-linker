@@ -104,6 +104,10 @@ set_target_properties(${LINKER_LIBRARY_NAME} PROPERTIES
 		${CMAKE_CURRENT_SOURCE_DIR}/../libs/${THIS_BUILD_TYPE}/${COPY_DIR})
 
 set_target_properties(${LINKER_LIBRARY_NAME} PROPERTIES
+		LIBRARY_OUTPUT_DIRECTORY
+		${CMAKE_CURRENT_SOURCE_DIR}/../libs/${THIS_BUILD_TYPE}/${COPY_DIR})
+
+set_target_properties(${LINKER_LIBRARY_NAME} PROPERTIES
 		LINK_FLAGS_RELEASE
 		"${LINK_FLAGS_RELEASE} -Wl,--gc-sections,-S,--version-script=\"${CMAKE_CURRENT_SOURCE_DIR}/symbol.map.txt\"")
 
