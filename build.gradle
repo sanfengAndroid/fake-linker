@@ -99,6 +99,10 @@ tasks.whenTaskAdded { task ->
                         println 'delete current fake-linker version module'
                         it.delete()
                     }
+//                    if (rootProject.mergeBuild && it.name == "lib${linkerModuleName}-${rootProject.buildApi}64.so"){
+//                        println 'delete merge build fake-linker module'
+//                        it.delete()
+//                    }
                 }
             }
         }
