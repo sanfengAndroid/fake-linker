@@ -30,7 +30,7 @@ android {
 
     defaultConfig {
         minSdkVersion 21
-        targetSdkVersion 30
+        targetSdkVersion rootProject.targetSdk
         versionCode mVersionCode
         versionName mVersionName
 
@@ -41,14 +41,13 @@ android {
             cmake {
                 cppFlags "-Werror"
                 cFlags "-Werror"
-                abiFilters.addAll(rootProject.abis)
-                arguments "-DANDROID_PLATFORM=${rootProject.buildApi}", "-DLINKER_MODULE_NAME=${linkerModuleName}",
-                        "-DMERGE_BUILD=${rootProject.mergeBuild}",
+                abiFilters.addAll(rootProject.props['abis']?: ['armeabi-v7a', 'x86', 'arm64-v8a', 'x86_64'])
+                arguments "-DANDROID_PLATFORM=" +(rootProject.props['buildApi']?:rootProject.targetSdk) , "-DLINKER_MODULE_NAME=${linkerModuleName}",
+                        "-DMERGE_BUILD=" + (rootProject.props['mergeBuild']?:true),
                         "-DHOOK_INSTALL_MODULE_NAME=${hookInstallModuleName}",
-                        "-DHOOK_LOG_LEVEL=${rootProject.logLevel}",
+                        "-DHOOK_LOG_LEVEL="+ (rootProject.props['logLevel']?:2),
                         "-DMODULE_VERSION=${mVersionCode}",
                         "-DMODULE_VERSION_NAME=\"${mVersionName}\""
-
             }
         }
 
@@ -99,10 +98,6 @@ tasks.whenTaskAdded { task ->
                         println "delete current fake-linker version module: ${it.name}"
                         it.delete()
                     }
-//                    if (rootProject.mergeBuild && it.name == "lib${linkerModuleName}-${rootProject.buildApi}64.so"){
-//                        println 'delete merge build fake-linker module'
-//                        it.delete()
-//                    }
                 }
             }
         }
