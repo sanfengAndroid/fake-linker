@@ -23,6 +23,7 @@ def linkerModuleName = 'fake-linker'
 def hookInstallModuleName = 'hook-install'
 def mVersionCode = 1100
 def mVersionName = "1.1"
+def buildApi = rootProject.props['buildApi'] ?: rootProject.targetSdk
 
 android {
     compileSdkVersion 30
@@ -42,7 +43,7 @@ android {
                 cppFlags "-Werror"
                 cFlags "-Werror"
                 abiFilters.addAll(rootProject.props['abis']?: ['armeabi-v7a', 'x86', 'arm64-v8a', 'x86_64'])
-                arguments "-DANDROID_PLATFORM=" +(rootProject.props['buildApi']?:rootProject.targetSdk) , "-DLINKER_MODULE_NAME=${linkerModuleName}",
+                arguments "-DANDROID_PLATFORM=${buildApi}", "-DLINKER_MODULE_NAME=${linkerModuleName}",
                         "-DMERGE_BUILD=" + (rootProject.props['mergeBuild']?:true),
                         "-DHOOK_INSTALL_MODULE_NAME=${hookInstallModuleName}",
                         "-DHOOK_LOG_LEVEL="+ (rootProject.props['logLevel']?:2),
@@ -94,7 +95,7 @@ tasks.whenTaskAdded { task ->
         task.doLast {
             it.outputs.files.files.each { File dir ->
                 dir.eachFileRecurse {
-                    if (it.name == "lib${linkerModuleName}-${rootProject.buildApi}.so") {
+                    if (it.name == "lib${linkerModuleName}-${buildApi}.so") {
                         println "delete current fake-linker version module: ${it.name}"
                         it.delete()
                     }
