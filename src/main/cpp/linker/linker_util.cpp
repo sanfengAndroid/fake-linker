@@ -36,64 +36,6 @@
         snprintf(&out[len_], (size_t)(MAX_OUT - len_), "0x%" SCNx64, (uint64_t)value);\
     } while (0)
 
-std::string android_namespace_to_string(android_namespace_t *np) {
-    if (np == nullptr) {
-        return "android_namespace_t is null.";
-    }
-    char out[MAX_OUT];
-    out[0] = '\0';
-    size_t len;
-
-    STRCAT_STRING("namespace name: ", np->get_name());
-    STRCAT_BOOLEAN(", isolated: ", np->is_isolated_);
-
-#if __ANDROID_API__ >= __ANDROID_API_O__
-    STRCAT_BOOLEAN(", greylist enabled: ", np->is_greylist_enabled_);
-#endif
-#if __ANDROID_API__ >= __ANDROID_API_R__
-    STRCAT_BOOLEAN(", use anonymous: ", np->is_also_used_as_anonymous_);
-#endif
-    auto format = [&](const std::vector<std::string> &input, const char *name) {
-        STRCAT_STRING(name, "{");
-        size_t len = input.size();
-        for (size_t i = 0; i < len; i++) {
-            STRCAT_MES(input[i].c_str());
-            if (i != len - 1) {
-                STRCAT_MES(", ");
-            }
-        }
-        STRCAT_MES("}");
-    };
-    STRCAT_MES(", \n");
-    format(np->ld_library_paths_, "ld_library");
-    STRCAT_MES(", \n");
-    format(np->default_library_paths_, "default_library_paths");
-    STRCAT_MES(", \n");
-    format(np->permitted_paths_, "permitted_paths");
-
-#if __ANDROID_API__ >= __ANDROID_API_Q__
-    STRCAT_MES(", \n");
-    format(np->whitelisted_libs_, "whitelisted_libs");
-#endif
-
-#if __ANDROID_API__ >= __ANDROID_API_O__
-    STRCAT_MES(", \nlinked_namespaces{");
-    len = np->linked_namespaces_.size();
-    for (size_t i = 0; i < len; i++) {
-        STRCAT_MES(np->linked_namespaces_[i].linked_namespace_->get_name());
-        if (i != len - 1) {
-            STRCAT_MES(", ");
-        }
-    }
-    STRCAT_MES("}");
-#endif
-    STRCAT_MES(",solist{\n");
-    for (auto si : np->soinfo_list_) {
-        STRCAT_STRING(si->get_realpath(), "\n");
-    }
-    STRCAT_MES("}");
-    return out;
-}
 
 std::string soinfo_to_string(soinfo *si) {
     if (si == nullptr) {

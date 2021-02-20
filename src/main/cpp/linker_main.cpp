@@ -61,11 +61,6 @@ Java_com_sanfengandroid_fakelinker_FakeLinker_entrance(JNIEnv *env, jclass clazz
         LOGE("load hook module failed: %s", dlerror());
         return JNI_FALSE;
     }
-#if __ANDROID_API__ >= __ANDROID_API_N__
-    soinfo *so = ProxyLinker::SoinfoFromHandle(hookHandle);
-    std::string value = android_namespace_to_string(so->get_primary_namespace());
-    LOGV("This handle: %p, namespace: %s", hookHandle, value.c_str());
-#endif
     InitHookModule(env, hookHandle, cache.c_str(), config.c_str(), process_.c_str());
     return JNI_TRUE;
 }

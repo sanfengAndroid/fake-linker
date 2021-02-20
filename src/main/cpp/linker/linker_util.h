@@ -9,7 +9,6 @@
 /*
  * linker的数据在写入后都被保护起来,关闭了写权限
  * */
-std::string android_namespace_to_string(android_namespace_t *np);
 
 std::string soinfo_to_string(soinfo *si);
 
