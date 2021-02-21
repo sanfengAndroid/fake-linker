@@ -5,6 +5,7 @@
 #include "linker_common_types.h"
 
 #include <variable_length_object.h>
+#include <sys/mman.h>
 
 #include "fake_linker.h"
 
@@ -75,6 +76,10 @@ void NamespaceListAllocator::free(LinkedListEntry<android_namespace_t> *entry) {
 
 void linker_block_protect_all(int port) {
     Init();
+    // 由于我们修改的同时linker可能也在同时修改，因此只包含读写，不保护读
+    if ((port & PROT_WRITE) == 0){
+        return;
+    }
     g_soinfo_allocator->protect_all(port);
     g_soinfo_links_allocator->protect_all(port);
 #if __ANDROID_API__ >= __ANDROID_API_N__
