@@ -17,7 +17,8 @@ Android version: `Android 5.0` ~ `Android 11`+. Support instructions: `x86`, `x8
 > Add it as an `Android Library` to the `Android` project,the main module adds its dependencies.Change [`build.gradle`](build.gradle) `buildApi` variable,compile the specified Api level.
 2. Use build library
 > Download [the latest version](https://github.com/sanfengAndroid/fake-linker/releases/latest) of the binary file, decompress it, add the `aar` file as a library to the project dependencies, and import the header file under the `include` directory into the Hook module for use.
-
+3. Build configuration
+> Refer to [FakeXposed](https://github.com/sanfengAndroid/FakeXposed) configuration scripts `build.py` and `build.gradle`
 ## Hook module development
 1. Copy the export header file (the source code is in the [export](src/main/cpp/export) directory under the `cpp` directory) to the `Hook` module.
 2. Implement the `fake_load_library_init` export function in [`linker_export.h`](src/main/cpp/export/linker_export.h).

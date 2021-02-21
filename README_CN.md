@@ -14,7 +14,8 @@
 > 将其作为 `Android Library` 添加到 `Android` 项目中，主模块添加其依赖，修改[`build.gradle`](build.gradle)中的 `buildApi` 变量编译指定Api等级
 2. 使用构建库
 > 下载[最新版本](https://github.com/sanfengAndroid/fake-linker/releases/latest)二进制文件解压将 `aar` 文件作为库添加至项目依赖，将 `include` 目录下头文件导入到Hook模块使用
-
+3. 编译配置
+> 参考 [FakeXposed](https://github.com/sanfengAndroid/FakeXposed) 配置脚本 `build.py`和 `build.gradle`
 ## Hook 模块开发
 
 1. 复制导出头文件(源码在 `cpp` 目录下的 [export](src/main/cpp/export) 目录)到 `Hook` 模块
