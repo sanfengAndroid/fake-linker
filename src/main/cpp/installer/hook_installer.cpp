@@ -32,10 +32,18 @@ int SetFileXattr(const char *path, const char *value) {
 }
 
 static bool CreateDir(const char *dir) {
+    char* parent = dirname(dir);
+    char *copy = strdup(parent);
+    if (copy != nullptr && access(copy, F_OK) != 0){
+        bool create = CreateDir(copy);
+        if (!create){
+            return false;
+        }
+    }
     if (opendir(dir) == nullptr) {
         int ret = mkdir(dir, 00777);
         if (ret == -1) {
-            LOGE("native install file create dir error: %s", dir);
+            LOGE("native create dir error: %s", dir);
             return false;
         }
         chown(dir, set_uid, set_gid);
