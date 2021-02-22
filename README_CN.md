@@ -80,4 +80,5 @@
         InitHook();
     }
     ```
-3. 其它更多使用请等待后续另一仓库
+3. 其它更多使用
+[FakeXposed](https://github.com/sanfengAndroid/FakeXposed) `Xposed`，`root`屏蔽检测，文件重定向等
