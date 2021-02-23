@@ -434,7 +434,7 @@ void *ProxyLinker::FindSymbolByDlsym(soinfo *si, const char *name) {
 #else
     result = CallDoDlsym(si, name);
 #endif
-    LOGV("dlsym soinfo name: %s, symbol: %s, address: %p", si->get_soname() == nullptr ? "(null)" : si->get_soname(), name, result);
+//    LOGV("dlsym soinfo name: %s, symbol: %s, address: %p", si->get_soname() == nullptr ? "(null)" : si->get_soname(), name, result);
     return result;
 }
 
