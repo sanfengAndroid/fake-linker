@@ -41,7 +41,8 @@ public class FakeLinker {
 
     public static void localLoad() {
         try {
-            System.loadLibrary(BuildConfig.LINKER_MODULE_NAME + "-" + Build.VERSION.SDK_INT);
+
+            System.loadLibrary(BuildConfig.LINKER_MODULE_NAME + "-" + (Build.VERSION.SDK_INT == Build.VERSION_CODES.N_MR1 ? Build.VERSION_CODES.N :Build.VERSION.SDK_INT));
         } catch (UnsatisfiedLinkError e) {
             Log.e(TAG, "load fake linker library error", e);
         }

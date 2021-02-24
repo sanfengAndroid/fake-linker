@@ -35,7 +35,7 @@ The module has integrated the installation executable file, and the Java layer c
 ## Other description
 
 1. The project is different from directly setting the `LD_PRELOAD` environment variable. Direct setting usually cannot intercept the `dlsym` method, because once intercepted, you need to implement the search symbol yourself and the higher version has the `caller` address restriction, and the module passes the transfer module `fake- linker` provides calling `dlsym` method, so Hook module can intercept `dlsym` and provide more `Linker` related functions.
-2. Each version of Android `Linker` has corresponding modifications, so the module depends on the `api` level of the phone, and the corresponding modules can be loaded at different levels. The internal use of the `NDK` version is the latest version. This version has been deleted from the `Api-25`. The code supports `Api-25`, you need to switch the lower version `NDK` to compile, you need to adapt the code yourself.
+2. Each version of Android `Linker` has corresponding modifications, so the module depends on the `api` level of the phone, and the corresponding modules can be loaded at different levels. When loading manually, you need to pay attention to `Api 25` directly use the library of `Api 24`
 
 ## Note
 
