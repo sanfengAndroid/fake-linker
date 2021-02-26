@@ -135,6 +135,13 @@ std::string JNIHelper::ToString(JNIEnv *env, jfieldID fieldID) {
     return ToString(env, filed.get());
 }
 
+void JNIHelper::PrintAndClearException(JNIEnv *env) {
+    if (env->ExceptionCheck()) {
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+    }
+}
+
 std::string JNIHelper::GetMethodName(JNIEnv *env, jmethodID mid) {
     ProxyJNIEnv proxy(env);
     if (__predict_false(proxy.ExceptionCheck())) {

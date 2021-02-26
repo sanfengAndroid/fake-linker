@@ -18,6 +18,7 @@ public:
 
     static std::string GetFieldName(JNIEnv *env, jfieldID fieldId);
 
+
     static bool IsClassObject(JNIEnv *env, jobject obj);
 
     static std::string ToString(JNIEnv *env, jboolean z);
@@ -41,6 +42,9 @@ public:
     static std::string ToString(JNIEnv *env, jmethodID methodID);
 
     static std::string ToString(JNIEnv *env, jfieldID fieldID);
+
+    static void PrintAndClearException(JNIEnv * env);
+
 public:
     static void Init(JNIEnv *env);
 

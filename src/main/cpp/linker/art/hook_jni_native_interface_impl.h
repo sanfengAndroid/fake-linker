@@ -16,3 +16,7 @@
 HookJniError HookJniNativeInterface(size_t function_offset, void *hook_method, void **backup_method);
 
 int HookJniNativeInterfaces(HookJniUnit *items, size_t len);
+
+int RegisterNativeAgain(JNIEnv *env, jclass clazz, HookRegisterNativeUnit *items, size_t len);
+
+bool InitJniFunctionOffset(JNIEnv *env, jclass clazz, jmethodID methodId, void *native, uint32_t flags);

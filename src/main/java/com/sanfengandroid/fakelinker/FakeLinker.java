@@ -38,6 +38,7 @@ public class FakeLinker {
 
     private static native int relinkSpecialFilterSymbol(String symbolName, boolean add);
 
+    public static native void nativeOffset();
 
     public static void localLoad() {
         try {

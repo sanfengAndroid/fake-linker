@@ -21,8 +21,8 @@ plugins {
 
 def linkerModuleName = 'fake-linker'
 def hookInstallModuleName = 'hook-install'
-def mVersionCode = 1100
-def mVersionName = "1.1"
+def mVersionCode = 1200
+def mVersionName = "1.2"
 def buildApi = rootProject.props['buildApi'] ?: 30
 def appType = rootProject.props['appType']
 android {

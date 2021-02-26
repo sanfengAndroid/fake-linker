@@ -26,12 +26,12 @@ RemoteInvokeInterface gRemoteInvokeInterface = {
         call_namespace_function,
         reinterpret_cast<void *(*)(const char *, const char *, const char *, uint64_t, const char *, void *, const void *)>(ProxyLinker::CallCreateNamespace),
         reinterpret_cast<void *(*)(const char *, int, const void *, void *)>(ProxyLinker::CallDoDlopen),
-        ProxyLinker::CallDoDlsym
+        ProxyLinker::CallDoDlsym,
 #else
         reinterpret_cast<void *(*)(const char *, int, const void *)>(ProxyLinker::CallDoDlopen),
-        ProxyLinker::CallDoDlsym
+        ProxyLinker::CallDoDlsym,
 #endif
-
+        RegisterNativeAgain
 };
 
 JNINativeInterface *original_functions;
@@ -46,6 +46,16 @@ static void InitHookModule(JNIEnv *env, void *module, const char *cache_path, co
     fake_load_library_init_ptr(env, this_so, &gRemoteInvokeInterface, cache_path, config_path, process_name);
 }
 
+static void FakeLinker_nativeOffset(JNIEnv *env, jclass clazz) {
+    LOGE("This test native offset");
+}
+
+static void InitArt(JNIEnv *env, jclass clazz) {
+    JNINativeMethod methods[] = {{"nativeOffset", "()V", reinterpret_cast<void *>(FakeLinker_nativeOffset)}};
+    CHECK(env->RegisterNatives(clazz, methods, 1) == JNI_OK);
+    CHECK(InitJniFunctionOffset(env, clazz, env->GetStaticMethodID(clazz, methods[0].name, methods[0].signature), reinterpret_cast<void *>(FakeLinker_nativeOffset), 0x109));
+}
+
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_com_sanfengandroid_fakelinker_FakeLinker_entrance(JNIEnv *env, jclass clazz, jstring hook_module_path, jstring cache_dir, jstring config_path, jstring process_name) {
@@ -55,6 +65,7 @@ Java_com_sanfengandroid_fakelinker_FakeLinker_entrance(JNIEnv *env, jclass clazz
     ScopedUtfChars config(env, config_path);
 
     ProxyLinker::Init();
+    InitArt(env, clazz);
     original_functions = const_cast<JNINativeInterface *>(env->functions);
     void *hookHandle = dlopen(hook_module.c_str(), RTLD_NOW);
     if (hookHandle == nullptr) {
