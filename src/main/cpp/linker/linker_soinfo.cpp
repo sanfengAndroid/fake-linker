@@ -450,9 +450,7 @@ android_namespace_t *soinfo::get_primary_namespace() {
 }
 
 void soinfo::add_secondary_namespace(android_namespace_t *secondary_ns) {
-    if (secondary_namespaces_.find(secondary_ns) == secondary_namespaces_.end()) {
-        secondary_namespaces_.push_back(secondary_ns);
-    }
+    secondary_namespaces_.push_back(secondary_ns);
 }
 
 android_namespace_list_t &soinfo::get_secondary_namespaces() {

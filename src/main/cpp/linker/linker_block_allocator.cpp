@@ -33,8 +33,11 @@ struct FreeBlockInfo {
 LinkerBlockAllocator::LinkerBlockAllocator(size_t block_size)
         : block_size_(round_up(block_size < sizeof(FreeBlockInfo) ? sizeof(FreeBlockInfo) : block_size, 16)),
           page_list_(nullptr),
-          free_block_list_(nullptr),
-          allocated_(0) {}
+          free_block_list_(nullptr) {
+#if __ANDROID_API__ >= __ANDROID_API_Q__
+    allocated_ = 0;
+#endif
+}
 
 void *LinkerBlockAllocator::alloc() {
     protect_all(PROT_READ | PROT_WRITE);
@@ -54,9 +57,9 @@ void *LinkerBlockAllocator::alloc() {
     }
 
     memset(block_info, 0, block_size_);
-
+#if __ANDROID_API__ >= __ANDROID_API_Q__
     ++allocated_;
-
+#endif
     return block_info;
 }
 
@@ -64,7 +67,7 @@ void LinkerBlockAllocator::free(void *block) {
     if (block == nullptr) {
         return;
     }
-    protect_all(PROT_READ|PROT_WRITE);
+    protect_all(PROT_READ | PROT_WRITE);
     LinkerBlockAllocatorPage *page = find_page(block);
     if (page == nullptr) {
         abort();
@@ -86,8 +89,9 @@ void LinkerBlockAllocator::free(void *block) {
     block_info->num_free_blocks = 1;
 
     free_block_list_ = block_info;
-
+#if __ANDROID_API__ >= __ANDROID_API_Q__
     --allocated_;
+#endif
 }
 
 void LinkerBlockAllocator::protect_all(int prot) {
@@ -140,10 +144,11 @@ LinkerBlockAllocatorPage *LinkerBlockAllocator::find_page(void *block) {
 }
 
 void LinkerBlockAllocator::purge() {
+#if __ANDROID_API__ >= __ANDROID_API_Q__
     if (allocated_) {
         return;
     }
-
+#endif
     LinkerBlockAllocatorPage *page = page_list_;
     while (page) {
         LinkerBlockAllocatorPage *next = page->next;

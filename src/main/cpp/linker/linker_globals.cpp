@@ -24,7 +24,6 @@
 #include <algorithm>
 #include <dlfcn.h>
 #include <sys/mman.h>
-
 #define DEFAULT_NAMESPACE_NAME "(default)"
 
 #if __ANDROID_API__ >= __ANDROID_API_N__
@@ -36,11 +35,11 @@ static void *(*dlopen_ptr)(const char *filename, int flags, const android_dlexti
 /*
     * Linker导出的符号 __loader_dlopen, __loader_dlsym,已经包含返回地址可以直接使用
     * */
-    static void *(*dlsym_ptr)(void *handle, const char *symbol, const void *caller_addr);
+static void *(*dlsym_ptr)(void *handle, const char *symbol, const void *caller_addr);
 
-    // 已经包含caller地址则无需查找内部符号
-    static android_namespace_t *(*create_namespace_ptr)(const char *name, const char *ld_library_path, const char *default_library_path, uint64_t type,
-                                                        const char *permitted_when_isolated_path, android_namespace_t *parent_namespace, const void *caller_addr);
+// 已经包含caller地址则无需查找内部符号
+static android_namespace_t *(*create_namespace_ptr)(const char *name, const char *ld_library_path, const char *default_library_path, uint64_t type,
+                                                    const char *permitted_when_isolated_path, android_namespace_t *parent_namespace, const void *caller_addr);
 
     #else
 
@@ -416,7 +415,8 @@ soinfo *ProxyLinker::FindSoinfoByPath(const char *path) {
 
 soinfo *ProxyLinker::FindContainingLibrary(const void *p) {
     soinfo *si = solist_ptr;
-    ElfW(Addr) address = reinterpret_cast<ElfW(Addr)>(untag_address(p));
+    ElfW(Addr)
+            address = reinterpret_cast<ElfW(Addr) > (untag_address(p));
     do {
         if (address >= si->base && address - si->base < si->size) {
             return si;
@@ -836,6 +836,17 @@ void ProxyLinker::Init() {
     const char *lib = "/linker";
     const char *create_namespace_name = "__dl__Z16create_namespacePKvPKcS2_S2_yS2_P19android_namespace_t";
 #endif
+    const char *platform;
+#if  defined(__arm__)
+    platform = "arm";
+#elif defined(__aarch64__)
+    platform = "arm64";
+#elif defined(__i386__)
+    platform = "x86";
+#else
+    platform = "x86_64";
+#endif
+    LOGE("Current operating platform: %s", platform);
 // __dl__Z16create_namespacePKvPKcS2_S2_yS2_P19android_namespace_t
 // __dl__Z16create_namespacePKvPKcS2_S2_mS2_P19android_namespace_t
 #define COMMON_SYMBOLS "__dl__ZL6solist", "__dl_g_ld_debug_verbosity", "__dl__ZL10g_dl_mutex", "__dl__ZL19__linker_dl_err_buf", LINK_IMAGE_NAME
@@ -866,7 +877,8 @@ void ProxyLinker::Init() {
 #if  __ANDROID_API__ >= __ANDROID_API_N__
 
     g_default_namespace_ptr = (android_namespace_t *) symbols.data->elements[5];
-    g_soinfo_handles_map_ptr = (std::unordered_map<uintptr_t, soinfo *> *) symbols.data->elements[6];
+    g_soinfo_handles_map_ptr = (std::unordered_map<uintptr_t, soinfo *> *)
+            symbols.data->elements[6];
 
     CHECK(g_default_namespace_ptr);
     CHECK(g_soinfo_handles_map_ptr);

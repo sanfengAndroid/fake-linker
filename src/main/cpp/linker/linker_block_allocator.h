@@ -16,28 +16,30 @@ struct LinkerBlockAllocatorPage;
  */
 class LinkerBlockAllocator {
 public:
-	explicit LinkerBlockAllocator(size_t block_size);
+    explicit LinkerBlockAllocator(size_t block_size);
 
-	void *alloc();
+    void *alloc();
 
-	void free(void *block);
+    void free(void *block);
 
-	void protect_all(int prot);
+    void protect_all(int prot);
 
-	// Purge all pages if all previously allocated blocks have been freed.
-	void purge();
+    // Purge all pages if all previously allocated blocks have been freed.
+    void purge();
 
 private:
-	void create_new_page();
+    void create_new_page();
 
-	LinkerBlockAllocatorPage *find_page(void *block);
+    LinkerBlockAllocatorPage *find_page(void *block);
 
-	size_t block_size_;
-	LinkerBlockAllocatorPage *page_list_;
-	void *free_block_list_;
-	size_t allocated_;
+    size_t block_size_;
+    LinkerBlockAllocatorPage *page_list_;
+    void *free_block_list_;
+#if __ANDROID_API__ >= __ANDROID_API_Q__
+    size_t allocated_;
+#endif
 
-	DISALLOW_COPY_AND_ASSIGN(LinkerBlockAllocator);
+    DISALLOW_COPY_AND_ASSIGN(LinkerBlockAllocator);
 };
 
 /*
@@ -60,15 +62,15 @@ private:
 template<typename T>
 class LinkerTypeAllocator {
 public:
-	LinkerTypeAllocator() : block_allocator_(sizeof(T)) {}
+    LinkerTypeAllocator() : block_allocator_(sizeof(T)) {}
 
-	T *alloc() { return reinterpret_cast<T *>(block_allocator_.alloc()); }
+    T *alloc() { return reinterpret_cast<T *>(block_allocator_.alloc()); }
 
-	void free(T *t) { block_allocator_.free(t); }
+    void free(T *t) { block_allocator_.free(t); }
 
-	void protect_all(int prot) { block_allocator_.protect_all(prot); }
+    void protect_all(int prot) { block_allocator_.protect_all(prot); }
 
 private:
-	LinkerBlockAllocator block_allocator_;
-	DISALLOW_COPY_AND_ASSIGN(LinkerTypeAllocator);
+    LinkerBlockAllocator block_allocator_;
+    DISALLOW_COPY_AND_ASSIGN(LinkerTypeAllocator);
 };
