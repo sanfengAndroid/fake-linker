@@ -13,6 +13,11 @@
 
 extern "C" JNINativeInterface *original_functions;
 
+static int api;
+
+static constexpr uint32_t kAccFastNative = 0x00080000;  // method (runtime; native only)
+static constexpr uint32_t kAccNative = 0x0100;  // method
+
 HookJniError HookJniNativeInterface(size_t function_offset, void *hook_method, void **backup_method) {
     if (function_offset < offsetof(JNINativeInterface, reserved0) || function_offset > offsetof(JNINativeInterface, GetObjectRefType)) {
         return kHJErrorOffset;
@@ -100,6 +105,7 @@ static void InitArt(JNIEnv *env) {
     field_art_method = env->GetFieldID(clazz, "artMethod", "J");
     CHECK(field_art_method);
 #endif
+    api = android_get_device_api_level();
 }
 
 static void *GetArtMethod(JNIEnv *env, jclass clazz, jmethodID methodId) {
@@ -145,21 +151,40 @@ static void *GetOriginalNativeFunction(const uintptr_t *art_method) {
     return (void *) art_method[jni_offset];
 }
 
+/*
+ * 由于手动修改 jni入口点没有加锁,因此尽量做到每次读写
+ * */
 inline static uint32_t GetAccessFlags(const char *art_method) {
     return *reinterpret_cast<const uint32_t *>(art_method + access_flags_art_method_offset);
 }
 
-inline static void RestoreAccessFlags(char *art_method, uint32_t flags) {
+inline static bool SetAccessFlags(char *art_method, uint32_t flags) {
     *reinterpret_cast<uint32_t *>(art_method + access_flags_art_method_offset) = flags;
+    return true;
 }
 
-inline static void ClearFastNativeFlags(char *art_method, uint32_t flags) {
-    uint32_t new_flags = flags & ~0x80000;
-    RestoreAccessFlags(art_method, new_flags);
+inline static bool AddAccessFlag(char *art_method, uint32_t flag) {
+    uint32_t old_flag = GetAccessFlags(art_method);
+    uint32_t new_flag = old_flag | flag;
+    return new_flag != old_flag && SetAccessFlags(art_method, new_flag);
+
 }
 
-inline static bool IsNativeFlags(uint32_t flags) {
-    return (flags & 0x0100) == 0x0100;
+inline static bool ClearAccessFlag(char *art_method, uint32_t flag) {
+    uint32_t old_flag = GetAccessFlags(art_method);
+    uint32_t new_flag = old_flag & ~flag;
+    return new_flag != old_flag && SetAccessFlags(art_method, new_flag);
+}
+
+inline static bool HasAccessFlag(char *art_method, uint32_t flag) {
+    uint32_t flags = GetAccessFlags(art_method);
+    return (flags & flag) == flag;
+}
+
+inline static bool ClearFastNativeFlag(char *art_method) {
+    // Android 9.0以上没有判断 FastNative 标志
+    return api < __ANDROID_API_P__ && ClearAccessFlag(art_method, kAccFastNative);
+
 }
 
 int RegisterNativeAgain(JNIEnv *env, jclass clazz, HookRegisterNativeUnit *items, size_t len) {
@@ -172,7 +197,7 @@ int RegisterNativeAgain(JNIEnv *env, jclass clazz, HookRegisterNativeUnit *items
     for (int i = 0; i < len; ++i) {
         JNINativeMethod hook = items[i].hook_method;
         const char *sign = hook.signature;
-        while (sign[0] != '(') {
+        if (sign[0] == '!') {
             sign++;
         }
         jmethodID methodId = items[i].is_static ? env->GetStaticMethodID(clazz, hook.name, sign) : env->GetMethodID(clazz, hook.name, sign);
@@ -191,20 +216,30 @@ int RegisterNativeAgain(JNIEnv *env, jclass clazz, HookRegisterNativeUnit *items
         if (items[i].backup_method != nullptr) {
             *(items[i].backup_method) = backup;
         }
-        uint32_t access_flags = GetAccessFlags(reinterpret_cast<char *>(artMethod));
-        LOGI("method: %s, access flags: %d", hook.name, access_flags);
-        if (!IsNativeFlags(access_flags)) {
+        if (!HasAccessFlag(reinterpret_cast<char *>(artMethod), kAccNative)) {
             LOGE("You are hooking a non-native method, name: %s, signature: %s, is static: %d", hook.name, hook.signature, items[i].is_static);
             continue;
         }
-        ClearFastNativeFlags(reinterpret_cast<char *>(artMethod), access_flags);
+        bool restore = ClearFastNativeFlag(reinterpret_cast<char *>(artMethod));
+        if (api >= __ANDROID_API_O__) {
+            hook.signature = sign;
+        }
         methods[0] = hook;
         if (env->RegisterNatives(clazz, methods, 1) == JNI_OK) {
             success++;
+            /*
+             * Android 8.0 ,8.1 必须清除 FastNative 标志才能注册成功,所以如果原来包含 FastNative 标志还得恢复,
+             * 否者调用原方法可能会出现问题
+             * */
+            if (restore && (api == __ANDROID_API_O__ || api == __ANDROID_API_O_MR1__)) {
+                AddAccessFlag(reinterpret_cast<char *>(artMethod), kAccFastNative);
+            }
         } else {
             LOGE("register native function failed, method name: %s, sign: %s, is static: %d", hook.name, hook.signature, items[i].is_static);
             JNIHelper::PrintAndClearException(env);
-            RestoreAccessFlags(reinterpret_cast<char *>(artMethod), access_flags);
+            if (restore) {
+                AddAccessFlag(reinterpret_cast<char *>(artMethod), kAccFastNative);
+            }
             if (items[i].backup_method != nullptr) {
                 *(items[i].backup_method) = nullptr;
             }
