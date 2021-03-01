@@ -93,7 +93,7 @@ inline static bool IsIndexId(jmethodID mid) {
 
 
 static jfieldID field_art_method = nullptr;
-int access_flags_art_method_offset;
+int access_flags_art_method_offset = -1;
 static int jni_offset;
 
 static void InitArt(JNIEnv *env) {
@@ -118,7 +118,6 @@ static void *GetArtMethod(JNIEnv *env, jclass clazz, jmethodID methodId) {
     return methodId;
 }
 
-
 bool InitJniFunctionOffset(JNIEnv *env, jclass clazz, jmethodID methodId, void *native, uint32_t flags) {
     InitArt(env);
     uintptr_t *artMethod = static_cast<uintptr_t *>(GetArtMethod(env, clazz, methodId));
@@ -131,16 +130,32 @@ bool InitJniFunctionOffset(JNIEnv *env, jclass clazz, jmethodID methodId, void *
             break;
         }
     }
+    CHECK(success);
+    if (api >= __ANDROID_API_Q__){
+        // 非内部隐藏类
+        flags |= 0x10000000;
+    }
     char *start = reinterpret_cast<char *>(artMethod);
-    for (int i = 1; i < 30; ++i) {
+    for (int i = 1; i < 18; ++i) {
         uint32_t value = *(uint32_t *) (start + i * 4);
-        if ((flags & value) == flags) {
+        if (value == flags) {
             access_flags_art_method_offset = i * 4;
             LOGD("found art method match access flags offset: %d", i * 4);
             success &= true;
+            break;
         }
     }
-    CHECK(success);
+    if (access_flags_art_method_offset < 0){
+        if (api >= __ANDROID_API_N__) {
+            access_flags_art_method_offset = 4;
+        }else if (api == __ANDROID_API_M__){
+            access_flags_art_method_offset = 12;
+        }else if (api == __ANDROID_API_L_MR1__){
+            access_flags_art_method_offset = 20;
+        }else if (api == __ANDROID_API_L__){
+            access_flags_art_method_offset = 56;
+        }
+    }
     return success;
 }
 
