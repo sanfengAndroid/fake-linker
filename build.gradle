@@ -21,8 +21,8 @@ plugins {
 
 def linkerModuleName = 'fake-linker'
 def hookInstallModuleName = 'hook-install'
-def mVersionCode = 1200
-def mVersionName = "1.2"
+def mVersionCode = 1300
+def mVersionName = "1.3"
 def buildApi = rootProject.props['buildApi'] ?: 30
 def appType = rootProject.props['appType']
 android {
@@ -44,7 +44,7 @@ android {
                 cFlags "-Werror"
                 abiFilters.addAll(rootProject.props['abis'] ?: ['armeabi-v7a', 'x86', 'arm64-v8a', 'x86_64'])
                 arguments "-DANDROID_PLATFORM=${buildApi}", "-DLINKER_MODULE_NAME=${linkerModuleName}",
-                        "-DMERGE_BUILD=" + (rootProject.props['mergeBuild'] ?: true),
+                        "-DMERGE_BUILD=" + rootProject.props['mergeBuild'],
                         "-DHOOK_INSTALL_MODULE_NAME=${hookInstallModuleName}",
                         "-DHOOK_LOG_LEVEL=" + (rootProject.props['logLevel']),
                         "-DMODULE_VERSION=${mVersionCode}",
@@ -103,7 +103,12 @@ tasks.whenTaskAdded { task ->
                 }
 
                 dir.eachFileRecurse {
-                    if (it.name == "lib${linkerModuleName}-${buildApi}.so") {
+                    if (it.parentFile.name == 'x86_64' || it.parentFile.name == 'arm64-v8a') {
+                        if (!rootProject.props['mergeBuild'] && it.name == "lib${linkerModuleName}-${buildApi}64.so") {
+                            println "delete current fake-linker version module: ${it.name}"
+                            it.delete()
+                        }
+                    } else if (it.name == "lib${linkerModuleName}-${buildApi}.so") {
                         println "delete current fake-linker version module: ${it.name}"
                         it.delete()
                     }
