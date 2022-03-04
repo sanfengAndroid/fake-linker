@@ -202,7 +202,9 @@ static bool is_lookup_tracing_enabled() {
 }
 
 const char *soinfo::get_soname() const {
-#if __ANDROID_API__ >= __ANDROID_API_M__
+#if __ANDROID_API__ >= __ANDROID_API_S__
+    return soname_.c_str();
+#elif __ANDROID_API__ >= __ANDROID_API_M__
     return soname_;
 #else
     return name_;

@@ -496,7 +496,11 @@ public:
 	uint8_t *android_relocs_;
 	size_t android_relocs_size_;
 
+#if __ANDROID_API__ >= __ANDROID_API_S__
+	std::string soname_;
+#else
 	const char *soname_;
+#endif
 	std::string realpath_;
 
 	const ElfW(Versym) *versym_;
