@@ -22,7 +22,7 @@ Android version: `Android 5.0` ~ `Android 11`+. Support instructions: `x86`, `x8
 ## Hook module development
 1. Copy the export header file (the source code is in the [export](src/main/cpp/export) directory under the `cpp` directory) to the `Hook` module.
 2. Implement the `fake_load_library_init` export function in [`linker_export.h`](src/main/cpp/export/linker_export.h).
-3. Call various implementation methods, check the definition of `RemoteInvokeInterface` in [`linker_export.h`](src/main/cpp/export/linker_export.h).
+3. Call various implementation methods, check the definition of `FakeLinker` in [`linker_export.h`](src/main/cpp/export/linker_export.h).
 4. Normally implement Hook methods such as: `open`, `dlopen`, `dlsym` method, etc., the method must be exported.
 5. Hook module distinguishes Android7.0 or lower (no namespace, `soinfo handle`), Android7.0 and above (namespace, `soinfo handle`).
 
@@ -47,7 +47,7 @@ The module has integrated the installation executable file, and the Java layer c
 1. Set the `Hook` module as the global library `remote->CallCommonFunction(kCFAddSoinfoToGlobal, kSPAddress, nullptr, kSPNull, nullptr, &error_code);`.
 2. Relocate some loaded modules `remote->CallCommonFunction(kCFCallManualRelinks, kSPAddress, nullptr, kSPNames, libs, &error_code);`.
     ```c++
-    static const RemoteInvokeInterface *remote;
+    static const FakeLinker *remote;
     // Hook the jni function RegisterNatives
     static jint HookJniRegisterNatives(JNIEnv *env, jclass c, const JNINativeMethod *methods, jint nMethods) {
         LOG("start register native function %p", __builtin_return_address(0));
@@ -69,15 +69,15 @@ The module has integrated the installation executable file, and the Java layer c
             LOGE("init global soinfo error, error code: %x", error_code);
             return;
         }
-        VarLengthObject<const char *> *libs;
+        VarArray<const char *> *libs;
         // Re-parse the import table of the following modules, because the following modules have been loaded before we have loaded them, and all re-links make their symbolic links to our Hook method
         // The java system code also mainly uses the following libraries, and relinking also means the core import function of Hook's java
-        libs = VaArgsToVarLengthObject<const char *>(5, "libjavacore.so", "libnativehelper.so", "libnativeloader.so", "libart.so", "libopenjdk.so");
+        libs = VaargToVarArray<const char *>(5, "libjavacore.so", "libnativehelper.so", "libnativeloader.so", "libart.so", "libopenjdk.so");
         remote->CallCommonFunction(kCFCallManualRelinks, kSPAddress, nullptr, kSPNames, libs, &error_code);
         // Hook JNI interface
         remote_->HookJniNative(offsetof(JNINativeInterface, RegisterNatives), (void *)HookJniRegisterNatives, nullptr);
     }
-    C_API void fake_load_library_init(JNIEnv *env, void *fake_soinfo, const RemoteInvokeInterface *interface, 
+    C_API void fake_load_library_init(JNIEnv *env, void *fake_soinfo, const FakeLinker *interface,
     const char *cache_path, const char *config_path, const char *_process_name){
         remote = interface;
         InitHook();

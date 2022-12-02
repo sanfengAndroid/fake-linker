@@ -20,7 +20,7 @@
 
 1. 复制导出头文件(源码在 `cpp` 目录下的 [export](src/main/cpp/export) 目录)到 `Hook` 模块
 2. 实现[`linker_export.h`](src/main/cpp/export/linker_export.h)中的 `fake_load_library_init` 导出函数
-3. 调用各种实现方法，查看[`linker_export.h`](src/main/cpp/export/linker_export.h)中的 `RemoteInvokeInterface` 定义
+3. 调用各种实现方法，查看[`linker_export.h`](src/main/cpp/export/linker_export.h)中的 `FakeLinker` 定义
 4. 正常编写Hook方法如: `open`，`dlopen`，`dlsym`方法等等，方法必须被导出
 5. Hook模块区分Android7.0以下(无命名空间，`soinfo handle`)，Android7.0及以上(有命名空间，`soinfo handle`)
 
@@ -44,7 +44,7 @@
 1. 将`Hook`模块设置为全局库 `remote->CallCommonFunction(kCFAddSoinfoToGlobal, kSPAddress, nullptr, kSPNull, nullptr, &error_code);`
 2. 重定位一些已经加载完成的模块 `remote->CallCommonFunction(kCFCallManualRelinks, kSPAddress, nullptr, kSPNames, libs, &error_code);`
     ```c++
-    static const RemoteInvokeInterface *remote;
+    static const FakeLinker *remote;
     // Hook JNI 函数RegisterNatives
     static jint HookJniRegisterNatives(JNIEnv *env, jclass c, const JNINativeMethod *methods, jint nMethods) {
         LOG("start register native function %p", __builtin_return_address(0));
@@ -66,15 +66,15 @@
             LOGE("init global soinfo error, error code: %x", error_code);
             return;
         }
-        VarLengthObject<const char *> *libs;
+        VarArray<const char *> *libs;
         // 重新解析以下模块的导入表,因为以下模块在我们还未加载前就已经加载完成了,所有重新链接使其符号链接到我们的Hook方法
         // java系统代码也主要使用是以下几个库,重链接也意味着Hook的java的核心导入函数
-        libs = VaArgsToVarLengthObject<const char *>(5, "libjavacore.so", "libnativehelper.so", "libnativeloader.so", "libart.so", "libopenjdk.so");
+        libs = VaargToVarArray<const char *>(5, "libjavacore.so", "libnativehelper.so", "libnativeloader.so", "libart.so", "libopenjdk.so");
         remote->CallCommonFunction(kCFCallManualRelinks, kSPAddress, nullptr, kSPNames, libs, &error_code);
         // Hook JNI 接口,监听RegisterNatives方法
         remote_->HookJniNative(offsetof(JNINativeInterface, RegisterNatives), (void *)HookJniRegisterNatives, nullptr);
     }
-    C_API void fake_load_library_init(JNIEnv *env, void *fake_soinfo, const RemoteInvokeInterface *interface, 
+    C_API void fake_load_library_init(JNIEnv *env, void *fake_soinfo, const FakeLinker *interface,
     const char *cache_path, const char *config_path, const char *_process_name){
         remote = interface;
         InitHook();

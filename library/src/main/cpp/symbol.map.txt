@@ -1,0 +1,7 @@
+{
+    global:
+        g_fakelinker_export;
+        JNI_OnLoad;
+    local:
+        *;
+};

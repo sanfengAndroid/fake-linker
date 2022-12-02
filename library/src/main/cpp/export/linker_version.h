@@ -1,0 +1,9 @@
+
+#ifndef FAKE_LINKER_LINKER_VERSION_H
+#define FAKE_LINKER_LINKER_VERSION_H
+
+#define HOOK_LOG_LEVEL      2
+#define MODULE_VERSION      2000
+#define MODULE_VERSION_NAME "2.0"
+
+#endif
