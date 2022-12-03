@@ -226,7 +226,7 @@ bool ElfReader::LoadFromDisk(const char *library_name) {
   disk_info_ = std::make_unique<ElfDiskInfo>();
   disk_info_->library_fd.reset(open64(real_path.c_str(), O_RDONLY | O_CLOEXEC));
   if (!disk_info_->library_fd.ok()) {
-    DL_ERR("Failed to open file from disk: %s", library_name);
+    DL_ERR("Failed to open file from disk: %s", real_path.c_str());
     return false;
   }
   size_t file_size = lseek64(disk_info_->library_fd.get(), 0, SEEK_END);

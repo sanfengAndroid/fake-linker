@@ -343,7 +343,7 @@ soinfo *ProxyLinker::FindContainingLibrary(const void *p) {
   return nullptr;
 }
 
-soinfo *ProxyLinker::GetLinkerSoinfo() { return linker_symbol.linker_soinfo; }
+soinfo *ProxyLinker::GetLinkerSoinfo() { return linker_symbol.linker_soinfo.Get(); }
 
 void *ProxyLinker::FindSymbolByDlsym(soinfo *si, const char *name) {
   void *result;
@@ -516,9 +516,6 @@ int *ProxyLinker::GetGLdDebugVerbosity() { return linker_symbol.g_ld_debug_verbo
 bool ProxyLinker::SetLdDebugVerbosity(int level) {
   if (int *p = linker_symbol.g_ld_debug_verbosity.Get()) {
     *p = level;
-    if (uint32_t *p1 = linker_symbol.g_linker_logger.Get()) {
-      *p1 = 1 | 2;
-    }
     return true;
   }
   return false;
@@ -695,6 +692,7 @@ bool ProxyLinker::ManualRelinkLibrary(symbol_relocations &rels, soinfo *child) {
 
 /*
  * 调用系统重定位会出现各种问题,废弃使用
+ *
  * */
 bool ProxyLinker::SystemRelinkLibrary(soinfo *so) {
   bool success;

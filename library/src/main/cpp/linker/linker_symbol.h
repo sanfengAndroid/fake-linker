@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <unordered_map>
 
+#include <alog.h>
+
 #include "linked_list.h"
 #include "linker_block_allocator.h"
 #include "linker_namespaces.h"
@@ -31,8 +33,24 @@ struct SymbolItem {
     return pointer != nullptr;
   }
 
+  bool SetValue(T *value) {
+    if (value == nullptr) {
+      return !force;
+    }
+    pointer = value;
+    return true;
+  }
+
   bool CheckApi(int api) { return api >= min_api && api < max_api; }
-  T *Get() { return pointer; }
+  T *Get() {
+    if (!pointer) {
+      LOGE("Attempt to get symbol/library `%s` address is empty, api is %d in [%d, %d), only to terminate program "
+           "prevent error from sending",
+           name, android_api, min_api, max_api);
+      abort();
+    }
+    return pointer;
+  }
 };
 
 template <typename T, bool IsPointer = false>
@@ -45,13 +63,17 @@ struct ExportSymbol : SymbolItem<T, IsPointer> {
   static constexpr int type = 1;
 };
 
+struct LibrarySymbol : SymbolItem<soinfo, false> {
+  static constexpr int type = 2;
+};
+
 struct LinkerSymbol {
   InternalSymbol<soinfo, true> solist;
   InternalSymbol<int> g_ld_debug_verbosity{{.force = false}};
   InternalSymbol<uint32_t> g_linker_logger{{.force = false}};
   InternalSymbol<pthread_mutex_t> g_dl_mutex;
   InternalSymbol<char> linker_dl_err_buf;
-  InternalSymbol<void> link_image;
+  InternalSymbol<void> link_image{{.force = false}};
   ANDROID_GE_N InternalSymbol<android_namespace_t> g_default_namespace{{.min_api = __ANDROID_API_N__}};
   ANDROID_LE_M InternalSymbol<std::unordered_map<uintptr_t, soinfo *>> g_soinfo_handles_map{
     {.min_api = __ANDROID_API_N__}};
@@ -83,10 +105,11 @@ struct LinkerSymbol {
 
   InternalSymbol<LinkerTypeAllocator<soinfo>> g_soinfo_allocator;
   InternalSymbol<LinkerTypeAllocator<LinkedListEntry<soinfo>>> g_soinfo_links_allocator;
-  InternalSymbol<LinkerTypeAllocator<android_namespace_t>> g_namespace_allocator;
-  InternalSymbol<LinkerTypeAllocator<LinkedListEntry<android_namespace_t>>> g_namespace_list_allocator;
+  InternalSymbol<LinkerTypeAllocator<android_namespace_t>> g_namespace_allocator{{.min_api = __ANDROID_API_N__}};
+  InternalSymbol<LinkerTypeAllocator<LinkedListEntry<android_namespace_t>>> g_namespace_list_allocator{
+    {.min_api = __ANDROID_API_N__}};
 
-  soinfo *linker_soinfo;
+  LibrarySymbol linker_soinfo;
 
   void InitSymbolName();
 

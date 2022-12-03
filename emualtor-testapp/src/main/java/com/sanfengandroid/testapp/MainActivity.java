@@ -53,17 +53,12 @@ public class MainActivity extends AppCompatActivity {
 
     findViewById(R.id.btnLoadArmLibrary).setOnClickListener(v -> {
       // test_module 是 arm 架构, fakelinker和fakelinker模块是x86架构
-      new Thread() {
-        @Override
-        public void run() {
-          System.loadLibrary("test_module");
-          testArmSymbolForFakeinkerHook();
-          beforeAddress = findModuleBeforeAddress();
-          afterAddress = findModuleAfterAddress();
-          testBeforeHook();
-          System.loadLibrary("test_module_hook");
-        }
-      }.start();
+      System.loadLibrary("test_module");
+      testArmSymbolForFakeinkerHook();
+      beforeAddress = findModuleBeforeAddress();
+      afterAddress = findModuleAfterAddress();
+      testBeforeHook();
+      System.loadLibrary("test_module_hook");
     });
 
     findViewById(R.id.btnTestBeforeHook).setOnClickListener(v -> {
