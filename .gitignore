@@ -15,3 +15,4 @@ build/
 .externalNativeBuild
 .cxx
 local.properties
+library/src/main/cpp/export/linker_version.h
