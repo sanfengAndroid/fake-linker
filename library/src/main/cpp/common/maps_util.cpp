@@ -18,7 +18,6 @@
 
 namespace fakelinker {
 
-
 MapsHelper::MapsHelper(const char *library_name) { GetLibraryProtect(library_name); }
 
 MapsHelper::~MapsHelper() { CloseMaps(); }
@@ -39,6 +38,7 @@ bool MapsHelper::GetMemoryProtect(void *address) {
       page.file_offset = file_offset_;
       page.old_protect = FormatProtect();
       page.inode = inode_;
+      page.path = path_;
       page_.push_back(page);
       return true;
     }
@@ -56,21 +56,28 @@ bool MapsHelper::ReadLibraryMap() {
       }
       found_inode = inode_;
       started = true;
-    } else if (!FormatLine() || !MatchPath()) {
+    } else if (!FormatLine()) {
       break;
     }
-    // 不允许库映射段中间包含匿名映射
-    if (found_inode != inode_) {
+    // 库映射可能是不连续的
+    if (found_inode != inode_ && inode_ != 0) {
       break;
+    }
+    if (inode_ == 0) {
+      continue;
     }
     PageProtect page;
-    real_path_ = path_;
     page.start = start_address_;
     page.end = end_address_;
     page.old_protect = FormatProtect();
     page.file_offset = file_offset_;
     page.inode = inode_;
+    page.path = path_;
     page_.push_back(page);
+  }
+  if (page_.empty()) {
+    // 文件已读取完
+    return true;
   }
   return VerifyLibraryMap();
 }
@@ -83,6 +90,9 @@ bool MapsHelper::GetLibraryProtect(const char *library_name) {
   do {
     page_.clear();
   } while (!ReadLibraryMap());
+  if (!page_.empty()) {
+    LOGD("find library: %s\n %s", library_name, ToString().c_str());
+  }
   return !page_.empty();
 }
 
@@ -104,9 +114,6 @@ bool MapsHelper::UnlockAddressProtect(void *address) {
   return false;
 }
 
-/*
- * 查找模块基址忽略内存权限匹配,有些情况并不是r-xp在最前面
- * */
 gaddress MapsHelper::FindLibraryBase(const char *library_name) {
   gaddress result = 0;
   if (!library_name || !OpenMaps()) {
@@ -172,8 +179,6 @@ gaddress MapsHelper::GetLibraryBaseAddress() const {
   return start;
 }
 
-gaddress MapsHelper::GetCurrentLineStartAddress() const { return start_address_; }
-
 std::string MapsHelper::GetLibraryRealPath(const char *library_name) {
   std::string result;
   if (!library_name || !OpenMaps()) {
@@ -193,10 +198,17 @@ std::string MapsHelper::GetLibraryRealPath(const char *library_name) {
   return result;
 }
 
-std::string MapsHelper::GetCurrentRealPath() { return real_path_; }
+std::string MapsHelper::GetCurrentRealPath() const {
+  for (auto &page : page_) {
+    if (!page.path.empty() && page.inode != 0) {
+      return page.path;
+    }
+  }
+  return "";
+}
 
 std::string MapsHelper::ToString() const {
-  std::string result = real_path_ + ":";
+  std::string result = GetCurrentRealPath() + ":";
   char tmp[16];
 
   auto IntToHex = [&tmp](gaddress addr) -> const char * {
@@ -263,8 +275,13 @@ bool MapsHelper::RecoveryPageProtect() {
 bool MapsHelper::GetMapsLine() { return fgets(line_, sizeof(line_), maps_fd_) != nullptr; }
 
 bool MapsHelper::FormatLine() {
-  return sscanf(line_, "%" SCNx64 "-%" SCNx64 " %s %" SCNx64 "%*s %" SCNi32 " %s", &start_address_, &end_address_,
-                protect_, &file_offset_, &inode_, path_) == 6;
+  int num = sscanf(line_, "%" SCNx64 "-%" SCNx64 " %s %" SCNx64 "%*s %" SCNi32 " %s", &start_address_, &end_address_,
+                   protect_, &file_offset_, &inode_, path_);
+  if (num == 5) {
+    path_[0] = '\0';
+    return true;
+  }
+  return num == 6;
 }
 
 int MapsHelper::FormatProtect() {
@@ -302,7 +319,7 @@ bool MapsHelper::OpenMaps() {
     return true;
   }
   maps_fd_ = fopen(MAPS_PATH, "re");
-  return (maps_fd_ != nullptr);
+  return maps_fd_ != nullptr;
 }
 
 void MapsHelper::CloseMaps() {
@@ -332,10 +349,6 @@ bool MapsHelper::MakeLibraryName(const char *library_name) {
  * @return false
  */
 bool MapsHelper::VerifyLibraryMap() {
-  if (page_.empty()) {
-    // 说明已经读取完整个maps文件了
-    return true;
-  }
   for (auto &page : page_) {
     // 模拟器下查找arm库没有可执行权限
     if ((page.old_protect & (kMPEexcute | kMPWrite)) != 0) {

@@ -17,6 +17,7 @@ struct PageProtect {
   uint8_t new_protect;
   uint64_t file_offset;
   int32_t inode;
+  std::string path;
 };
 
 enum MapsProt {
@@ -50,11 +51,9 @@ public:
 
   gaddress GetLibraryBaseAddress() const;
 
-  gaddress GetCurrentLineStartAddress() const;
-
   std::string GetLibraryRealPath(const char *library_name);
 
-  std::string GetCurrentRealPath();
+  std::string GetCurrentRealPath() const;
 
   std::string ToString() const;
 
@@ -90,7 +89,6 @@ private:
   char protect_[7]{};
   FILE *maps_fd_ = nullptr;
   std::string library_name_;
-  std::string real_path_;
   gaddress start_address_ = 0;
   gaddress end_address_ = 0;
   uint64_t file_offset_ = 0;
