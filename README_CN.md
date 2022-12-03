@@ -6,7 +6,7 @@
 
 ## 支持的Android版本
 
-支持版本：`Android 5.0 ~ Android 11+`，支持架构：`x86`，`x86_64`，`arm`，`arm64`
+支持版本：`Android 5.0 ~ Android 13+`，支持架构：`x86`，`x86_64`，`arm`，`arm64`, 支持鸿蒙系统 2.x 和 3.x
 
 ## 构建
 
