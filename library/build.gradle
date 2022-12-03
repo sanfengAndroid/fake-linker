@@ -38,7 +38,7 @@ android {
                         "-DINSTALLER_MODULE_NAME=${rootProject.installerModuleName}",
                         "-DHOOK_LOG_LEVEL=${rootProject.logLevel}",
                         "-DMODULE_VERSION=${rootProject.versionCode}",
-                        "-DMODULE_VERSION_NAME=\\\"${rootProject.versionName}\\\"",
+                        "-DMODULE_VERSION_NAME=${rootProject.versionName}",
                         '-DFAKELINKER_TEST=ON'
             }
         }
