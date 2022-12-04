@@ -113,6 +113,10 @@ if(FAKELINKER_TEST)
     gtest
   )
   target_compile_options(fakelinker_test PRIVATE -DSTD_LOG)
+
+  set_target_properties(fakelinker_test PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY
+    ${CMAKE_CURRENT_SOURCE_DIR}/build/${CMAKE_BUILD_TYPE}/${CMAKE_ANDROID_ARCH_ABI})
 endif()
 
 if(FAKELINKER_BUILD_INSTALLER)

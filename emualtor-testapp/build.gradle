@@ -39,10 +39,24 @@ android {
         }
     }
 
+    if (rootProject.hasSign){
+        signingConfigs {
+            sign {
+                storeFile file(rootProject.storeFile)
+                storePassword rootProject.storePassword
+                keyAlias rootProject.keyAlias
+                keyPassword rootProject.keyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (rootProject.hasSign) {
+                signingConfig signingConfigs.sign
+            }
         }
     }
     compileOptions {

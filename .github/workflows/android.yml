@@ -20,14 +20,48 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
+    - name: Install store file
+      run: echo ${{ secrets.STORE_FILE }} | base64 -d > fake.jks
+    - name: Install build configuration
+      run: |
+        echo storeFile=`pwd`/fake.jks > local.properties
+        echo storePassword=${{ secrets.STORE_PASSWORD }} >> local.properties
+        echo keyAlias=${{ secrets.KEY_ALIAS }} >> local.properties
+        echo keyPassword=${{ secrets.KEY_PASSWORD }} >> local.properties
+        echo logLevel=3 >> local.properties
+        echo targetSdk=33 >> local.properties
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Build with Gradle
-      run: ./gradlew build
+      run: ./gradlew build -PmergeBuild=true -PemulatorBuild=false
+    - name: Copy output
+      run: |
+        mkdir out
+        mv emualtor-testapp/build/outputs/apk/debug/emualtor-testapp-debug.apk out/debug/testapp-hook-debug.apk
+        mv emualtor-testapp/build/outputs/apk/release/emualtor-testapp-release.apk out/release/testapp-hook-release.apk
+        mv library/src/main/cpp/build/Debug out/debug/test_binary
+        mv library/src/main/cpp/build/Release out/release/test_binary
+        mv library/build/outputs/aar/library-debug.aar out/faklinker-debug.aar
+        mv library/build/outputs/aar/library-release.aar out/fakelinker-release.aar
+
+    - name: Build emulator version with Gradle
+      run: |
+        ./gradlew clean
+        ./gradlew build -PmergeBuild=true -PemulatorBuild=true
+
+    - name: Copy emulator version output
+      run: |
+        mv emualtor-testapp/build/outputs/apk/debug/emualtor-testapp-debug.apk out/debug/emulator-testapp-hook-debug.apk
+        mv emualtor-testapp/build/outputs/apk/release/emualtor-testapp-release.apk out/release/emulator-testapp-hook-release.apk
+        mv library/build/outputs/aar/library-debug.aar out/faklinker-emualtor-debug.aar
+        mv library/build/outputs/aar/library-release.aar out/fakelinker-emulator-release.aar
+
+    - name: Uninstall store file
+      run: rm -f fake.jks
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v3.1.1
       with:
-        name: testapk
+        name: ${{ github.sha }}-build
         # A file, directory or wildcard pattern that describes what to upload
-        path: emualtor-testapp/build/outputs/apk
+        path: out
         
