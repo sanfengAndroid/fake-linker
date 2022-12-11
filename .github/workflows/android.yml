@@ -19,6 +19,11 @@ jobs:
           distribution: "temurin"
           cache: gradle
 
+      - name: Setup Python
+        uses: actions/setup-python@v4.3.1
+        with:
+          python-version: "3.10"
+
       - name: Install store file
         run: echo ${{ secrets.STORE_FILE }} | base64 -d > fake.jks
       - name: Install build configuration
@@ -32,33 +37,37 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Build with Gradle
-        run: ./gradlew build -PmergeBuild=true -PemulatorBuild=false
+        run: ./gradlew -PmergeBuild=true -PemulatorBuild=false fakelinker-test:assembleDebug fakelinker-test:assembleDebugAndroidTest library:assembleDebug library:assembleRelease
       - name: Copy output
         run: |
-          mkdir -p out/debug/test_binary out/release/test_binary out/debug/test_apk out/release/test_apk
-          mv fakelinker-test/src/main/cpp/build/Debug out/debug/test_binary
-          mv fakelinker-test/src/main/cpp/build/Release out/release/test_binary
-          mv fakelinker-test/build/outputs/apk/debug/fakelinker-test-debug.apk out/debug/test_apk/fakelinker-test-debug.apk
+          mkdir -p out/test_binary out/test_apk
+          mv fakelinker-test/src/main/cpp/build/Debug out/test_binary
+          mv fakelinker-test/build/outputs/apk/debug/fakelinker-test-debug.apk out/test_apk/fakelinker-test-debug.apk
+          mv fakelinker-test/build/outputs/apk/androidTest/debug/fakelinker-test-debug-androidTest.apk out/test_apk/fakelinker-androidtest-debug.apk
           mv library/build/outputs/aar/library-debug.aar out/faklinker-lib-debug.aar
           mv library/build/outputs/aar/library-release.aar out/fakelinker-lib-release.aar
 
-      - name: Build android test version with Gradle
-        run: ./gradlew fakelinker-test:assembleDebugAndroidTest
-      - name: Copy android test output
-        run: |
-          mv fakelinker-test/build/outputs/apk/androidTest/debug/fakelinker-test-debug-androidTest.apk out/debug/test_apk/fakelinker-androidtest-debug.apk
-
       - name: Build emulator version with Gradle
         run: |
-          ./gradlew clean
-          ./gradlew build -PmergeBuild=true -PemulatorBuild=true
+          rm -rf library/build/intermediates/merged_native_libs
+          ./gradlew -PmergeBuild=true -PemulatorBuild=true emulator-testapp:assembleDebug library:assembleDebug library:assembleRelease
 
       - name: Copy emulator version output
         run: |
-          mv emulator-testapp/build/outputs/apk/debug/emulator-testapp-debug.apk out/debug/test_apk/fakelinker-emulator-test-debug.apk
-          mv emulator-testapp/build/outputs/apk/release/emulator-testapp-release.apk out/release/fakelinker-emulator-test-release.apk
+          mv emulator-testapp/build/outputs/apk/debug/emulator-testapp-debug.apk out/test_apk/fakelinker-emulator-test-debug.apk
           mv library/build/outputs/aar/library-debug.aar out/faklinker-emulator-lib-debug.aar
           mv library/build/outputs/aar/library-release.aar out/fakelinker-emulator-lib-release.aar
+
+      - name: Build 32-bit test app
+        run: |
+          rm -rf library/build/intermediates/merged_native_libs
+          rm -rf fakelinker-test/build/intermediates/merged_native_libs
+          echo "abis=armeabi-v7a,x86" >> local.properties
+          ./gradlew fakelinker-test:assembleDebug
+
+      - name: Copy 32-bit test app
+        run: |
+          mv fakelinker-test/build/outputs/apk/debug/fakelinker-test-debug.apk out/test_apk/fakelinker-test-32bit-debug.apk
 
       - name: Uninstall store file
         run: rm -f fake.jks
