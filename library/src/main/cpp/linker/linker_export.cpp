@@ -89,6 +89,44 @@ SoinfoPtr soinfo_find_impl(SoinfoFindType find_type, const void *param, int *out
   return nullptr;
 }
 
+ANDROID_GE_N SoinfoPtr soinfo_find_in_namespace_impl(SoinfoFindType find_type, const void *param,
+                                                     AndroidNamespacePtr np, int *out_error) {
+  CHECK_API_PTR(__ANDROID_API_N__);
+  if (np == nullptr) {
+    return soinfo_find_impl(find_type, param, out_error);
+  }
+  switch (find_type) {
+  case kSTAddress: {
+    if (!param) {
+      param = __builtin_return_address(0);
+    }
+    void *ret = ProxyLinker::Get().FindContainingLibrary(param);
+    CHECK_ERROR(ret, kErrorSoinfoNotFound);
+    return ret;
+  }
+  case kSTHandle: {
+    CHECK_API_PTR(__ANDROID_API_N__);
+    CHECK_PARAM_PTR(param, kErrorParameterNull);
+    void *ret = ProxyLinker::Get().SoinfoFromHandle(param);
+    CHECK_ERROR(ret, kErrorSoinfoNotFound);
+    return ret;
+  }
+  case kSTName: {
+    CHECK_PARAM_PTR(param, kErrorParameterNull);
+    void *ret = ProxyLinker::Get().FindSoinfoByNameInNamespace(reinterpret_cast<const char *>(param),
+                                                               reinterpret_cast<android_namespace_t *>(np));
+    CHECK_ERROR(ret, kErrorSoinfoNotFound);
+    return ret;
+  }
+  case kSTOrig:
+    return const_cast<void *>(param);
+  default:
+    CHECK_PARAM_PTR(false, kErrorParameter);
+    return nullptr;
+  }
+  return nullptr;
+}
+
 int soinfo_get_attribute_impl(SoinfoPtr soinfo_ptr, SoinfoAttributes *attrs) {
   CHECK_PARAM_RET_ERROR(soinfo_ptr, kErrorSoinfoNull);
   CHECK_PARAM_RET_ERROR(attrs, kErrorParameterNull);
@@ -407,21 +445,7 @@ ANDROID_GE_N void *android_namespace_get_caller_address_impl(AndroidNamespacePtr
 
   auto *np = static_cast<android_namespace_t *>(android_namespace_ptr);
   CHECK_PARAM_PTR(np, kErrorNpNull);
-  // 第一个soinfo可能是动态创建的基址可能为0,如果有全局库则还要判断命名空间
-  soinfo *first_so = np->soinfo_list().find_if([&first_so, &np](soinfo *so) {
-    if (so->load_bias() == 0) {
-      return false;
-    }
-    if (so->get_primary_namespace() != np) {
-      return false;
-    }
-    return true;
-  });
-
-  if (first_so) {
-    return reinterpret_cast<void *>(first_so->load_bias());
-  }
-  return nullptr;
+  return ProxyLinker::GetNamespaceCallerAddress(np);
 }
 
 ANDROID_GE_O int android_namespace_get_link_namespace_impl(AndroidNamespacePtr android_namespace_ptr,
@@ -720,6 +744,7 @@ C_API API_PUBLIC FakeLinker g_fakelinker_export = {
     return init_success;
   },
   soinfo_find_impl,
+  soinfo_find_in_namespace_impl,
   soinfo_get_attribute_impl,
   soinfo_to_string_impl,
   soinfo_query_all_impl,

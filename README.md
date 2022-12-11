@@ -60,7 +60,7 @@ The module has integrated the installation executable file, and the Java layer c
         }
         return ret;
     }
-    
+
     static void InitHook() {
         int error_code;
         // Add this hook module to the global module, which will affect all modules loaded later
@@ -84,4 +84,4 @@ The module has integrated the installation executable file, and the Java layer c
     }
     ```
 3. For other more uses
-[FakeXposed](https://github.com/sanfengAndroid/FakeXposed) `Xposed`，`root` Shield detection，File redirection, etc. 
+[FakeXposed](https://github.com/sanfengAndroid/FakeXposed) `Xposed`，`root` Shield detection，File redirection, etc.

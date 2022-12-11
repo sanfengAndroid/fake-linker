@@ -26,8 +26,6 @@ android {
     defaultConfig {
         minSdkVersion 21
         targetSdkVersion rootProject.targetSdk
-
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
 
         externalNativeBuild {
@@ -38,8 +36,7 @@ android {
                         "-DINSTALLER_MODULE_NAME=${rootProject.installerModuleName}",
                         "-DHOOK_LOG_LEVEL=${rootProject.logLevel}",
                         "-DMODULE_VERSION=${rootProject.versionCode}",
-                        "-DMODULE_VERSION_NAME=${rootProject.versionName}",
-                        '-DFAKELINKER_TEST=ON'
+                        "-DMODULE_VERSION_NAME=${rootProject.versionName}"
             }
         }
 

@@ -1,0 +1,96 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.sanfengandroid.fakelinker.test'
+    compileSdk rootProject.targetSdk
+
+    defaultConfig {
+        applicationId "com.sanfengandroid.fakelinker.test"
+        minSdk 21
+        targetSdk rootProject.targetSdk
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        externalNativeBuild {
+            cmake {
+                abiFilters.addAll(rootProject.abis)
+                arguments '-DANDROID_PLATFORM=21',
+                        "-DLINKER_MODULE_NAME=${rootProject.fakeLinkerModuleName}",
+                        "-DINSTALLER_MODULE_NAME=${rootProject.installerModuleName}",
+                        "-DHOOK_LOG_LEVEL=${rootProject.logLevel}",
+                        "-DMODULE_VERSION=${rootProject.versionCode}",
+                        "-DMODULE_VERSION_NAME=${rootProject.versionName}"
+            }
+        }
+    }
+
+    if (rootProject.hasSign) {
+        signingConfigs {
+            sign {
+                storeFile file(rootProject.storeFile)
+                storePassword rootProject.storePassword
+                keyAlias rootProject.keyAlias
+                keyPassword rootProject.keyPassword
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (rootProject.hasSign) {
+                signingConfig signingConfigs.sign
+            }
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+        }
+    }
+    ndkVersion '25.1.8937393'
+    buildFeatures {
+        prefab true
+    }
+
+    packagingOptions{
+        exclude 'lib/armeabi-v7a/libadder.so'
+        exclude 'lib/armeabi-v7a/libapptest.so'
+        exclude 'lib/armeabi-v7a/libc++_shared.so'
+        exclude 'lib/arm64-v8a/libadder.so'
+        exclude 'lib/arm64-v8a/libapptest.so'
+        exclude 'lib/arm64-v8a/libc++_shared.so'
+        exclude 'lib/x86/libadder.so'
+        exclude 'lib/x86/libapptest.so'
+        exclude 'lib/x86/libc++_shared.so'
+        exclude 'lib/x86_64/libadder.so'
+        exclude 'lib/x86_64/libapptest.so'
+        exclude 'lib/x86_64/libc++_shared.so'
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.8.0'
+    implementation 'androidx.appcompat:appcompat:1.5.1'
+    implementation 'com.google.android.material:material:1.7.0'
+    implementation 'androidx.test.ext:junit-gtest:1.0.0-alpha01'
+    implementation 'com.android.ndk.thirdparty:googletest:1.11.0-beta-1'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.4'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.0'
+}

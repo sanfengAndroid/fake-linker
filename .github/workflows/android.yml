@@ -2,66 +2,69 @@ name: Android CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: set up JDK 11
-      uses: actions/setup-java@v3
-      with:
-        java-version: '11'
-        distribution: 'temurin'
-        cache: gradle
+      - uses: actions/checkout@v3
+      - name: set up JDK 11
+        uses: actions/setup-java@v3
+        with:
+          java-version: "11"
+          distribution: "temurin"
+          cache: gradle
 
-    - name: Install store file
-      run: echo ${{ secrets.STORE_FILE }} | base64 -d > fake.jks
-    - name: Install build configuration
-      run: |
-        echo storeFile=`pwd`/fake.jks > local.properties
-        echo storePassword=${{ secrets.STORE_PASSWORD }} >> local.properties
-        echo keyAlias=${{ secrets.KEY_ALIAS }} >> local.properties
-        echo keyPassword=${{ secrets.KEY_PASSWORD }} >> local.properties
-        echo logLevel=3 >> local.properties
-        echo targetSdk=33 >> local.properties
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-    - name: Build with Gradle
-      run: ./gradlew build -PmergeBuild=true -PemulatorBuild=false
-    - name: Copy output
-      run: |
-        mkdir -p out/debug/test_binary out/release/test_binary
-        mv emualtor-testapp/build/outputs/apk/debug/emualtor-testapp-debug.apk out/debug/testapp-hook-debug.apk
-        mv emualtor-testapp/build/outputs/apk/release/emualtor-testapp-release.apk out/release/testapp-hook-release.apk
-        mv library/src/main/cpp/build/Debug out/debug/test_binary
-        mv library/src/main/cpp/build/Release out/release/test_binary
-        mv library/build/outputs/aar/library-debug.aar out/faklinker-debug.aar
-        mv library/build/outputs/aar/library-release.aar out/fakelinker-release.aar
+      - name: Install store file
+        run: echo ${{ secrets.STORE_FILE }} | base64 -d > fake.jks
+      - name: Install build configuration
+        run: |
+          echo storeFile=`pwd`/fake.jks > local.properties
+          echo storePassword=${{ secrets.STORE_PASSWORD }} >> local.properties
+          echo keyAlias=${{ secrets.KEY_ALIAS }} >> local.properties
+          echo keyPassword=${{ secrets.KEY_PASSWORD }} >> local.properties
+          echo logLevel=3 >> local.properties
+          echo targetSdk=33 >> local.properties
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      - name: Build with Gradle
+        run: ./gradlew build -PmergeBuild=true -PemulatorBuild=false
+      - name: Copy output
+        run: |
+          mkdir -p out/debug/test_binary out/release/test_binary out/debug/test_apk out/release/test_apk
+          mv fakelinker-test/src/main/cpp/build/Debug out/debug/test_binary
+          mv fakelinker-test/src/main/cpp/build/Release out/release/test_binary
+          mv fakelinker-test/build/outputs/apk/debug/fakelinker-test-debug.apk out/debug/test_apk/fakelinker-test-debug.apk
+          mv library/build/outputs/aar/library-debug.aar out/faklinker-lib-debug.aar
+          mv library/build/outputs/aar/library-release.aar out/fakelinker-lib-release.aar
 
-    - name: Build emulator version with Gradle
-      run: |
-        ./gradlew clean
-        ./gradlew build -PmergeBuild=true -PemulatorBuild=true
+      - name: Build android test version with Gradle
+        run: ./gradlew fakelinker-test:assembleDebugAndroidTest
+      - name: Copy android test output
+        run: |
+          mv fakelinker-test/build/outputs/apk/androidTest/debug/fakelinker-test-debug-androidTest.apk out/debug/test_apk/fakelinker-androidtest-debug.apk
 
-    - name: Copy emulator version output
-      run: |
-        mv emualtor-testapp/build/outputs/apk/debug/emualtor-testapp-debug.apk out/debug/emulator-testapp-hook-debug.apk
-        mv emualtor-testapp/build/outputs/apk/release/emualtor-testapp-release.apk out/release/emulator-testapp-hook-release.apk
-        mv library/build/outputs/aar/library-debug.aar out/faklinker-emualtor-debug.aar
-        mv library/build/outputs/aar/library-release.aar out/fakelinker-emulator-release.aar
+      - name: Build emulator version with Gradle
+        run: |
+          ./gradlew clean
+          ./gradlew build -PmergeBuild=true -PemulatorBuild=true
 
-    - name: Uninstall store file
-      run: rm -f fake.jks
-    - name: Upload Build Artifact
-      uses: actions/upload-artifact@v3.1.1
-      with:
-        name: ${{ github.sha }}-build
-        # A file, directory or wildcard pattern that describes what to upload
-        path: out
-        
+      - name: Copy emulator version output
+        run: |
+          mv emulator-testapp/build/outputs/apk/debug/emulator-testapp-debug.apk out/debug/test_apk/fakelinker-emulator-test-debug.apk
+          mv emulator-testapp/build/outputs/apk/release/emulator-testapp-release.apk out/release/fakelinker-emulator-test-release.apk
+          mv library/build/outputs/aar/library-debug.aar out/faklinker-emulator-lib-debug.aar
+          mv library/build/outputs/aar/library-release.aar out/fakelinker-emulator-lib-release.aar
+
+      - name: Uninstall store file
+        run: rm -f fake.jks
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v3.1.1
+        with:
+          name: ${{ github.sha }}-build
+          # A file, directory or wildcard pattern that describes what to upload
+          path: out

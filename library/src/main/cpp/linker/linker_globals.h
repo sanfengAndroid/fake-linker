@@ -26,8 +26,9 @@ public:
 
   ANDROID_GE_N android_namespace_t *FindNamespaceByName(const char *name);
 
-  ANDROID_GE_N android_namespace_t *GetDefaultNamespace();
+  ANDROID_GE_N static android_namespace_t *GetDefaultNamespace();
 
+  ANDROID_GE_N static void *GetNamespaceCallerAddress(android_namespace_t *np);
   /*
    * 改变soinfo的命名空间,若np为null则添加到默认命名空间
    * */
@@ -61,6 +62,8 @@ public:
   void **GetTls();
 
   soinfo *FindSoinfoByName(const char *name);
+
+  soinfo *FindSoinfoByNameInNamespace(const char *name, android_namespace_t *np);
 
   soinfo *FindSoinfoByPath(const char *path);
 

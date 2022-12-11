@@ -84,17 +84,17 @@ static constexpr bool is64BitBuild() {
 }
 
 template <typename T>
-static inline T *align_down(T *p, size_t align) {
+inline T *align_down(T *p, size_t align) {
   return reinterpret_cast<T *>(align_down(reinterpret_cast<uintptr_t>(p), align));
 }
 
 template <typename T>
-static inline T *align_up(T *p, size_t align) {
+inline T *align_up(T *p, size_t align) {
   return reinterpret_cast<T *>(align_up(reinterpret_cast<uintptr_t>(p), align));
 }
 
 template <typename T>
-static inline T *untag_address(T *p) {
+inline T *untag_address(T *p) {
 #if defined(__aarch64__)
   return reinterpret_cast<T *>(reinterpret_cast<uintptr_t>(p) & ((1ULL << 56) - 1));
 #else

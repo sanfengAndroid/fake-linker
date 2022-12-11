@@ -324,7 +324,7 @@ ElfW(Addr) __bionic_call_ifunc_resolver(ElfW(Addr) resolver_addr) {
 #endif
 }
 
-static inline bool check_symbol_version(const ElfW(Versym) * ver_table, uint32_t sym_idx, const ElfW(Versym) verneed) {
+inline bool check_symbol_version(const ElfW(Versym) * ver_table, uint32_t sym_idx, const ElfW(Versym) verneed) {
   if (ver_table == nullptr)
     return true;
   const uint32_t verdef = ver_table[sym_idx];

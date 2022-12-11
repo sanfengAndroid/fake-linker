@@ -172,6 +172,20 @@ typedef struct {
   FunPtr(SoinfoPtr, soinfo_find, SoinfoFindType find_type, const void *param, int *out_error);
 
   /**
+   * @brief Android 7.0+ finds soinfo, restricts the namespace, and returns the first matching item when the namespace
+   * is empty
+   *
+   * @note Required Android 7.0+
+   *
+   * @param       find_type   Specifies the type of parameter
+   * @param       param       Specific parameters
+   * @param       np          Restrict namespace or nullptr
+   * @param[out]  out_error   Write error code on error exists
+   */
+  ANDROID_GE_N FunPtr(SoinfoPtr, soinfo_find_in_namespace, SoinfoFindType find_type, const void *param,
+                      AndroidNamespacePtr np, int *out_error);
+
+  /**
    * @brief Finds some properties of a specified SoinfoPtr
    *
    * @param       soinfo_ptr  Specify the soinfo pointer

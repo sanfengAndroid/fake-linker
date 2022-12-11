@@ -17,4 +17,5 @@
 
 
 include ':library'
-include ':emualtor-testapp'
+include ':emulator-testapp'
+include ':fakelinker-test'

@@ -116,6 +116,22 @@ android_namespace_t *ProxyLinker::FindNamespaceByName(const char *name) {
 
 android_namespace_t *ProxyLinker::GetDefaultNamespace() { return linker_symbol.g_default_namespace.Get(); }
 
+void *ProxyLinker::GetNamespaceCallerAddress(android_namespace_t *np) {
+  for (soinfo *si = linker_symbol.solist.Get(); si != nullptr; si = si->next()) {
+    if (si->get_primary_namespace() == np && si->base() > 0 && si->size() > 0) {
+      for (size_t i = 0; i != si->phnum(); ++i) {
+        const ElfW(Phdr) *phdr = &si->phdr()[i];
+        if (phdr->p_type != PT_LOAD) {
+          continue;
+        }
+        ElfW(Addr) addr = phdr->p_vaddr + si->load_bias();
+        return reinterpret_cast<void *>(addr);
+      }
+    }
+  }
+  return nullptr;
+}
+
 bool ProxyLinker::AddGlobalSoinfoToNamespace(soinfo *global, android_namespace_t *np) {
   if (__predict_false(global == nullptr) || __predict_false(np == nullptr)) {
     return false;
@@ -301,13 +317,27 @@ soinfo *ProxyLinker::FindSoinfoByName(const char *name) {
       int delta = strlen(so_name) - len_a;
       if (delta == 0 && strncmp(so_name, name, len_a) == 0) {
         return si;
-
       } else if (delta > 0 && strncmp(so_name + delta, name, len_a) == 0 && so_name[delta - 1] == '/') {
         return si;
       }
     }
   } while ((si = si->next()) != nullptr);
   return nullptr;
+}
+
+soinfo *ProxyLinker::FindSoinfoByNameInNamespace(const char *name, android_namespace_t *np) {
+  int len_a = strlen(name);
+  return np->soinfo_list().find_if([&](soinfo *si) {
+    if (const char *so_name = si->get_soname()) {
+      int delta = strlen(so_name) - len_a;
+      if (delta == 0 && strncmp(so_name, name, len_a) == 0) {
+        return true;
+      } else if (delta > 0 && strncmp(so_name + delta, name, len_a) == 0 && so_name[delta - 1] == '/') {
+        return true;
+      }
+    }
+    return false;
+  });
 }
 
 soinfo *ProxyLinker::FindSoinfoByPath(const char *path) {

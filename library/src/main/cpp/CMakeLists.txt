@@ -30,9 +30,6 @@ endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
 
-include_directories(common)
-include_directories(export)
-
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/module_config.h.in" "${CMAKE_CURRENT_SOURCE_DIR}/export/linker_version.h")
 
 message(STATUS "cmake version:${CMAKE_VERSION}
@@ -68,66 +65,41 @@ set(FAKE_LINKER_SRC
   common/unique_memory.cpp
 )
 
-add_library(
-  ${LINKER_MODULE_NAME}
-
-  SHARED
-  ${FAKE_LINKER_SRC}
-)
-
-target_compile_options(${LINKER_MODULE_NAME} PRIVATE -fno-rtti -fno-exceptions)
-
 find_library(log-lib log)
 
-target_link_libraries(
-  ${LINKER_MODULE_NAME}
-  ${log-lib})
-
-set_target_properties(${LINKER_MODULE_NAME} PROPERTIES
-  LINK_FLAGS_RELEASE
-  "${LINK_FLAGS} -Wl,--gc-sections,-s,--version-script=\"${CMAKE_CURRENT_SOURCE_DIR}/symbol.map.txt\""
-  SUFFIX "${MODULE_SUFFIX}.so"
-)
-
-if(FAKELINKER_TEST)
-  set(GTEST_DIR ${ANDROID_NDK}/sources/third_party/googletest)
-  add_library(gtest STATIC ${GTEST_DIR}/src/gtest-all.cc)
-  target_include_directories(gtest PRIVATE ${GTEST_DIR})
-  target_include_directories(gtest PUBLIC ${GTEST_DIR}/include)
-
-  # find_package(GTest CONFIG REQUIRED)
-  add_executable(
-    fakelinker_test
-
+if(FAKELINKER_BUILD_STATIC_LIB)
+  add_library(fakelinker_static
+    STATIC
     ${FAKE_LINKER_SRC}
-    test/test_elf_reader.cpp
-    test/test_fakelinker.cpp
+  )
+  target_compile_options(fakelinker_static PRIVATE -fno-rtti -fno-exceptions)
+  target_include_directories(fakelinker_static PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/common ${CMAKE_CURRENT_SOURCE_DIR}/export)
+  target_link_libraries(fakelinker_static ${log-lib})
+else()
+  add_library(fakelinker
+    SHARED
+    ${FAKE_LINKER_SRC}
   )
 
-  target_include_directories(fakelinker_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/linker)
-
-  target_link_libraries(
-    fakelinker_test
-    PRIVATE
-    ${log-lib}
-    gtest
+  target_compile_options(fakelinker PRIVATE -fno-rtti -fno-exceptions)
+  target_link_libraries(fakelinker ${log-lib})
+  target_include_directories(fakelinker PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/common ${CMAKE_CURRENT_SOURCE_DIR}/export)
+  set_target_properties(fakelinker PROPERTIES
+    LINK_FLAGS_RELEASE
+    "${LINK_FLAGS} -Wl,--gc-sections,-s,--version-script=\"${CMAKE_CURRENT_SOURCE_DIR}/symbol.map.txt\""
+    SUFFIX "${MODULE_SUFFIX}.so"
+    OUTPUT_NAME ${LINKER_MODULE_NAME}
   )
-  target_compile_options(fakelinker_test PRIVATE -DSTD_LOG)
-
-  set_target_properties(fakelinker_test PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY
-    ${CMAKE_CURRENT_SOURCE_DIR}/build/${CMAKE_BUILD_TYPE}/${CMAKE_ANDROID_ARCH_ABI})
 endif()
 
 if(FAKELINKER_BUILD_INSTALLER)
-  add_executable(
-    ${INSTALLER_MODULE_NAME}
+  add_executable(${INSTALLER_MODULE_NAME}
     installer/hook_installer.cpp
   )
 
-  target_link_libraries(
-    ${INSTALLER_MODULE_NAME}
+  target_link_libraries(${INSTALLER_MODULE_NAME}
     ${log-lib})
+
   set_target_properties(${HOOK_INSTALL_MODULE_NAME} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY
     ${CMAKE_CURRENT_SOURCE_DIR}/../assets/${CMAKE_ANDROID_ARCH_ABI})

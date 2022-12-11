@@ -421,7 +421,7 @@ soinfo_list_t android_namespace_t::get_global_group() {
 // the default namespace).
 
 soinfo_list_t android_namespace_t::get_shared_group() {
-  if (this == fakelinker::ProxyLinker::Get().GetDefaultNamespace()) {
+  if (this == fakelinker::ProxyLinker::GetDefaultNamespace()) {
     return get_global_group();
   }
   soinfo_list_t shared_group;
