@@ -15,9 +15,13 @@
  *
  */
 
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
+
 plugins {
     id 'com.android.library'
 }
+
 
 android {
     compileSdkVersion rootProject.targetSdk
@@ -70,11 +74,11 @@ android {
     ndkVersion '25.1.8937393'
     namespace 'com.sanfengandroid.fakelinker'
 
-    buildFeatures{
+    buildFeatures {
         prefabPublishing true
     }
-    prefab{
-        fakelinker{
+    prefab {
+        fakelinker {
             headers "src/main/cpp/export"
         }
     }
@@ -86,6 +90,25 @@ tasks.whenTaskAdded { task ->
             merge32BitTo64BitLibrary(it.outputs.files, rootProject.fakeLinkerModuleName)
             emulatorBuildMoveLibrary(it.outputs.files, rootProject.fakeLinkerModuleName)
             reducedLibrary(it.outputs.files)
+        }
+    }
+    if (task.name.startsWith('prefab') && !task.name.contains('Configure')) {
+        task.doLast {
+            it.outputs.files.files.each { File dir ->
+                dir.eachFileRecurse {
+                    if (it.name == 'prefab.json') {
+                        var json = new JsonSlurper()
+                        var prefab = json.parse(it, 'utf-8')
+                        prefab['name'] = 'Fakelinker'
+                        it.write(JsonOutput.prettyPrint(JsonOutput.toJson(prefab)))
+                    }  else if (it.name == 'abi.json') {
+                        var json = new JsonSlurper()
+                        var abi = json.parse(it, 'utf-8')
+                        abi['stl'] = 'none'
+                        it.write(JsonOutput.prettyPrint(JsonOutput.toJson(abi)))
+                    }
+                }
+            }
         }
     }
 }
