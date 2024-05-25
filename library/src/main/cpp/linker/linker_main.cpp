@@ -1,5 +1,7 @@
+#include <android/api-level.h>
 #include <cstring>
 #include <dlfcn.h>
+#include <sys/system_properties.h>
 
 #include <alog.h>
 #include <fake_linker.h>
@@ -7,6 +9,7 @@
 #include <macros.h>
 #include <maps_util.h>
 #include <scoped_utf_chars.h>
+
 
 #include "art/hook_jni_native_interface_impl.h"
 #include "linker_globals.h"
@@ -144,7 +147,7 @@ C_API int init_fakelinker(JNIEnv *env, FakeLinkerMode mode) {
   if (force && env == nullptr) {
     return 1;
   }
-  android_api = GetApiLevel();
+  android_api = android_get_device_api_level();
   Init();
   static bool registered = false;
 

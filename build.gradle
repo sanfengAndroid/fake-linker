@@ -59,9 +59,9 @@ ext {
     assert (targetSdk >= 21)
 
     installerModuleName = project.findProperty('installerModuleName')?.trim() ?: props.getOrDefault('installerModuleName', 'linkerInstaller')?.trim()
-    versionCode = project.findProperty('versionCode')?.toInteger() ?: props.getOrDefault('versionCode', 3000).
+    versionCode = project.findProperty('versionCode')?.toInteger() ?: props.getOrDefault('versionCode', 3100).
             toInteger()
-    versionName = project.findProperty('versionName')?.trim() ?: props.getOrDefault('versionName', '3.0').trim()
+    versionName = project.findProperty('versionName')?.trim() ?: props.getOrDefault('versionName', '3.1').trim()
 }
 
 buildscript {

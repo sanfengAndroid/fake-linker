@@ -60,7 +60,7 @@ android {
             path "src/main/cpp/CMakeLists.txt"
         }
     }
-    ndkVersion '25.1.8937393'
+    ndkVersion '26.3.11579264'
     buildFeatures {
         prefab true
     }

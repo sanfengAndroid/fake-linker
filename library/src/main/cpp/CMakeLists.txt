@@ -2,9 +2,9 @@
 # documentation: https://d.android.com/studio/projects/add-native-code.html
 
 # Sets the minimum version of CMake required to build the native library.
+cmake_minimum_required(VERSION 3.19)
 
 project(fakelinker)
-cmake_minimum_required(VERSION 3.4.1)
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 17)
@@ -30,7 +30,7 @@ endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/module_config.h.in" "${CMAKE_CURRENT_SOURCE_DIR}/include/linker_version.h")
+configure_file("${CMAKE_CURRENT_LIST_DIR}/module_config.h.in" "${CMAKE_CURRENT_LIST_DIR}/include/linker_version.h")
 
 message(STATUS "cmake version:${CMAKE_VERSION}
 api:${ANDROID_PLATFORM}
