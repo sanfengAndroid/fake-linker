@@ -17,7 +17,6 @@ int g_log_level = HOOK_LOG_LEVEL;
 int g_version_code = MODULE_VERSION;
 const char *g_version_name = MODULE_VERSION_NAME;
 int android_api;
-int android_api_T;
 C_API FakeLinker g_fakelinker_export;
 JNINativeInterface *original_functions;
 bool init_success = false;
@@ -26,10 +25,16 @@ using FakeLinkerModulePtr = void (*)(JNIEnv *, SoinfoPtr, const FakeLinker *);
 
 
 static void Init() {
-  soinfo::Init();
-  android_namespace_t::Init();
-  fakelinker::linker_symbol.InitSymbolName();
-  init_success = fakelinker::linker_symbol.LoadSymbol();
+  static bool initialized = false;
+  if (!initialized) {
+    soinfo::Init();
+    android_namespace_t::Init();
+    fakelinker::linker_symbol.InitSymbolName();
+  }
+  if (!init_success) {
+    init_success = fakelinker::linker_symbol.LoadSymbol();
+  }
+  initialized = true;
 }
 
 static void AndroidLog(std::string &str) {
@@ -134,19 +139,38 @@ static JNINativeMethod gMethods[] = {
   NATIVE_METHOD(FakeLinker, removeAllRelocationFilterSymbol, "()V"),
 };
 
-C_API JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *unused) {
-  JNIEnv *env;
-  if (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) != JNI_OK) {
-    async_safe_fatal("JNI environment error");
+C_API int init_fakelinker(JNIEnv *env, FakeLinkerMode mode) {
+  bool force = mode == FakeLinkerMode::kFMFully;
+  if (force && env == nullptr) {
+    return 1;
   }
-  original_functions = const_cast<JNINativeInterface *>(env->functions);
   android_api = GetApiLevel();
-  android_api_T = __ANDROID_API_T__;
   Init();
-  jclass clazz = env->FindClass("com/sanfengandroid/fakelinker/FakeLinker");
-  CHECK(env->RegisterNatives(clazz, gMethods, NELEM(gMethods)) == JNI_OK);
-  CHECK(fakelinker::InitJniFunctionOffset(env, clazz,
-                                          env->GetStaticMethodID(clazz, gMethods[0].name, gMethods[0].signature),
-                                          reinterpret_cast<void *>(FakeLinker_nativeOffset), 0x109));
-  return JNI_VERSION_1_6;
+  static bool registered = false;
+
+  if (env && !registered) {
+    original_functions = const_cast<JNINativeInterface *>(env->functions);
+    jclass clazz = env->FindClass("com/sanfengandroid/fakelinker/FakeLinker");
+    // 静态库不强制注册
+    if (clazz) {
+      bool success = env->RegisterNatives(clazz, gMethods, NELEM(gMethods)) == JNI_OK;
+      if (success) {
+        success = fakelinker::InitJniFunctionOffset(
+          env, clazz, env->GetStaticMethodID(clazz, gMethods[0].name, gMethods[0].signature),
+          reinterpret_cast<void *>(FakeLinker_nativeOffset), 0x109);
+      } else if (force) {
+        return 2;
+      }
+      if (!success && force) {
+        return 3;
+      }
+      registered = success;
+    } else if (force) {
+      return 5;
+    }
+  }
+  if (!init_success && force) {
+    return 6;
+  }
+  return 0;
 }

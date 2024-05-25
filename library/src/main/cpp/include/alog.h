@@ -1,7 +1,8 @@
 //
 // Created by beich on 2020/11/6.
 //
-#pragma once
+#ifndef FAKE_LINKER_ALOG_H
+#define FAKE_LINKER_ALOG_H
 #include <android/log.h>
 #ifdef STD_LOG
 #include <stdio.h>
@@ -43,3 +44,5 @@ extern int g_log_level;
 #define LOGE(format, ...) _PRINT(ANDROID_LOG_ERROR, format, ##__VA_ARGS__)
 
 #endif
+
+#endif // FAKE_LINKER_ALOG_H

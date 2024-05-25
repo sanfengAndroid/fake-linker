@@ -5,7 +5,7 @@
 
 #include <linker_macros.h>
 
-#include "../common/macros.h"
+#include "macros.h"
 
 
 struct LinkerBlockAllocatorPage;

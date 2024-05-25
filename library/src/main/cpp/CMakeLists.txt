@@ -30,12 +30,11 @@ endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/module_config.h.in" "${CMAKE_CURRENT_SOURCE_DIR}/export/linker_version.h")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/module_config.h.in" "${CMAKE_CURRENT_SOURCE_DIR}/include/linker_version.h")
 
 message(STATUS "cmake version:${CMAKE_VERSION}
 api:${ANDROID_PLATFORM}
 build type:${CMAKE_BUILD_TYPE}
-linker module:${LINKER_MODULE_NAME}
 install module:${INSTALLER_MODULE_NAME}
 version: ${MODULE_VERSION_NAME}")
 
@@ -67,30 +66,25 @@ set(FAKE_LINKER_SRC
 
 find_library(log-lib log)
 
-if(FAKELINKER_BUILD_STATIC_LIB)
-  add_library(fakelinker_static
-    STATIC
-    ${FAKE_LINKER_SRC}
-  )
-  target_compile_options(fakelinker_static PRIVATE -fno-rtti -fno-exceptions)
-  target_include_directories(fakelinker_static PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/common ${CMAKE_CURRENT_SOURCE_DIR}/export)
-  target_link_libraries(fakelinker_static ${log-lib})
-else()
-  add_library(fakelinker
-    SHARED
-    ${FAKE_LINKER_SRC}
-  )
+add_library(fakelinker_static
+  STATIC
+  ${FAKE_LINKER_SRC}
+)
+target_compile_options(fakelinker_static PRIVATE -fno-rtti -fno-exceptions)
+target_include_directories(fakelinker_static PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_link_libraries(fakelinker_static ${log-lib})
 
-  target_compile_options(fakelinker PRIVATE -fno-rtti -fno-exceptions)
-  target_link_libraries(fakelinker ${log-lib})
-  target_include_directories(fakelinker PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/common ${CMAKE_CURRENT_SOURCE_DIR}/export)
-  set_target_properties(fakelinker PROPERTIES
-    LINK_FLAGS_RELEASE
-    "${LINK_FLAGS} -Wl,--gc-sections,-s,--version-script=\"${CMAKE_CURRENT_SOURCE_DIR}/symbol.map.txt\""
-    SUFFIX "${MODULE_SUFFIX}.so"
-    OUTPUT_NAME ${LINKER_MODULE_NAME}
-  )
-endif()
+
+add_library(fakelinker SHARED
+  linker/linker_dynamic.cpp
+)
+target_link_libraries(fakelinker PUBLIC
+  fakelinker_static
+  ${log}
+)
+
 
 if(FAKELINKER_BUILD_INSTALLER)
   add_executable(${INSTALLER_MODULE_NAME}

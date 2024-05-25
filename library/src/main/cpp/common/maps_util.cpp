@@ -26,7 +26,7 @@ bool MapsHelper::GetMemoryProtect(void *address) {
   if (!OpenMaps()) {
     return false;
   }
-  auto target = reinterpret_cast<gaddress>(address);
+  auto target = reinterpret_cast<Address>(address);
   while (GetMapsLine()) {
     if (!FormatLine()) {
       continue;
@@ -114,8 +114,8 @@ bool MapsHelper::UnlockAddressProtect(void *address) {
   return false;
 }
 
-gaddress MapsHelper::FindLibraryBase(const char *library_name) {
-  gaddress result = 0;
+Address MapsHelper::FindLibraryBase(const char *library_name) {
+  Address result = 0;
   if (!library_name || !OpenMaps()) {
     return result;
   }
@@ -139,12 +139,12 @@ gaddress MapsHelper::FindLibraryBase(const char *library_name) {
   return result;
 }
 
-bool MapsHelper::CheckAddressPageProtect(const gaddress address, uint64_t size, uint8_t prot) {
+bool MapsHelper::CheckAddressPageProtect(const Address address, uint64_t size, uint8_t prot) {
   if (page_.empty()) {
     return false;
   }
-  gaddress start = address;
-  gaddress end = address + size;
+  Address start = address;
+  Address end = address + size;
   LOGI("check memory protect 0x%" PRIx64 " - 0x%" PRIx64, start, end);
   for (PageProtect &pp : page_) {
     if (pp.start > end || pp.end < start) {
@@ -161,12 +161,12 @@ bool MapsHelper::CheckAddressPageProtect(const gaddress address, uint64_t size, 
   return false;
 }
 
-gaddress MapsHelper::GetLibraryBaseAddress() const {
+Address MapsHelper::GetLibraryBaseAddress() const {
   if (page_.empty()) {
     return 0;
   }
   uint64_t minoffset = UINT64_MAX;
-  gaddress start = 0;
+  Address start = 0;
   for (const PageProtect &pp : page_) {
     if (pp.inode == 0) {
       continue;
@@ -211,7 +211,7 @@ std::string MapsHelper::ToString() const {
   std::string result = GetCurrentRealPath() + ":";
   char tmp[16];
 
-  auto IntToHex = [&tmp](gaddress addr) -> const char * {
+  auto IntToHex = [&tmp](Address addr) -> const char * {
     sprintf(tmp, "0x%08" SCNx64, addr);
     return tmp;
   };

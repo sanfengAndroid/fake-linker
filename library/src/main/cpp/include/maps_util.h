@@ -11,8 +11,8 @@
 
 namespace fakelinker {
 struct PageProtect {
-  gaddress start = 0;
-  gaddress end;
+  Address start = 0;
+  Address end;
   uint8_t old_protect;
   uint8_t new_protect;
   uint64_t file_offset;
@@ -45,11 +45,11 @@ public:
 
   bool UnlockAddressProtect(void *address);
 
-  gaddress FindLibraryBase(const char *library_name);
+  Address FindLibraryBase(const char *library_name);
 
-  bool CheckAddressPageProtect(const gaddress address, uint64_t size, uint8_t prot);
+  bool CheckAddressPageProtect(const Address address, uint64_t size, uint8_t prot);
 
-  gaddress GetLibraryBaseAddress() const;
+  Address GetLibraryBaseAddress() const;
 
   std::string GetLibraryRealPath(const char *library_name);
 
@@ -89,8 +89,8 @@ private:
   char protect_[7]{};
   FILE *maps_fd_ = nullptr;
   std::string library_name_;
-  gaddress start_address_ = 0;
-  gaddress end_address_ = 0;
+  Address start_address_ = 0;
+  Address end_address_ = 0;
   uint64_t file_offset_ = 0;
   int32_t inode_ = 0;
   std::vector<PageProtect> page_;

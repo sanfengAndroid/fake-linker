@@ -68,8 +68,8 @@ namespace fakelinker {
 typedef struct {
   const char *name;
   int index;
-  gaddress old_address;
-  gaddress new_address;
+  Address old_address;
+  Address new_address;
 } symbol_observed;
 
 enum walk_action_result_t : uint32_t { kWalkStop = 0, kWalkContinue = 1, kWalkSkip = 2 };
@@ -615,7 +615,7 @@ ANDROID_GE_M bool ProxyLinker::RelinkSoinfoImplM(soinfo *si) {
   return linked;
 }
 
-static int unprotect_rel_data(gaddress start, gaddress end, int port) {
+static int unprotect_rel_data(Address start, Address end, int port) {
   int error = mprotect(reinterpret_cast<void *>(start), end - start, port);
   if (error < 0) {
     LOGE("unprotect rel offset error: %d, port: %d ", error, port);
@@ -638,7 +638,7 @@ static void symbol_detect(soinfo *si, symbol_observed *symbols, size_t len, bool
       for (int i = 0; i < len; ++i) {
         if (symbols[i].index == 0 && strcmp(symbols[i].name, symbol_name) == 0) {
           symbols[i].index = index;
-          symbols[i].old_address = *(reinterpret_cast<gsize *>(start->r_offset + si->load_bias()));
+          symbols[i].old_address = *(reinterpret_cast<uintptr_t *>(start->r_offset + si->load_bias()));
           break;
         }
       }
@@ -648,7 +648,7 @@ static void symbol_detect(soinfo *si, symbol_observed *symbols, size_t len, bool
       if (symbols[i].index == 0) {
         continue;
       }
-      symbols[i].new_address = *reinterpret_cast<gsize *>((start + symbols[i].index)->r_offset + si->load_bias());
+      symbols[i].new_address = *reinterpret_cast<uintptr_t *>((start + symbols[i].index)->r_offset + si->load_bias());
     }
   }
 }

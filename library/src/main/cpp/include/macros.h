@@ -10,12 +10,9 @@
 #include <stdlib.h>
 #include <sys/user.h>
 
-typedef void *gpointer;
-typedef uintptr_t gsize;
-typedef uint64_t gaddress;
+typedef uint64_t Address;
 
 extern int android_api;
-extern int android_api_T;
 extern bool init_success;
 
 #define async_safe_fatal(...)                                                                                          \

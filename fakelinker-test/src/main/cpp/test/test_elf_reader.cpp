@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "../linker/elf_reader.h"
+#include "elf_reader.h"
 
 using namespace fakelinker;
 
@@ -13,7 +13,7 @@ TEST(ElfReader, importTest) {
   EXPECT_EQ(reader.FindImportSymbol("no_symbol"), 0) << "test not exist import symbol";
 
   std::vector<std::string> symbols = {"dlsym", "not_exist0", "dlerror", "not_exist1", ""};
-  std::vector<gaddress> addrs = reader.FindImportSymbols(symbols);
+  std::vector<Address> addrs = reader.FindImportSymbols(symbols);
   ASSERT_EQ(addrs.size(), symbols.size()) << "find import symbol size";
 
   EXPECT_NE(addrs[0], 0) << "find import symbol index 0";
@@ -28,11 +28,11 @@ TEST(ElfReader, exportTest) {
   EXPECT_EQ(reader.FindExportSymbol("strncmp"), 0) << "not load library";
   EXPECT_TRUE(reader.LoadFromMemory("libc.so")) << "load library from memory";
 
-  EXPECT_EQ(reader.FindExportSymbol("calloc"), reinterpret_cast<gaddress>(calloc)) << "test find export symbol";
+  EXPECT_EQ(reader.FindExportSymbol("calloc"), reinterpret_cast<Address>(calloc)) << "test find export symbol";
   EXPECT_EQ(reader.FindExportSymbol("not_exist"), 0) << "find not exist export symbol";
 
   std::vector<std::string> symbols = {"not_exist", "malloc", "not_exist2", "realloc", ""};
-  std::vector<gaddress> addrs = reader.FindExportSymbols(symbols);
+  std::vector<Address> addrs = reader.FindExportSymbols(symbols);
   ASSERT_EQ(addrs.size(), symbols.size()) << "find export symbol size";
 
   EXPECT_EQ(addrs[0], 0) << "find export symbol index 0";
@@ -56,7 +56,7 @@ TEST(ElfReader, internalTest) {
   EXPECT_EQ(reader.FindInternalSymbol("not_exist"), 0) << "find not exist export symbol";
 
   std::vector<std::string> symbols = {"calloc", "not_exist2", "malloc", ""};
-  std::vector<gaddress> addrs = reader.FindInternalSymbols(symbols);
+  std::vector<Address> addrs = reader.FindInternalSymbols(symbols);
   ASSERT_EQ(addrs.size(), symbols.size()) << "find export symbol size";
 
   EXPECT_NE(addrs[0], 0) << "find internal symbol index 0";

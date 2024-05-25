@@ -20,8 +20,7 @@ plugins {
 }
 
 android {
-    compileSdkVersion rootProject.targetSdk
-
+    compileSdk 34
     defaultConfig {
         minSdkVersion 21
         targetSdkVersion rootProject.targetSdk
@@ -73,14 +72,13 @@ android {
     }
     ndkVersion '25.1.8937393'
     namespace 'com.sanfengandroid.fakelinker_emulator_test'
-    buildToolsVersion '33.0.0'
     buildFeatures {
         viewBinding true
     }
 }
 
 
-tasks.whenTaskAdded { task ->
+tasks.configureEach { task ->
     if (task.name.startsWith('merge') && task.name.endsWith('NativeLibs')) {
         task.doLast {
             merge32BitTo64BitLibrary(it.outputs.files, "fakelinker-module")
@@ -91,13 +89,13 @@ tasks.whenTaskAdded { task ->
 }
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.5.1'
-    implementation 'com.google.android.material:material:1.7.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.12.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    implementation 'androidx.navigation:navigation-fragment:2.5.3'
-    implementation 'androidx.navigation:navigation-ui:2.5.3'
+    implementation 'androidx.navigation:navigation-fragment:2.7.7'
+    implementation 'androidx.navigation:navigation-ui:2.7.7'
     implementation(project(':library'))
     testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.4'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.0'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 }

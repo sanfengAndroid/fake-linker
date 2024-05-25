@@ -3,8 +3,8 @@
 #include <string>
 #include <vector>
 
-#include <unique_fd.h>
-#include <unique_memory.h>
+#include "unique_fd.h"
+#include "unique_memory.h"
 
 #include "linker.h"
 #include "linker_mapped_file_fragment.h"
@@ -21,21 +21,21 @@ namespace fakelinker {
 class MapsHelper;
 
 struct ElfDiskInfo {
-  gaddress section_strtab_offset;
-  gaddress section_strtab_addr = 0; // 实际内存中的地址
-  gsize section_strtab_size;        // 节区大小
-  gsize str_addralign;
+  Address section_strtab_offset;
+  Address section_strtab_addr = 0; // 实际内存中的地址
+  uintptr_t section_strtab_size;   // 节区大小
+  uintptr_t str_addralign;
 
-  gaddress section_symtab_offset;
-  gaddress section_symtab_addr = 0;
-  gsize section_symtab_size;
-  gsize sym_entsize;
-  gsize sym_addralign;
-  gsize sym_num;
+  Address section_symtab_offset;
+  Address section_symtab_addr = 0;
+  uintptr_t section_symtab_size;
+  uintptr_t sym_entsize;
+  uintptr_t sym_addralign;
+  uintptr_t sym_num;
 
   unique_memory mmap_memory;
   unique_fd library_fd;
-  gaddress base;
+  Address base;
 };
 
 
@@ -67,13 +67,22 @@ public:
   const ElfW(Sym) * ElfHashLookupSymbol(const char *name);
 
   uint64_t FindImportSymbol(const char *name);
-  std::vector<gaddress> FindImportSymbols(const std::vector<std::string> &symbols);
+  std::vector<Address> FindImportSymbols(const std::vector<std::string> &symbols);
 
   uint64_t FindExportSymbol(const char *name);
-  std::vector<gaddress> FindExportSymbols(const std::vector<std::string> &symbols);
+  std::vector<Address> FindExportSymbols(const std::vector<std::string> &symbols);
 
-  uint64_t FindInternalSymbol(const char *name);
-  std::vector<gaddress> FindInternalSymbols(const std::vector<std::string> &symbols);
+  uint64_t FindInternalSymbol(const char *name, bool useRegex = false);
+
+  /**
+   * 查找内部符号地址,可支持正则表达式,正则表达式使用默认 std::regex 因此需要调用者保证正则表达式合法,
+   * 注意: 虽然支持正则表达式但也优先匹配符号名称,这是方便完全符号匹配与正则匹配一起查找,避免多次遍历符号表
+   *
+   * @param symbols  查找的内部符号名称或正则表达式集合,保证非空避免查找整个符号表
+   * @param useRegex 开启正则匹配支持
+   * @return         返回地址集合,找到则对应地址非0
+   */
+  std::vector<Address> FindInternalSymbols(const std::vector<std::string> &symbols, bool useRegex = false);
 
 private:
   bool ReadElfHeader();

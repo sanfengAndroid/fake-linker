@@ -15,18 +15,18 @@
  *
  */
 
-import groovy.json.JsonSlurper
+
 import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 
 plugins {
     id 'com.android.library'
+    id 'maven-publish'
 }
 
 
 android {
-    compileSdkVersion rootProject.targetSdk
-    buildToolsVersion '33.0.0'
-
+    compileSdk 34
     defaultConfig {
         minSdkVersion 21
         targetSdkVersion rootProject.targetSdk
@@ -36,7 +36,6 @@ android {
             cmake {
                 abiFilters.addAll(rootProject.abis)
                 arguments '-DANDROID_PLATFORM=21',
-                        "-DLINKER_MODULE_NAME=${rootProject.fakeLinkerModuleName}",
                         "-DINSTALLER_MODULE_NAME=${rootProject.installerModuleName}",
                         "-DHOOK_LOG_LEVEL=${rootProject.logLevel}",
                         "-DMODULE_VERSION=${rootProject.versionCode}",
@@ -44,7 +43,6 @@ android {
             }
         }
 
-        buildConfigField 'String', 'LINKER_MODULE_NAME', "\"${rootProject.fakeLinkerModuleName}\""
         buildConfigField 'String', 'HOOK_INSTALL_MODULE_NAME', "\"${rootProject.installerModuleName}\""
     }
 
@@ -76,22 +74,44 @@ android {
 
     buildFeatures {
         prefabPublishing true
+        buildConfig true
     }
     prefab {
         fakelinker {
-            headers "src/main/cpp/export"
+            headers "src/main/cpp/include"
+        }
+    }
+    publishing {
+        multipleVariants {
+            includeBuildTypeValues('debug', 'release')
+            withJavadocJar()
         }
     }
 }
 
-tasks.whenTaskAdded { task ->
-    if (task.name.startsWith('merge') && task.name.endsWith('NativeLibs')) {
-        task.doLast {
-            merge32BitTo64BitLibrary(it.outputs.files, rootProject.fakeLinkerModuleName)
-            emulatorBuildMoveLibrary(it.outputs.files, rootProject.fakeLinkerModuleName)
-            reducedLibrary(it.outputs.files)
+afterEvaluate {
+    publishing {
+        publications {
+            // Creates a Maven publication called "release".
+            release(MavenPublication) {
+                from components.default
+                groupId = 'com.sanfengandroid'
+                artifactId = 'fakelinker'
+                version = rootProject.versionName
+            }
+        }
+        repositories {
+            maven {
+                name = 'Local'
+                url = "file://E:/maven-local/repo"
+            }
         }
     }
+
+}
+
+
+tasks.configureEach { task ->
     if (task.name.startsWith('prefab') && !task.name.contains('Configure')) {
         task.doLast {
             it.outputs.files.files.each { File dir ->
@@ -101,12 +121,13 @@ tasks.whenTaskAdded { task ->
                         var prefab = json.parse(it, 'utf-8')
                         prefab['name'] = 'Fakelinker'
                         it.write(JsonOutput.prettyPrint(JsonOutput.toJson(prefab)))
-                    }  else if (it.name == 'abi.json') {
-                        var json = new JsonSlurper()
-                        var abi = json.parse(it, 'utf-8')
-                        abi['stl'] = 'none'
-                        it.write(JsonOutput.prettyPrint(JsonOutput.toJson(abi)))
                     }
+//                    else if (it.name == 'abi.json') {
+//                        var json = new JsonSlurper()
+//                        var abi = json.parse(it, 'utf-8')
+//                        abi['stl'] = 'none'
+//                        it.write(JsonOutput.prettyPrint(JsonOutput.toJson(abi)))
+//                    }
                 }
             }
         }
@@ -114,4 +135,5 @@ tasks.whenTaskAdded { task ->
 }
 
 dependencies {
+    compileOnly(project(':Stub'))
 }

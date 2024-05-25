@@ -4,6 +4,7 @@
 
 #include <cinttypes>
 #include <fcntl.h>
+#include <regex>
 #include <sys/mman.h>
 #include <sys/prctl.h>
 #include <sys/stat.h>
@@ -192,7 +193,7 @@ bool ElfReader::LoadFromMemory(const char *name) {
     DL_ERR("find library failed: %s", name);
     return false;
   }
-  gaddress base = maps.GetLibraryBaseAddress();
+  Address base = maps.GetLibraryBaseAddress();
   if (base == 0) {
     DL_ERR("get library base address failed: %s", name);
     return false;
@@ -216,7 +217,7 @@ bool ElfReader::LoadFromDisk(const char *library_name) {
     return false;
   }
   MapsHelper maps(library_name);
-  gaddress base = maps.GetLibraryBaseAddress();
+  Address base = maps.GetLibraryBaseAddress();
   if (base == 0) {
     return false;
   }
@@ -258,7 +259,7 @@ bool ElfReader::LoadFromDisk(const char *library_name) {
     case SHT_STRTAB:
       if (strcmp(".strtab", shstr_table + section->sh_name) == 0) {
         disk_info_->section_strtab_addr =
-          reinterpret_cast<gaddress>(reinterpret_cast<char *>(head) + section->sh_offset);
+          reinterpret_cast<Address>(reinterpret_cast<char *>(head) + section->sh_offset);
         disk_info_->section_strtab_offset = section->sh_offset;
         disk_info_->section_strtab_size = section->sh_size;
         if (section->sh_offset + section->sh_size > file_size) {
@@ -270,7 +271,7 @@ bool ElfReader::LoadFromDisk(const char *library_name) {
       }
       break;
     case SHT_SYMTAB:
-      disk_info_->section_symtab_addr = reinterpret_cast<gaddress>(reinterpret_cast<char *>(head) + section->sh_offset);
+      disk_info_->section_symtab_addr = reinterpret_cast<Address>(reinterpret_cast<char *>(head) + section->sh_offset);
       disk_info_->sym_num = section->sh_size / sizeof(ElfW(Sym));
       if (section->sh_entsize != sizeof(ElfW(Sym))) {
         LOGW("%s elf symtab section e_shentsize error, file set: 0x%" PRIx32 ", expect size: 0x%" PRIx32, name(),
@@ -390,8 +391,8 @@ uint64_t ElfReader::FindImportSymbol(const char *name) {
   return 0;
 }
 
-std::vector<gaddress> ElfReader::FindImportSymbols(const std::vector<std::string> &symbols) {
-  std::vector<gaddress> ret;
+std::vector<Address> ElfReader::FindImportSymbols(const std::vector<std::string> &symbols) {
+  std::vector<Address> ret;
   size_t num = symbols.size();
   ret.resize(num, 0);
   if (symbols.empty() || !did_load_) {
@@ -461,8 +462,8 @@ uint64_t ElfReader::FindExportSymbol(const char *name) {
   return load_bias_ + sym->st_value;
 }
 
-std::vector<gaddress> ElfReader::FindExportSymbols(const std::vector<std::string> &symbols) {
-  std::vector<gaddress> ret;
+std::vector<Address> ElfReader::FindExportSymbols(const std::vector<std::string> &symbols) {
+  std::vector<Address> ret;
   if (symbols.empty() || !did_load_) {
     ret.resize(symbols.size(), 0);
     return ret;
@@ -473,7 +474,7 @@ std::vector<gaddress> ElfReader::FindExportSymbols(const std::vector<std::string
   return ret;
 }
 
-uint64_t ElfReader::FindInternalSymbol(const char *name) {
+uint64_t ElfReader::FindInternalSymbol(const char *name, bool useRegex) {
   if (!name || !did_disk_load_) {
     return 0;
   }
@@ -482,19 +483,20 @@ uint64_t ElfReader::FindInternalSymbol(const char *name) {
     return 0;
   }
 
+  std::regex reg(useRegex ? name : "");
   auto sym_start = reinterpret_cast<ElfW(Sym) *>(disk_info_->section_symtab_addr);
   auto sym_end = reinterpret_cast<ElfW(Sym) *>(disk_info_->section_symtab_addr) + disk_info_->sym_num;
   for (ElfW(Sym) *sym = sym_start; sym != sym_end; ++sym) {
     auto sym_name = reinterpret_cast<const char *>(disk_info_->section_strtab_addr + sym->st_name);
-    if (find_name == sym_name) {
+    if (find_name == sym_name || (useRegex && std::regex_search(sym_name, reg))) {
       return load_bias_ + sym->st_value;
     }
   }
   return 0;
 }
 
-std::vector<gaddress> ElfReader::FindInternalSymbols(const std::vector<std::string> &symbols) {
-  std::vector<gaddress> ret;
+std::vector<Address> ElfReader::FindInternalSymbols(const std::vector<std::string> &symbols, bool useRegex) {
+  std::vector<Address> ret;
   ret.resize(symbols.size(), 0);
   if (symbols.empty() || !did_disk_load_) {
     return ret;
@@ -503,19 +505,23 @@ std::vector<gaddress> ElfReader::FindInternalSymbols(const std::vector<std::stri
   auto sym_end = reinterpret_cast<ElfW(Sym) *>(disk_info_->section_symtab_addr) + disk_info_->sym_num;
 
   size_t count = 0;
-  size_t num = 0;
-  for (auto &name : symbols) {
-    if (!name.empty()) {
-      num++;
+  size_t num = symbols.size();
+  // 不再判断空字符串,调用者保证
+  std::vector<std::regex> regs;
+  if (useRegex) {
+    for (auto &name : symbols) {
+      // 正则表达式也需要调用者保证合法
+      regs.emplace_back(name);
     }
   }
 
   for (ElfW(Sym) *sym = sym_start; sym != sym_end; ++sym) {
     auto name = reinterpret_cast<const char *>(disk_info_->section_strtab_addr + sym->st_name);
     for (size_t index = 0; index < num; ++index) {
-      if (ret[index] == 0 && !symbols[index].empty() && symbols[index] == name) {
+      if (ret[index] == 0 && (symbols[index] == name || (useRegex && std::regex_search(name, regs[index])))) {
         ++count;
         ret[index] = load_bias_ + sym->st_value;
+        break;
       }
     }
     if (count == num) {
@@ -702,7 +708,7 @@ bool ElfReader::ReadProgramHeadersFromMemory(const char *base, MapsHelper &maps)
   size_t size = phdr_num_ * sizeof(ElfW(Phdr));
 
   // 1. 验证内存访问性
-  if (!maps.CheckAddressPageProtect(reinterpret_cast<const gaddress>(phdr_table_), size, kMPRead)) {
+  if (!maps.CheckAddressPageProtect(reinterpret_cast<const Address>(phdr_table_), size, kMPRead)) {
     DL_ERR("The library's program header table is not accessible");
     return false;
   }

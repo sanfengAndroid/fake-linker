@@ -19,3 +19,4 @@
 include ':library'
 include ':emulator-testapp'
 include ':fakelinker-test'
+include ':Stub'

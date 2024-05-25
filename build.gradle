@@ -41,7 +41,7 @@ ext {
     abis = abis?.trim()?.split(',')?.toList()
     logLevel = project.findProperty('logLevel')?.toInteger() ?: props.getOrDefault('logLevel', 3).toInteger()
 
-    targetSdk = project.findProperty('targetSdk')?.toInteger() ?: props.getOrDefault('targetSdk', 33).toInteger()
+    targetSdk = project.findProperty('targetSdk')?.toInteger() ?: props.getOrDefault('targetSdk', 34).toInteger()
     emulatorBuild = project.findProperty('emulatorBuild')?.toBoolean()
     if (emulatorBuild == null) {
         emulatorBuild = props.getOrDefault('emulatorBuild', false).toBoolean()
@@ -58,10 +58,10 @@ ext {
     }
     assert (targetSdk >= 21)
 
-    fakeLinkerModuleName = project.findProperty('fakeLinkerModuleName')?.trim() ?: props.getOrDefault('fakeLinkerModuleName', 'fakelinker')?.trim()
     installerModuleName = project.findProperty('installerModuleName')?.trim() ?: props.getOrDefault('installerModuleName', 'linkerInstaller')?.trim()
-    versionCode = project.findProperty('versionCode')?.toInteger() ?: props.getOrDefault('versionCode', 2000).toInteger()
-    versionName = project.findProperty('versionName')?.trim() ?: props.getOrDefault('versionName', '2.0').trim()
+    versionCode = project.findProperty('versionCode')?.toInteger() ?: props.getOrDefault('versionCode', 3000).
+            toInteger()
+    versionName = project.findProperty('versionName')?.trim() ?: props.getOrDefault('versionName', '3.0').trim()
 }
 
 buildscript {
@@ -70,7 +70,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.3.1'
+        classpath 'com.android.tools.build:gradle:8.4.1'
         classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.7.20'
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -84,7 +84,7 @@ allprojects {
     }
 }
 
-task clean(type: Delete) {
+tasks.register('clean', Delete) {
     delete rootProject.buildDir
 }
 

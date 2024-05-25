@@ -268,12 +268,12 @@ typedef struct __ifunc_arg_t {
 #define SOINFO_MEMBER_NULL(Type, Name, ...) funTable.Name = nullptr;
 
 #define SOINFO_MEMBER_WRAP(Type, Name)                                                                                 \
-  funTable.Name = [](soinfo *thiz) -> MemberType<decltype(&Type::Name)>::type {                                        \
+  funTable.Name = [](soinfo *thiz) -> member_type_trait<decltype(&Type::Name)>::type {                                 \
     return reinterpret_cast<Type *>(thiz)->Name;                                                                       \
   }
 
 #define SOINFO_MEMBER_VER_WRAP(Type, Name, Ver)                                                                        \
-  funTable.Name##Ver = [](soinfo *thiz) -> MemberType<decltype(&Type::Name)>::type {                                   \
+  funTable.Name##Ver = [](soinfo *thiz) -> member_type_trait<decltype(&Type::Name)>::type {                            \
     return reinterpret_cast<Type *>(thiz)->Name;                                                                       \
   }
 
@@ -288,12 +288,12 @@ typedef struct __ifunc_arg_t {
   }
 
 #define SOINFO_MEMBER_REF_WRAP(Type, Name)                                                                             \
-  funTable.Name = [](soinfo *thiz) -> MemberRefType<decltype(&Type::Name)>::type {                                     \
+  funTable.Name = [](soinfo *thiz) -> member_ref_type_trait<decltype(&Type::Name)>::type {                             \
     return reinterpret_cast<Type *>(thiz)->Name;                                                                       \
   }
 
 #define SOINFO_MEMBER_REF_VER_WRAP(Type, Name, Ver)                                                                    \
-  funTable.Name##Ver = [](soinfo *thiz) -> MemberRefType<decltype(&Type::Name)>::type {                                \
+  funTable.Name##Ver = [](soinfo *thiz) -> member_ref_type_trait<decltype(&Type::Name)>::type {                        \
     return reinterpret_cast<Type *>(thiz)->Name;                                                                       \
   }
 
@@ -1532,7 +1532,7 @@ void soinfo::Init() {
   useGnuHashNeon = false;
 #endif
 
-  if (android_api >= android_api_T) {
+  if (android_api >= __ANDROID_API_T__) {
     InitApiT();
   } else if (android_api >= __ANDROID_API_S__) {
     InitApiS();
@@ -1557,10 +1557,12 @@ void soinfo::Init() {
 }
 
 #define DECL_SOINFO_CALL(Name)                                                                                         \
-  ReturnType<MemberType<decltype(&SoinfoFunTable::Name)>::type>::type soinfo::Name() { return funTable.Name(this); }
+  return_type_trait<member_type_trait<decltype(&SoinfoFunTable::Name)>::type>::type soinfo::Name() {                   \
+    return funTable.Name(this);                                                                                        \
+  }
 
 #define DECL_SOINFO_CALL_(Name)                                                                                        \
-  ReturnType<MemberType<decltype(&SoinfoFunTable::Name##_)>::type>::type soinfo::Name() {                              \
+  return_type_trait<member_type_trait<decltype(&SoinfoFunTable::Name##_)>::type>::type soinfo::Name() {                \
     return funTable.Name##_(this);                                                                                     \
   }
 
@@ -1777,7 +1779,7 @@ void soinfo::add_child(soinfo *child) {
 
 soinfo_list_t_wrapper soinfo::get_children() {
   void *ref;
-  if (android_api >= android_api_T) {
+  if (android_api >= __ANDROID_API_T__) {
     ref = &funTable.children_T(this);
   } else {
     ref = &funTable.children_(this);
@@ -1787,7 +1789,7 @@ soinfo_list_t_wrapper soinfo::get_children() {
 
 soinfo_list_t_wrapper soinfo::get_parents() {
   void *ref;
-  if (android_api >= android_api_T) {
+  if (android_api >= __ANDROID_API_T__) {
     ref = &funTable.parents_T(this);
   } else {
     ref = &funTable.parents_(this);
@@ -2086,7 +2088,7 @@ ANDROID_GE_N void soinfo::remove_all_secondary_namespace() { get_secondary_names
 
 ANDROID_GE_N android_namespace_list_t_wrapper soinfo::get_secondary_namespaces() {
   void *ref;
-  if (android_api >= android_api_T) {
+  if (android_api >= __ANDROID_API_T__) {
     ref = &funTable.secondary_namespaces_T(this);
   } else {
     ref = &funTable.secondary_namespaces_(this);

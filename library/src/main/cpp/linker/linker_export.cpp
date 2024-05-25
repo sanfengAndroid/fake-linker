@@ -706,11 +706,11 @@ MEMORY_FREE uint64_t *find_library_symbols_impl(const char *library_name, const 
   if (!internals.empty()) {
     reader.LoadFromDisk(library_name);
   }
-  std::vector<gaddress> import_addrs = reader.FindImportSymbols(imports);
-  std::vector<gaddress> export_addrs = reader.FindExportSymbols(exports);
-  std::vector<gaddress> internal_addrs = reader.FindImportSymbols(internals);
+  std::vector<Address> import_addrs = reader.FindImportSymbols(imports);
+  std::vector<Address> export_addrs = reader.FindExportSymbols(exports);
+  std::vector<Address> internal_addrs = reader.FindImportSymbols(internals);
 
-  std::vector<gaddress> result;
+  std::vector<Address> result;
 
   for (int i = size - 1; i >= 0; ++i) {
     switch (symbols[i].symbol_type) {
@@ -729,7 +729,7 @@ MEMORY_FREE uint64_t *find_library_symbols_impl(const char *library_name, const 
       break;
     }
   }
-  unique_memory memory(sizeof(gaddress) * result.size());
+  unique_memory memory(sizeof(Address) * result.size());
   for (int i = 0; i < size; ++i) {
     memory.set(i, result[i]);
   }
@@ -834,3 +834,5 @@ C_API API_PUBLIC FakeLinker g_fakelinker_export = {
   find_library_symbols_impl,
   set_ld_debug_verbosity_impl,
 };
+
+C_API FakeLinker *get_fakelinker() { return &g_fakelinker_export; }

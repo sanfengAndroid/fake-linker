@@ -122,7 +122,7 @@ extern "C" JNIEXPORT jlong JNICALL Java_com_sanfengandroid_testapp_MainActivity_
     return 0;
   }
   LOGI("find hook module test_x86_arm_hook_before address");
-  gaddress addr =
+  Address addr =
     remote->find_library_symbol("libtest_module.so", "test_x86_arm_hook_before", FindSymbolType::kExported);
   LOGI("find result: %" PRIx64, addr);
   return addr;

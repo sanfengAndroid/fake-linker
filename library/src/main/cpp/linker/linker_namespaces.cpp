@@ -52,12 +52,12 @@ struct AndroidNamespaceFunTable {
 static AndroidNamespaceFunTable npTable;
 
 #define NP_MEMBER_REF_WRAP(Type, Name)                                                                                 \
-  npTable.Name = [](android_namespace_t *thiz) -> MemberRefType<decltype(&Type::Name)>::type {                         \
+  npTable.Name = [](android_namespace_t *thiz) -> member_ref_type_trait<decltype(&Type::Name)>::type {                 \
     return reinterpret_cast<Type *>(thiz)->Name;                                                                       \
   }
 
 #define NP_MEMBER_REF_VER_WRAP(Type, Name, Ver)                                                                        \
-  npTable.Name##Ver = [](android_namespace_t *thiz) -> MemberRefType<decltype(&Type::Name)>::type {                    \
+  npTable.Name##Ver = [](android_namespace_t *thiz) -> member_ref_type_trait<decltype(&Type::Name)>::type {            \
     return reinterpret_cast<Type *>(thiz)->Name;                                                                       \
   }
 
@@ -67,7 +67,7 @@ void android_namespace_t::Init() {
   if (android_api < __ANDROID_API_N__) {
     return;
   }
-  if (android_api >= android_api_T) {
+  if (android_api >= __ANDROID_API_T__) {
     NP_MEMBER_NULL(android_namespace_t_T, name_);
     NP_MEMBER_REF_WRAP(android_namespace_t_T, is_isolated_);
     NP_MEMBER_REF_WRAP(android_namespace_t_T, is_greylist_enabled_);
@@ -315,7 +315,7 @@ void android_namespace_t::remove_soinfo(const soinfo *si) {
 
 soinfo_list_t_wrapper android_namespace_t::soinfo_list() {
   void *ref;
-  if (android_api >= android_api_T) {
+  if (android_api >= __ANDROID_API_T__) {
     ref = &CALL_MEMBER(soinfo_list_T);
   } else {
     ref = &CALL_MEMBER(soinfo_list_);

@@ -21,10 +21,12 @@ import android.annotation.SuppressLint;
 import android.os.Build;
 import android.os.Process;
 import android.util.Log;
-import java.lang.reflect.Method;
+import dalvik.system.VMRuntime;
 
 public class FakeLinker {
   private static final String TAG = FakeLinker.class.getCanonicalName();
+
+  private static String libraryName = "fakelinker";
 
   private static native boolean entrance(String hookModulePath);
 
@@ -39,8 +41,7 @@ public class FakeLinker {
 
   public static void localLoad() {
     try {
-      System.loadLibrary(BuildConfig.LINKER_MODULE_NAME +
-                         (is64Bit() ? "64" : "32"));
+      System.loadLibrary(libraryName + (is64Bit() ? "64" : "32"));
     } catch (UnsatisfiedLinkError e) {
       Log.e(TAG, "load fake linker library error", e);
     }
@@ -50,15 +51,7 @@ public class FakeLinker {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
       return Process.is64Bit();
     }
-    try {
-      Class<?> cls = Class.forName("dalvik.system.VMRuntime");
-      Method insn = cls.getMethod("getRuntime");
-      Method call = cls.getMethod("is64Bit");
-      return (boolean)call.invoke(insn.invoke(null));
-    } catch (Throwable e) {
-      Log.e(TAG, "call VMRuntime.is64Bit() failed", e);
-    }
-    return false;
+    return VMRuntime.getRuntime().is64Bit();
   }
 
   @SuppressLint("UnsafeDynamicallyLoadedCode")
@@ -107,4 +100,8 @@ public class FakeLinker {
    * @param level 最低log等级
    */
   public static void setNativeLogLevel(int level) { setLogLevel(level); }
+
+  public static void setLibraryName(String libraryName) {
+    FakeLinker.libraryName = libraryName;
+  }
 }

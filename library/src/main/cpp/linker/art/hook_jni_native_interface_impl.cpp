@@ -9,9 +9,11 @@
 #include <maps_util.h>
 
 #include <jni_helper.h>
+#include <linker_macros.h>
+
 #include "../linker_globals.h"
 
-extern "C" JNINativeInterface *original_functions;
+C_API JNINativeInterface *original_functions;
 
 static int api;
 
@@ -19,7 +21,6 @@ static constexpr uint32_t kAccFastNative = 0x00080000; // method (runtime; nativ
 static constexpr uint32_t kAccNative = 0x0100;         // method
 
 namespace fakelinker {
-
 
 FakeLinkerError HookJniNativeInterface(int function_offset, void *hook_method, void **backup_method) {
   if (function_offset < offsetof(JNINativeInterface, reserved0) ||

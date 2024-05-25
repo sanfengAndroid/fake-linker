@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FAKE_LINKER_LINKER_H
+#define FAKE_LINKER_LINKER_H
 
 #include <link.h>
 
@@ -13,3 +14,5 @@ struct platform_properties {
   bool bti_supported = false;
 #endif
 };
+
+#endif // FAKE_LINKER_LINKER_H

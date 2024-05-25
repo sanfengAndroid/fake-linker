@@ -151,8 +151,8 @@ bool LinkerSymbol::LoadSymbol() {
 
   const char *library = is64BitBuild() ? "/linker64" : "/linker";
 
-  std::vector<gaddress> internalAddresses;
-  std::vector<gaddress> exportAddresses;
+  std::vector<Address> internalAddresses;
+  std::vector<Address> exportAddresses;
   std::vector<soinfo *> libraryAddresses;
 
   int internal_index = 0;
@@ -184,7 +184,7 @@ bool LinkerSymbol::LoadSymbol() {
   ASSIGN_LIBRARY(linker_soinfo);
   if (!exportSymbols.empty()) {
     for (auto name : exportSymbols) {
-      exportAddresses.push_back(reinterpret_cast<gaddress>(linker_soinfo.Get()->find_export_symbol_address(name)));
+      exportAddresses.push_back(reinterpret_cast<Address>(linker_soinfo.Get()->find_export_symbol_address(name)));
     }
   }
 

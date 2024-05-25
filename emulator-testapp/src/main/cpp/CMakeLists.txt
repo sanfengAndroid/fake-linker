@@ -25,7 +25,9 @@ add_library( # Sets the name of the library.
   ${FAKELINKER_DIR}/common/maps_util.cpp
 )
 
-target_include_directories(fakelinker-module PRIVATE ${FAKELINKER_DIR}/export ${FAKELINKER_DIR}/common)
+target_include_directories(fakelinker-module PRIVATE
+  ${FAKELINKER_DIR}/include
+)
 
 add_library(test_module
   SHARED

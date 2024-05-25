@@ -6,7 +6,7 @@
 
 #include <linker_macros.h>
 
-#include "../common/macros.h"
+#include "macros.h"
 // https://cs.android.com/android/platform/superproject/+/master:bionic/linker/linked_list.h
 
 template <typename T>
@@ -464,7 +464,7 @@ public:
   typedef T *value_type;
 
   LinkedListWrapper(void *ptr) {
-    isT = android_api >= android_api_T;
+    isT = android_api >= __ANDROID_API_T__;
     if (isT) {
       linkTPtr = reinterpret_cast<LinkedListT<T, Allocator> *>(ptr);
     } else {

@@ -834,6 +834,35 @@ typedef struct {
  */
 extern void fakelinker_module_init(JNIEnv *env, SoinfoPtr fake_soinfo, const FakeLinker *fake_linker);
 
+enum FakeLinkerMode {
+  /**
+   * All parts must be initialized successfully
+   */
+  kFMFully,
+  /**
+   * You can only initialize the part, as long as you do not use the uninitialized successful part.
+   */
+  kFMPart,
+};
+
+/**
+ * @brief Fakelinker has been changed to static library mode to facilitate integration and reuse of APIs,
+ * so the initialization function needs to be called manually.
+ * It can be initialized multiple times, for example, it can be used before there is no jni environment
+ * and it can be used after there is a jni environment.
+ *
+ *
+ * @param env   jni environment or nullptr
+ * @param mode  initialization mode
+ * @return      return 0 on success
+ */
+int init_fakelinker(JNIEnv *env, FakeLinkerMode mode);
+
+/**
+ * @brief Static library mode directly calls to obtain the object
+ */
+FakeLinker *get_fakelinker();
+
 __END_DECLS
 
 #endif // FAKE_LINKER_FAKE_LINKER_H

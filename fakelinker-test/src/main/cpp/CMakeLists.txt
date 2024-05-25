@@ -20,19 +20,18 @@ add_executable(fakelinker_static_test
 
 set(FAKELINKER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../../library/src/main/cpp)
 
-option(FAKELINKER_BUILD_STATIC_LIB "build fakelinker static library" ON)
 add_subdirectory(${FAKELINKER_DIR} lib)
 
 target_link_libraries(fakelinker_test
   PRIVATE
-  fakelinker_static
+  fakelinker
   googletest::gtest
   junit-gtest::junit-gtest
 )
 
 target_compile_definitions(fakelinker_static_test PUBLIC FAKELINKER_STATIC_TEST STD_LOG)
 
-target_link_libraries(fakelinker_static_test PRIVATE googletest::gtest fakelinker_static)
+target_link_libraries(fakelinker_static_test PRIVATE googletest::gtest fakelinker)
 
 if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
   set(OUTPUT_TYPE "Debug")

@@ -2,9 +2,9 @@
 #include <gtest/gtest.h>
 
 #include <fake_linker.h>
-#include "../linker/elf_reader.h"
 #include "../linker/linker_globals.h"
 #include "../linker/linker_symbol.h"
+#include "elf_reader.h"
 
 using namespace fakelinker;
 
@@ -66,7 +66,6 @@ static void Init() {
 static void init_env() {
   android_api = GetApiLevel();
   LOGI("current android api: %d", android_api);
-  android_api_T = __ANDROID_API_T__;
   Init();
 }
 

@@ -11,16 +11,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
-      - name: set up JDK 11
-        uses: actions/setup-java@v3
+      - uses: actions/checkout@v4
+      - name: set up JDK 17
+        uses: actions/setup-java@v4
         with:
-          java-version: "11"
+          java-version: "17"
           distribution: "temurin"
           cache: gradle
 
       - name: Setup Python
-        uses: actions/setup-python@v4.3.1
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
@@ -33,7 +33,7 @@ jobs:
           echo keyAlias=${{ secrets.KEY_ALIAS }} >> local.properties
           echo keyPassword=${{ secrets.KEY_PASSWORD }} >> local.properties
           echo logLevel=3 >> local.properties
-          echo targetSdk=33 >> local.properties
+          echo targetSdk=34 >> local.properties
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Build with Gradle
@@ -72,7 +72,7 @@ jobs:
       - name: Uninstall store file
         run: rm -f fake.jks
       - name: Upload Build Artifact
-        uses: actions/upload-artifact@v3.1.1
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ github.sha }}-build
           # A file, directory or wildcard pattern that describes what to upload

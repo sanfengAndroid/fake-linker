@@ -1,10 +1,9 @@
 #pragma once
 
+#include <android/log.h>
 #include <pthread.h>
 #include <stddef.h>
 #include <unordered_map>
-
-#include <alog.h>
 
 #include "linked_list.h"
 #include "linker_block_allocator.h"
@@ -21,7 +20,7 @@ struct SymbolItem {
   T *pointer = nullptr;
   bool force = true;
 
-  bool Set(gaddress addr) {
+  bool Set(Address addr) {
     if (addr == 0) {
       return !force;
     }
@@ -44,9 +43,11 @@ struct SymbolItem {
   bool CheckApi(int api) { return api >= min_api && api < max_api; }
   T *Get() {
     if (!pointer) {
-      LOGE("Attempt to get symbol/library `%s` address is empty, api is %d in [%d, %d), only to terminate program "
-           "prevent error from sending",
-           name, android_api, min_api, max_api);
+      __android_log_print(
+        ANDROID_LOG_ERROR, "FakeLinker",
+        "Attempt to get symbol/library `%s` address is empty, api is %d in [%d, %d), only to terminate program "
+        "prevent error from sending",
+        name, android_api, min_api, max_api);
       abort();
     }
     return pointer;
