@@ -58,7 +58,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_sanfengandroid_testapp_MainActivity_a
 #endif
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_sanfengandroid_testapp_MainActivity_testArmSymbolForFakeinkerHook(JNIEnv *env, jobject thiz) {
+Java_com_sanfengandroid_testapp_MainActivity_testArmSymbolForFakelinkerHook(JNIEnv *env, jobject thiz) {
   void *libc = dlopen("libm.so", RTLD_NOW);
   LOGW("found libc module: %p, hook function address: %p", libc, test_x86_arm_hook_before);
   if (libc) {

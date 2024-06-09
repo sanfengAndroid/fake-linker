@@ -31,12 +31,10 @@ android {
 
         externalNativeBuild {
             cmake {
-                cppFlags "-Werror"
-                cFlags "-Werror"
                 abiFilters.addAll(rootProject.abis)
-                arguments "-DHOOK_LOG_LEVEL=${rootProject.logLevel}",
-                        "-DMODULE_VERSION=${rootProject.versionCode}",
-                        "-DMODULE_VERSION_NAME=${rootProject.versionName}"
+                arguments "-DFAKELINKER_LOG_LEVEL=${rootProject.logLevel}",
+                        "-DFAKELINKER_MODULE_VERSION=${rootProject.versionCode}",
+                        "-DFAKELINKER_MODULE_VERSION_NAME=${rootProject.versionName}"
             }
         }
     }

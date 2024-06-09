@@ -41,9 +41,13 @@ public class FakeLinker {
 
   public static void localLoad() {
     try {
-      System.loadLibrary(libraryName + (is64Bit() ? "64" : "32"));
-    } catch (UnsatisfiedLinkError e) {
-      Log.e(TAG, "load fake linker library error", e);
+      System.loadLibrary(libraryName);
+    } catch (UnsatisfiedLinkError ignore) {
+      try {
+        System.loadLibrary(libraryName + (is64Bit() ? "64" : "32"));
+      } catch (UnsatisfiedLinkError e) {
+        Log.e(TAG, "load fake linker library error", e);
+      }
     }
   }
 

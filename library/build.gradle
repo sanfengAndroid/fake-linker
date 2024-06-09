@@ -24,7 +24,6 @@ plugins {
     id 'maven-publish'
 }
 
-
 android {
     compileSdk 34
     defaultConfig {
@@ -35,11 +34,10 @@ android {
         externalNativeBuild {
             cmake {
                 abiFilters.addAll(rootProject.abis)
-                arguments '-DANDROID_PLATFORM=21',
-                        "-DINSTALLER_MODULE_NAME=${rootProject.installerModuleName}",
-                        "-DHOOK_LOG_LEVEL=${rootProject.logLevel}",
-                        "-DMODULE_VERSION=${rootProject.versionCode}",
-                        "-DMODULE_VERSION_NAME=${rootProject.versionName}"
+                arguments "-DFAKELINKER_INSTALLER_MODULE_NAME=${rootProject.installerModuleName}",
+                        "-DFAKELINKER_LOG_LEVEL=${rootProject.logLevel}",
+                        "-DFAKELINKER_MODULE_VERSION=${rootProject.versionCode}",
+                        "-DFAKELINKER_MODULE_VERSION_NAME=${rootProject.versionName}"
             }
         }
 
@@ -51,12 +49,6 @@ android {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             consumerProguardFiles 'consumer-rules.pro'
-            externalNativeBuild {
-                cmake {
-                    cppFlags "-fvisibility=hidden -fvisibility-inlines-hidden -Os -fomit-frame-pointer"
-                    cFlags "-fvisibility=hidden -fvisibility-inlines-hidden -Os -fomit-frame-pointer"
-                }
-            }
         }
 
     }
@@ -80,7 +72,11 @@ android {
         fakelinker {
             headers "src/main/cpp/include"
         }
+        fakelinker_static {
+            headers "src/main/cpp/include"
+        }
     }
+
     publishing {
         multipleVariants {
             includeBuildTypeValues('debug', 'release')
@@ -107,7 +103,6 @@ afterEvaluate {
             }
         }
     }
-
 }
 
 
@@ -129,6 +124,22 @@ tasks.configureEach { task ->
 //                        it.write(JsonOutput.prettyPrint(JsonOutput.toJson(abi)))
 //                    }
                 }
+                // 删减动态库版本多余的头文件
+                File includeDir = new File(dir, 'modules/fakelinker/include')
+                def keepFiles = ['linker_macros.h', 'fake_linker.h', 'linker_version.h']
+                includeDir.eachFile {
+                    if (!keepFiles.contains(it.name)) {
+                        it.delete()
+                    }
+                }
+            }
+        }
+    } else if (task.name.startsWith('copy') && task.name.contains('JniLibsProjectAndLocalJars')) {
+        // 在这里删除 aar 包中的 jni 目录,它与 prefab 重复了,不能直接排除 lib 目录否则其它项目直接引用该项目导致
+        // 库也会被删除
+        task.doLast {
+            it.outputs.files.files.each { dir ->
+                dir.deleteDir()
             }
         }
     }

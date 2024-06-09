@@ -57,7 +57,7 @@ ext {
         appType = 'arm'
     }
     assert (targetSdk >= 21)
-
+    fakeLinkerModuleName = project.findProperty('fakeLinkerModuleName')?.trim() ?: props.getOrDefault('fakeLinkerModuleName', 'fakelinker')?.trim()
     installerModuleName = project.findProperty('installerModuleName')?.trim() ?: props.getOrDefault('installerModuleName', 'linkerInstaller')?.trim()
     versionCode = project.findProperty('versionCode')?.toInteger() ?: props.getOrDefault('versionCode', 3100).
             toInteger()

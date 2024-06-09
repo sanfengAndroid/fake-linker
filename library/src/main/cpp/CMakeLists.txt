@@ -6,11 +6,20 @@ cmake_minimum_required(VERSION 3.19)
 
 project(fakelinker)
 
+include(GNUInstallDirs)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_C_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
 if(NOT ${CMAKE_BUILD_TYPE} STREQUAL "Debug")
   set(CMAKE_BUILD_TYPE "Release")
+endif()
+
+if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Os -fomit-frame-pointer")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os -fomit-frame-pointer")
 endif()
 
 if(${CMAKE_ANDROID_ARCH_ABI} STREQUAL "arm64-v8a" OR ${CMAKE_ANDROID_ARCH_ABI} STREQUAL "x86_64")
@@ -30,13 +39,25 @@ endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
 
+if(NOT DEFINED FAKELINKER_LOG_LEVEL)
+  set(FAKELINKER_LOG_LEVEL 5)
+endif()
+
+if(NOT DEFINED FAKELINKER_MODULE_VERSION)
+  set(FAKELINKER_MODULE_VERSION 3100)
+endif()
+
+if(NOT DEFINED FAKELINKER_MODULE_VERSION_NAME)
+  set(FAKELINKER_MODULE_VERSION_NAME "3.1.0")
+endif()
+
 configure_file("${CMAKE_CURRENT_LIST_DIR}/module_config.h.in" "${CMAKE_CURRENT_LIST_DIR}/include/linker_version.h")
 
 message(STATUS "cmake version:${CMAKE_VERSION}
 api:${ANDROID_PLATFORM}
 build type:${CMAKE_BUILD_TYPE}
-install module:${INSTALLER_MODULE_NAME}
-version: ${MODULE_VERSION_NAME}")
+install module:${FAKELINKER_INSTALLER_MODULE_NAME}
+version: ${FAKELINKER_MODULE_VERSION_NAME}")
 
 set(FAKE_LINKER_SRC
   linker/linker_main.cpp
@@ -72,7 +93,8 @@ add_library(fakelinker_static
 )
 target_compile_options(fakelinker_static PRIVATE -fno-rtti -fno-exceptions)
 target_include_directories(fakelinker_static PUBLIC
-  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/fakelinker>
 )
 target_link_libraries(fakelinker_static ${log-lib})
 
@@ -85,16 +107,30 @@ target_link_libraries(fakelinker PUBLIC
   ${log}
 )
 
+set_target_properties(fakelinker PROPERTIES
+  LINK_FLAGS_RELEASE
+  "${LINK_FLAGS} -Wl,--gc-sections,-s,--version-script=\"${CMAKE_CURRENT_SOURCE_DIR}/symbol.map.txt\""
+)
+
+
+install(TARGETS fakelinker fakelinker_static
+  EXPORT fakelinker
+)
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/fakelinker/fakelinker
+)
 
 if(FAKELINKER_BUILD_INSTALLER)
-  add_executable(${INSTALLER_MODULE_NAME}
+  add_executable(${FAKELINKER_INSTALLER_MODULE_NAME}
     installer/hook_installer.cpp
   )
 
-  target_link_libraries(${INSTALLER_MODULE_NAME}
+  target_link_libraries(${FAKELINKER_INSTALLER_MODULE_NAME}
     ${log-lib})
 
   set_target_properties(${HOOK_INSTALL_MODULE_NAME} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY
-    ${CMAKE_CURRENT_SOURCE_DIR}/../assets/${CMAKE_ANDROID_ARCH_ABI})
+    ${CMAKE_CURRENT_SOURCE_DIR}/../assets/${CMAKE_ANDROID_ARCH_ABI}
+  )
 endif()

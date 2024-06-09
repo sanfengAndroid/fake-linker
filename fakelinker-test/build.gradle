@@ -21,9 +21,9 @@ android {
                 abiFilters.addAll(rootProject.abis)
                 arguments '-DANDROID_PLATFORM=21',
                         "-DINSTALLER_MODULE_NAME=${rootProject.installerModuleName}",
-                        "-DHOOK_LOG_LEVEL=${rootProject.logLevel}",
-                        "-DMODULE_VERSION=${rootProject.versionCode}",
-                        "-DMODULE_VERSION_NAME=${rootProject.versionName}"
+                        "-DFAKELINKER_LOG_LEVEL=${rootProject.logLevel}",
+                        "-DFAKELINKER_MODULE_VERSION=${rootProject.versionCode}",
+                        "-DFAKELINKER_MODULE_VERSION_NAME=${rootProject.versionName}"
             }
         }
     }

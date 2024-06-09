@@ -16,9 +16,9 @@
 #include "linker_symbol.h"
 #include "linker_util.h"
 
-int g_log_level = HOOK_LOG_LEVEL;
-int g_version_code = MODULE_VERSION;
-const char *g_version_name = MODULE_VERSION_NAME;
+int g_log_level = FAKELINKER_LOG_LEVEL;
+int g_version_code = FAKELINKER_MODULE_VERSION;
+const char *g_version_name = FAKELINKER_MODULE_VERSION_NAME;
 int android_api;
 C_API FakeLinker g_fakelinker_export;
 JNINativeInterface *original_functions;
@@ -128,7 +128,7 @@ static void FakeLinker_removeAllRelocationFilterSymbol(JNIEnv *, jclass) {
 }
 
 #define NATIVE_METHOD(className, functionName, signature)                                                              \
-  { #functionName, signature, (void *)(className##_##functionName) }
+  {#functionName, signature, (void *)(className##_##functionName)}
 
 #ifndef NELEM
 #define NELEM(x) ((int)(sizeof(x) / sizeof((x)[0])))

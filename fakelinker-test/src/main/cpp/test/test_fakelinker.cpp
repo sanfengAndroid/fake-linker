@@ -1,3 +1,4 @@
+#include <android/api-level.h>
 #include <dlfcn.h>
 #include <gtest/gtest.h>
 
@@ -47,10 +48,7 @@ static constexpr bool isStaticTest() {
 }
 
 static int GetApiLevel() {
-  char value[92] = {0};
-  if (__system_property_get("ro.build.version.sdk", value) < 1)
-    return -1;
-  int api_level = atoi(value);
+  int api_level = android_get_device_api_level();
   return (api_level > 0) ? api_level : -1;
 }
 

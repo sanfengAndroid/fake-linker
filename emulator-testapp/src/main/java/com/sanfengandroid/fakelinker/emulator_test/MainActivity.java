@@ -36,10 +36,10 @@ public class MainActivity extends AppCompatActivity {
     findViewById(R.id.btnLoadFakelinker).setOnClickListener(view -> {
       try {
         // 模拟器可能加载到默认命名空间中,因此要先手动加载fakelinker模块
-        System.loadLibrary(FakeLinker.is64Bit() ? "fakelinker-test64"
-                                                : "fakelinker-test32");
-        String name = FakeLinker.is64Bit() ? "libfakelinker-test64.so"
-                                           : "libfakelinker-test32.so";
+        System.loadLibrary(FakeLinker.is64Bit() ? "fakelinker-module64"
+                                                : "fakelinker-module32");
+        String name = FakeLinker.is64Bit() ? "libfakelinker-module64.so"
+                                           : "libfakelinker-module32.so";
         FakeLinker.initFakeLinker(null, name);
         Log.w("FakeLinker_Test", "start load test module");
       } catch (Throwable e) {
@@ -53,9 +53,9 @@ public class MainActivity extends AppCompatActivity {
     });
 
     findViewById(R.id.btnLoadArmLibrary).setOnClickListener(v -> {
-      // test_module 是 arm 架构, fakelinker和fakelinker模块是x86架构
+      // test_module 是 arm 架构, fakelinker和fakelinker_module是x86架构
       System.loadLibrary("test_module");
-      testArmSymbolForFakeinkerHook();
+      testArmSymbolForFakelinkerHook();
       beforeAddress = findModuleBeforeAddress();
       afterAddress = findModuleAfterAddress();
       testBeforeHook();
@@ -87,5 +87,5 @@ public class MainActivity extends AppCompatActivity {
 
   private native void testAfterHook();
 
-  private native void testArmSymbolForFakeinkerHook();
+  private native void testArmSymbolForFakelinkerHook();
 }

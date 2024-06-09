@@ -54,7 +54,7 @@ using namespace fakelinker;
 
 static std::vector<std::string> filter_symbols;
 
-int get_fakelinker_version_impl() { return MODULE_VERSION; }
+int get_fakelinker_version_impl() { return FAKELINKER_MODULE_VERSION; }
 
 SoinfoPtr soinfo_find_impl(SoinfoFindType find_type, const void *param, int *out_error) {
   RET_SUCCESS();

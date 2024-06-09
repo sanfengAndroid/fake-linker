@@ -16,11 +16,7 @@ set_target_properties(Dobby PROPERTIES IMPORTED_LOCATION
 
 set(FAKELINKER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../../library/src/main/cpp)
 
-add_library( # Sets the name of the library.
-  fakelinker-module
-
-  SHARED
-
+add_library(fakelinker-module SHARED
   fakelinker_module.cpp
   ${FAKELINKER_DIR}/common/maps_util.cpp
 )

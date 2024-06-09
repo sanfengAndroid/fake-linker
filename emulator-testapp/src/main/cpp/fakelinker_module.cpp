@@ -1,6 +1,7 @@
 //
 // Created by WrBug on 2018/3/23.
 //
+#include <android/api-level.h>
 #include <android/log.h>
 #include <inttypes.h>
 #include <string>
@@ -29,14 +30,10 @@ int g_log_level = 2;
 static bool loaded = false;
 
 static int get_api_level() {
-  static int api = 0;
   if (api > 0) {
     return api;
   }
-  char value[92] = {0};
-  if (__system_property_get("ro.build.version.sdk", value) < 1)
-    return -1;
-  api = atoi(value);
+  api = android_get_device_api_level();
   return api;
 }
 
@@ -108,16 +105,16 @@ C_API JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *unused) {
   LOGI("load fakelinker module");
   return JNI_VERSION_1_6;
 }
-extern "C" JNIEXPORT void JNICALL Java_com_sanfengandroid_testapp_MainActivity_relocateLibrary(JNIEnv *env, jobject,
-                                                                                               jstring library) {
+C_API JNIEXPORT void JNICALL Java_com_sanfengandroid_testapp_MainActivity_relocateLibrary(JNIEnv *env, jobject,
+                                                                                          jstring library) {
   if (!library || !loaded) {
     return;
   }
   ScopedUtfChars name(env, library);
   LOGW("relocate library: %s, result: %d", name.c_str(), remote->call_manual_relocation_by_name(thiz, name.c_str()));
 }
-extern "C" JNIEXPORT jlong JNICALL Java_com_sanfengandroid_testapp_MainActivity_findModuleBeforeAddress(JNIEnv *env,
-                                                                                                        jobject thiz) {
+C_API JNIEXPORT jlong JNICALL Java_com_sanfengandroid_testapp_MainActivity_findModuleBeforeAddress(JNIEnv *env,
+                                                                                                   jobject _unused) {
   if (!loaded) {
     return 0;
   }
@@ -127,8 +124,8 @@ extern "C" JNIEXPORT jlong JNICALL Java_com_sanfengandroid_testapp_MainActivity_
   LOGI("find result: %" PRIx64, addr);
   return addr;
 }
-extern "C" JNIEXPORT jlong JNICALL Java_com_sanfengandroid_testapp_MainActivity_findModuleAfterAddress(JNIEnv *env,
-                                                                                                       jobject thiz) {
+C_API JNIEXPORT jlong JNICALL Java_com_sanfengandroid_testapp_MainActivity_findModuleAfterAddress(JNIEnv *env,
+                                                                                                  jobject _unused) {
   if (!loaded) {
     return 0;
   }
