@@ -24,14 +24,14 @@ add_subdirectory(${FAKELINKER_DIR} lib)
 
 target_link_libraries(fakelinker_test
   PRIVATE
-  fakelinker
+  fakelinker_static
   googletest::gtest
   junit-gtest::junit-gtest
 )
 
 target_compile_definitions(fakelinker_static_test PUBLIC FAKELINKER_STATIC_TEST STD_LOG)
 
-target_link_libraries(fakelinker_static_test PRIVATE googletest::gtest fakelinker)
+target_link_libraries(fakelinker_static_test PRIVATE googletest::gtest fakelinker_static)
 
 if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
   set(OUTPUT_TYPE "Debug")

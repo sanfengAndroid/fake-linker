@@ -56,6 +56,14 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+
+    sourceSets {
+        main {
+            // add stub class
+            java.srcDirs += 'src/stub/java'
+        }
+    }
+
     externalNativeBuild {
         cmake {
             path "src/main/cpp/CMakeLists.txt"
@@ -85,6 +93,10 @@ android {
     }
 }
 
+def removeFiles = [
+        'dalvik/system'
+]
+
 afterEvaluate {
     publishing {
         publications {
@@ -103,6 +115,17 @@ afterEvaluate {
             }
         }
     }
+    tasks.named('compileReleaseJavaWithJavac') {
+        doLast {
+            def dir = it.destinationDirectory.get().asFile
+            removeFiles.each {
+                def file = new File(dir, it)
+                if (file.exists()) {
+                    delete file
+                }
+            }
+        }
+    }
 }
 
 
@@ -116,13 +139,12 @@ tasks.configureEach { task ->
                         var prefab = json.parse(it, 'utf-8')
                         prefab['name'] = 'Fakelinker'
                         it.write(JsonOutput.prettyPrint(JsonOutput.toJson(prefab)))
+                    } else if (it.name == 'abi.json') {
+                        var json = new JsonSlurper()
+                        var abi = json.parse(it, 'utf-8')
+                        abi['stl'] = 'none'
+                        it.write(JsonOutput.prettyPrint(JsonOutput.toJson(abi)))
                     }
-//                    else if (it.name == 'abi.json') {
-//                        var json = new JsonSlurper()
-//                        var abi = json.parse(it, 'utf-8')
-//                        abi['stl'] = 'none'
-//                        it.write(JsonOutput.prettyPrint(JsonOutput.toJson(abi)))
-//                    }
                 }
                 // 删减动态库版本多余的头文件
                 File includeDir = new File(dir, 'modules/fakelinker/include')

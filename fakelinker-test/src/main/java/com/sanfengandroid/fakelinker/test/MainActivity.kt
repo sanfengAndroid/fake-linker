@@ -2,6 +2,7 @@ package com.sanfengandroid.fakelinker.test
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import java.lang.reflect.Modifier
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

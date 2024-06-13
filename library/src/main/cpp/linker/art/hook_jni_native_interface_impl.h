@@ -19,5 +19,8 @@ int HookJniNativeInterfaces(HookJniUnit *items, int len);
 
 int HookJavaNativeFunctions(JNIEnv *env, jclass clazz, HookRegisterNativeUnit *items, size_t len);
 
-bool InitJniFunctionOffset(JNIEnv *env, jclass clazz, jmethodID methodId, void *native, uint32_t flags);
+bool InitJniFunctionOffset(JNIEnv *env, jclass clazz, jmethodID methodId, void *native, uint32_t flags,
+                           uint32_t unmask);
+
+bool DefaultInitJniFunctionOffset(JNIEnv *env);
 } // namespace fakelinker

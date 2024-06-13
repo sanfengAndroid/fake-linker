@@ -835,4 +835,4 @@ C_API API_PUBLIC FakeLinker g_fakelinker_export = {
   set_ld_debug_verbosity_impl,
 };
 
-C_API FakeLinker *get_fakelinker() { return &g_fakelinker_export; }
+C_API const FakeLinker *get_fakelinker() { return &g_fakelinker_export; }

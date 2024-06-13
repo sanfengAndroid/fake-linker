@@ -74,16 +74,6 @@ static void InitHookModule(JNIEnv *env, void *module, const char *module_name) {
   module_ptr(env, hook_ptr, &g_fakelinker_export);
 }
 
-static void FakeLinker_nativeOffset(JNIEnv *env, jclass clazz) { LOGW("This test native offset"); }
-
-static int GetApiLevel() {
-  char value[92] = {0};
-  if (__system_property_get("ro.build.version.sdk", value) < 1)
-    return -1;
-  int api_level = atoi(value);
-  return (api_level > 0) ? api_level : -1;
-}
-
 static jboolean FakeLinker_entrance(JNIEnv *env, jclass clazz, jstring hook_module_path) {
   LOGD("current api level: %d", android_api);
   if (!init_success) {
@@ -99,12 +89,12 @@ static jboolean FakeLinker_entrance(JNIEnv *env, jclass clazz, jstring hook_modu
     LOGE("Load null module error");
     return JNI_FALSE;
   }
-  void *hookHandle = dlopen(hook_module.c_str(), RTLD_NOW);
-  if (hookHandle == nullptr) {
+  void *hook_handle = dlopen(hook_module.c_str(), RTLD_NOW);
+  if (hook_handle == nullptr) {
     LOGE("load hook module failed: %s", dlerror());
     return JNI_FALSE;
   }
-  InitHookModule(env, hookHandle, hook_module.c_str());
+  InitHookModule(env, hook_handle, hook_module.c_str());
   return JNI_TRUE;
 }
 
@@ -135,45 +125,48 @@ static void FakeLinker_removeAllRelocationFilterSymbol(JNIEnv *, jclass) {
 #endif
 
 static JNINativeMethod gMethods[] = {
-  NATIVE_METHOD(FakeLinker, nativeOffset, "()V"),
   NATIVE_METHOD(FakeLinker, entrance, "(Ljava/lang/String;)Z"),
   NATIVE_METHOD(FakeLinker, setLogLevel, "(I)V"),
   NATIVE_METHOD(FakeLinker, relocationFilterSymbol, "(Ljava/lang/String;Z)I"),
   NATIVE_METHOD(FakeLinker, removeAllRelocationFilterSymbol, "()V"),
 };
 
-C_API int init_fakelinker(JNIEnv *env, FakeLinkerMode mode) {
-  bool force = mode == FakeLinkerMode::kFMFully;
-  if (force && env == nullptr) {
-    return 1;
-  }
+C_API int init_fakelinker(JNIEnv *env, FakeLinkerMode mode, const char *java_class_name) {
   android_api = android_get_device_api_level();
-  Init();
-  static bool registered = false;
-
-  if (env && !registered) {
-    original_functions = const_cast<JNINativeInterface *>(env->functions);
-    jclass clazz = env->FindClass("com/sanfengandroid/fakelinker/FakeLinker");
-    // 静态库不强制注册
-    if (clazz) {
-      bool success = env->RegisterNatives(clazz, gMethods, NELEM(gMethods)) == JNI_OK;
-      if (success) {
-        success = fakelinker::InitJniFunctionOffset(
-          env, clazz, env->GetStaticMethodID(clazz, gMethods[0].name, gMethods[0].signature),
-          reinterpret_cast<void *>(FakeLinker_nativeOffset), 0x109);
-      } else if (force) {
-        return 2;
-      }
-      if (!success && force) {
-        return 3;
-      }
-      registered = success;
-    } else if (force) {
-      return 5;
+  static bool native_hook_initialized = false;
+  static bool java_register_initialized = false;
+  if (mode & FakeLinkerMode::kFMSoinfo) {
+    Init();
+    if (!init_success) {
+      return 1;
     }
   }
-  if (!init_success && force) {
-    return 6;
+
+  if ((mode & FakeLinkerMode::kFMNativeHook) && !native_hook_initialized) {
+    if (env == nullptr) {
+      LOGE("JNIEnv is a null pointer and cannot register native hook");
+      return 2;
+    }
+    native_hook_initialized = fakelinker::DefaultInitJniFunctionOffset(env);
+    if (!native_hook_initialized) {
+      return 3;
+    }
+  }
+
+  if ((mode & (FakeLinkerMode::kFMJavaRegister | FakeLinkerMode::kFMForceJavaRegister)) && !java_register_initialized) {
+    if (env == nullptr) {
+      LOGE("JNIEnv is a null pointer and cannot register fakelinker java api");
+      return 4;
+    }
+    jclass clazz = env->FindClass(java_class_name ? java_class_name : "com/sanfengandroid/fakelinker/FakeLinker");
+    if (clazz == nullptr) {
+      env->ExceptionClear();
+      return (mode & FakeLinkerMode::kFMJavaRegister) && java_class_name == nullptr ? 0 : 5;
+    }
+    java_register_initialized = env->RegisterNatives(clazz, gMethods, NELEM(gMethods)) == JNI_OK;
+    if (!java_register_initialized) {
+      return (mode & FakeLinkerMode::kFMJavaRegister) && java_class_name == nullptr ? 0 : 6;
+    }
   }
   return 0;
 }

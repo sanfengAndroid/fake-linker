@@ -102,9 +102,13 @@ target_link_libraries(fakelinker_static ${log-lib})
 add_library(fakelinker SHARED
   linker/linker_dynamic.cpp
 )
-target_link_libraries(fakelinker PUBLIC
+target_link_libraries(fakelinker PRIVATE
   fakelinker_static
   ${log}
+)
+target_include_directories(fakelinker PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/fakelinker>
 )
 
 set_target_properties(fakelinker PROPERTIES

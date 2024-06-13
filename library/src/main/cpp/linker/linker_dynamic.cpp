@@ -13,7 +13,10 @@ C_API JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
   if (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) != JNI_OK) {
     async_safe_fatal("JNI environment error");
   }
-  jint code = init_fakelinker(env, FakeLinkerMode::kFMFully);
+  jint code = init_fakelinker(env,
+                              static_cast<FakeLinkerMode>(FakeLinkerMode::kFMSoinfo | FakeLinkerMode::kFMNativeHook |
+                                                          FakeLinkerMode::kFMJavaRegister),
+                              nullptr);
   if (code != 0) {
     LOGE("init fakelinker result: %d", code);
   }

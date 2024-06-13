@@ -12,6 +12,7 @@
 #include <linker_macros.h>
 
 #include "../linker_globals.h"
+#include "scoped_local_ref.h"
 
 C_API JNINativeInterface *original_functions;
 
@@ -99,8 +100,8 @@ int HookJniNativeInterfaces(HookJniUnit *items, int len) {
 inline static bool IsIndexId(jmethodID mid) { return ((reinterpret_cast<uintptr_t>(mid) % 2) != 0); }
 
 static jfieldID field_art_method = nullptr;
-int access_flags_art_method_offset = -1;
-static int jni_offset;
+static int access_flags_art_method_offset = -1;
+static int jni_offset = -1;
 
 static void InitArt(JNIEnv *env) {
   if (android_api >= __ANDROID_API_R__) {
@@ -124,7 +125,11 @@ static void *GetArtMethod(JNIEnv *env, jclass clazz, jmethodID methodId) {
   return methodId;
 }
 
-bool InitJniFunctionOffset(JNIEnv *env, jclass clazz, jmethodID methodId, void *native, uint32_t flags) {
+bool InitJniFunctionOffset(JNIEnv *env, jclass clazz, jmethodID methodId, void *native, uint32_t flags,
+                           uint32_t unmask) {
+  if (jni_offset != -1 && access_flags_art_method_offset != -1) {
+    return true;
+  }
   InitArt(env);
   uintptr_t *artMethod = static_cast<uintptr_t *>(GetArtMethod(env, clazz, methodId));
   bool success = false;
@@ -136,15 +141,14 @@ bool InitJniFunctionOffset(JNIEnv *env, jclass clazz, jmethodID methodId, void *
       break;
     }
   }
-  CHECK(success);
-  if (api >= __ANDROID_API_Q__) {
-    // 非内部隐藏类
-    flags |= 0x10000000;
+  if (!success) {
+    LOGE("Failed to find jni offset of art method");
+    return false;
   }
-  char *start = reinterpret_cast<char *>(artMethod);
+  uint32_t *start = reinterpret_cast<uint32_t *>(artMethod);
   for (int i = 1; i < 18; ++i) {
-    uint32_t value = *(uint32_t *)(start + i * 4);
-    if (value == flags) {
+    uint32_t value = start[i];
+    if ((value & 0xffff) == (flags & 0xffff) && (value & unmask) == 0) {
       access_flags_art_method_offset = i * 4;
       LOGD("found art method match access flags offset: %d", i * 4);
       success &= true;
@@ -163,6 +167,45 @@ bool InitJniFunctionOffset(JNIEnv *env, jclass clazz, jmethodID methodId, void *
     }
   }
   return success;
+}
+
+static void HookNativeFinishInit() { CHECK(false); }
+
+bool DefaultInitJniFunctionOffset(JNIEnv *env) {
+  if (jni_offset != -1 && access_flags_art_method_offset != -1) {
+    return true;
+  }
+  InitArt(env);
+  ScopedLocalRef<jclass> clazz(env, env->FindClass("com/android/internal/os/RuntimeInit"));
+  if (clazz.get() == nullptr) {
+    LOGE("not found com.android.internal.os.RuntimeInit.class");
+    return false;
+  }
+  JNINativeMethod method{
+    .name = "nativeFinishInit", .signature = "()V", .fnPtr = reinterpret_cast<void *>(HookNativeFinishInit)};
+  jmethodID methodId = env->GetStaticMethodID(clazz.get(), method.name, method.signature);
+  if (methodId == nullptr) {
+    LOGE("find RuntimeInit.nativeFinishInit jmethodID failed");
+    return false;
+  }
+  uintptr_t *artMethod = static_cast<uintptr_t *>(GetArtMethod(env, clazz.get(), methodId));
+  uintptr_t backup[30];
+  for (int i = 0; i < 30; ++i) {
+    backup[i] = artMethod[i];
+  }
+  if (env->RegisterNatives(clazz.get(), &method, 1) != JNI_OK) {
+    LOGE("Cannot re-register RuntimeInit.nativeFinishInit");
+    return false;
+  }
+  // private static final native
+  // kAccConstructor | kAccDeclaredSynchronized | kAccClassIsProxy | kAccSkipAccessChecks |  kAccSkipHiddenapiChecks |
+  // kAccCopied kAccDefault
+  if (InitJniFunctionOffset(env, clazz.get(), methodId, method.fnPtr, 0x11a, 0xf0000 | 0x80000000)) {
+    // recovery pointer
+    artMethod[jni_offset] = backup[jni_offset];
+    return true;
+  }
+  return false;
 }
 
 static void *GetOriginalNativeFunction(const uintptr_t *art_method) {

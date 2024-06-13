@@ -5,6 +5,8 @@
 
 #include <linker_macros.h>
 
+#include <map>
+
 #include "linker_namespaces.h"
 #include "local_block_allocator.h"
 
@@ -184,19 +186,7 @@ struct soinfo_tls {
   size_t module_id = 0;
 };
 
-struct symbol_relocation {
-  const char *name;
-  /*
-   * resolve_symbol_address 解析后的值
-   * */
-  ElfW(Addr) sym_address;
-  /*
-   * 调试时使用
-   * */
-  soinfo *source;
-};
-
-typedef std::vector<symbol_relocation> symbol_relocations;
+typedef std::map<std::string, ElfW(Addr)> symbol_relocations;
 
 struct soinfo {
   static void Init();

@@ -44,7 +44,7 @@ jobs:
           mv fakelinker-test/src/main/cpp/build/Debug out/test_binary
           mv fakelinker-test/build/outputs/apk/debug/fakelinker-test-debug.apk out/test_apk/fakelinker-test-debug.apk
           mv fakelinker-test/build/outputs/apk/androidTest/debug/fakelinker-test-debug-androidTest.apk out/test_apk/fakelinker-androidtest-debug.apk
-          mv library/build/outputs/aar/library-debug.aar out/faklinker-lib-debug.aar
+          mv library/build/outputs/aar/library-debug.aar out/fakelinker-lib-debug.aar
           mv library/build/outputs/aar/library-release.aar out/fakelinker-lib-release.aar
 
       - name: Build emulator version with Gradle
@@ -55,7 +55,7 @@ jobs:
       - name: Copy emulator version output
         run: |
           mv emulator-testapp/build/outputs/apk/debug/emulator-testapp-debug.apk out/test_apk/fakelinker-emulator-test-debug.apk
-          mv library/build/outputs/aar/library-debug.aar out/faklinker-emulator-lib-debug.aar
+          mv library/build/outputs/aar/library-debug.aar out/fakelinker-emulator-lib-debug.aar
           mv library/build/outputs/aar/library-release.aar out/fakelinker-emulator-lib-release.aar
 
       - name: Build 32-bit test app

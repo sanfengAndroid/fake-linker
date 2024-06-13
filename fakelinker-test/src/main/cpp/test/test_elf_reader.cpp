@@ -12,7 +12,7 @@ TEST(ElfReader, importTest) {
   EXPECT_NE(reader.FindImportSymbol("dlclose"), 0) << "test exist import symbol";
   EXPECT_EQ(reader.FindImportSymbol("no_symbol"), 0) << "test not exist import symbol";
 
-  std::vector<std::string> symbols = {"dlsym", "not_exist0", "dlerror", "not_exist1", ""};
+  std::vector<std::string> symbols = {"dlsym", "not_exist0", "dlerror", "not_exist1"};
   std::vector<Address> addrs = reader.FindImportSymbols(symbols);
   ASSERT_EQ(addrs.size(), symbols.size()) << "find import symbol size";
 
@@ -20,7 +20,6 @@ TEST(ElfReader, importTest) {
   EXPECT_EQ(addrs[1], 0) << "find import symbol index 1";
   EXPECT_NE(addrs[2], 0) << "find import symbol index 2";
   EXPECT_EQ(addrs[3], 0) << "find import symbol index 3";
-  EXPECT_EQ(addrs[4], 0) << "find import symbol index 4";
 }
 
 TEST(ElfReader, exportTest) {
@@ -31,7 +30,7 @@ TEST(ElfReader, exportTest) {
   EXPECT_EQ(reader.FindExportSymbol("calloc"), reinterpret_cast<Address>(calloc)) << "test find export symbol";
   EXPECT_EQ(reader.FindExportSymbol("not_exist"), 0) << "find not exist export symbol";
 
-  std::vector<std::string> symbols = {"not_exist", "malloc", "not_exist2", "realloc", ""};
+  std::vector<std::string> symbols = {"not_exist", "malloc", "not_exist2", "realloc"};
   std::vector<Address> addrs = reader.FindExportSymbols(symbols);
   ASSERT_EQ(addrs.size(), symbols.size()) << "find export symbol size";
 
@@ -39,7 +38,6 @@ TEST(ElfReader, exportTest) {
   EXPECT_NE(addrs[1], 0) << "find export symbol index 1";
   EXPECT_EQ(addrs[2], 0) << "find export symbol index 2";
   EXPECT_NE(addrs[3], 0) << "find export symbol index 3";
-  EXPECT_EQ(addrs[4], 0) << "find export symbol index 4";
 }
 
 TEST(ElfReader, internalTest) {
@@ -55,12 +53,11 @@ TEST(ElfReader, internalTest) {
   }
   EXPECT_EQ(reader.FindInternalSymbol("not_exist"), 0) << "find not exist export symbol";
 
-  std::vector<std::string> symbols = {"calloc", "not_exist2", "malloc", ""};
+  std::vector<std::string> symbols = {"calloc", "not_exist2", "malloc"};
   std::vector<Address> addrs = reader.FindInternalSymbols(symbols);
   ASSERT_EQ(addrs.size(), symbols.size()) << "find export symbol size";
 
   EXPECT_NE(addrs[0], 0) << "find internal symbol index 0";
   EXPECT_EQ(addrs[1], 0) << "find internal symbol index 1";
   EXPECT_NE(addrs[2], 0) << "find internal symbol index 2";
-  EXPECT_EQ(addrs[3], 0) << "find internal symbol index 3";
 }

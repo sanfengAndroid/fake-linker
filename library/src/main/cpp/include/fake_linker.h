@@ -327,7 +327,7 @@ typedef struct {
    *
    * @param  name        Export symbol name
    * @param  error       Write error code on error exists
-   * @return Symbolc address or nullptr
+   * @return Symbol address or nullptr
    */
   FunPtr(SymbolAddress, get_linker_export_symbol, const char *name, int *out_error);
 
@@ -836,13 +836,23 @@ extern void fakelinker_module_init(JNIEnv *env, SoinfoPtr fake_soinfo, const Fak
 
 enum FakeLinkerMode {
   /**
-   * All parts must be initialized successfully
+   * Initialize soinfo, namespace feature
    */
-  kFMFully,
+  kFMSoinfo = 1,
   /**
-   * You can only initialize the part, as long as you do not use the uninitialized successful part.
+   * Initialize android native hook feature
    */
-  kFMPart,
+  kFMNativeHook = 2,
+
+  /**
+   * Register the Java functions, by default, the FakeLinker class will return success even if the registration fails,
+   * whereas non-default classes will only return success if the registration is successful.
+   */
+  kFMJavaRegister = 4,
+  /**
+   * The default FakeLinker class or non-default classes must return success only if the registration is successful.
+   */
+  kFMForceJavaRegister = 5,
 };
 
 /**
@@ -854,14 +864,16 @@ enum FakeLinkerMode {
  *
  * @param env   jni environment or nullptr
  * @param mode  initialization mode
+ * @param java_class_name Register the class name of the Java interface. If empty, use the default
+ * com/sanfengandroid/fakelinker/FakeLinker
  * @return      return 0 on success
  */
-int init_fakelinker(JNIEnv *env, FakeLinkerMode mode);
+int init_fakelinker(JNIEnv *env, FakeLinkerMode mode, const char *java_class_name);
 
 /**
  * @brief Static library mode directly calls to obtain the object
  */
-FakeLinker *get_fakelinker();
+const FakeLinker *get_fakelinker();
 
 __END_DECLS
 

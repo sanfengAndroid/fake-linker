@@ -1,6 +1,7 @@
 #include <android/api-level.h>
 #include <dlfcn.h>
 #include <gtest/gtest.h>
+#include <jni.h>
 
 #include <fake_linker.h>
 #include "../linker/linker_globals.h"
@@ -52,14 +53,7 @@ static int GetApiLevel() {
   return (api_level > 0) ? api_level : -1;
 }
 
-static void Init() {
-  soinfo::Init();
-  LOGI("init soinfo completed");
-  android_namespace_t::Init();
-  LOGI("init android namespace completed");
-  fakelinker::linker_symbol.InitSymbolName();
-  init_success = fakelinker::linker_symbol.LoadSymbol();
-}
+static void Init() { init_fakelinker(nullptr, FakeLinkerMode::kFMSoinfo, nullptr); }
 
 static void init_env() {
   android_api = GetApiLevel();
@@ -67,8 +61,23 @@ static void init_env() {
   Init();
 }
 
+C_API JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
+  JNIEnv *env;
+  if (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) != JNI_OK) {
+    async_safe_fatal("JNI environment error");
+  }
+  init_fakelinker(env,
+                  static_cast<FakeLinkerMode>(FakeLinkerMode::kFMSoinfo | FakeLinkerMode::kFMNativeHook |
+                                              FakeLinkerMode::kFMJavaRegister),
+                  nullptr);
+  return JNI_VERSION_1_6;
+}
+
 TEST(Fakelinker, initTest) {
-  ASSERT_TRUE(init_success) << "test init fakelinker environment";
+  if (!isStaticTest()) {
+    init_env();
+    ASSERT_EQ(init_fakelinker(nullptr, FakeLinkerMode::kFMNativeHook, nullptr), 0) << "init native hook failed";
+  }
   ASSERT_TRUE(g_fakelinker_export.is_init_success()) << "Fakelinker init";
   ASSERT_TRUE(g_fakelinker_export.set_ld_debug_verbosity(3)) << "open linker log";
 }
@@ -364,10 +373,7 @@ TEST(FakeLinker, loadTest) {
   EXPECT_TRUE(g_fakelinker_export.get_linker_export_symbol(name, nullptr)) << "get_linker_export_symbol";
 }
 
-C_API API_PUBLIC int gettimeofday(struct timeval *tv, struct timezone *tz) {
-  LOGI("only test relocate gettimeofday ");
-  return 0;
-}
+C_API API_PUBLIC int gettimeofday(struct timeval *tv, struct timezone *tz) { return 0; }
 
 C_API API_PUBLIC void android_set_abort_message(const char *msg) {
   LOGI("only test relocate android_set_abort_message");

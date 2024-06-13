@@ -543,38 +543,36 @@ static bool process_relocation(soinfo *so, const rel_t &reloc, symbol_relocation
   };
 #endif
   ElfW(Addr) orig = *static_cast<ElfW(Addr) *>(rel_target);
-  for (size_t i = 0, e = rels.size(); i < e; ++i) {
-    if (strcmp(sym_name, rels[i].name) == 0) {
-      sym_addr = rels[i].sym_address;
-      if (Mode == RelocMode::JumpTable) {
-        if (r_type == R_GENERIC_JUMP_SLOT) {
-          *static_cast<ElfW(Addr) *>(rel_target) = sym_addr + get_addend_norel();
-          LOGV("Relocation symbol JumpTable: %s, original address: %p, new "
-               "address: %p",
-               sym_name, reinterpret_cast<void *>(orig),
-               reinterpret_cast<void *>(*static_cast<ElfW(Addr) *>(rel_target)));
-          return true;
-        }
+  if (auto itr = rels.find(sym_name); itr != rels.end()) {
+    sym_addr = itr->second;
+    if (Mode == RelocMode::JumpTable) {
+      if (r_type == R_GENERIC_JUMP_SLOT) {
+        *static_cast<ElfW(Addr) *>(rel_target) = sym_addr + get_addend_norel();
+        LOGV("Relocation symbol JumpTable: %s, original address: %p, new "
+             "address: %p",
+             sym_name, reinterpret_cast<void *>(orig),
+             reinterpret_cast<void *>(*static_cast<ElfW(Addr) *>(rel_target)));
+        return true;
       }
-      if (Mode == RelocMode::Typical) {
-        if (r_type == R_GENERIC_ABSOLUTE) {
-          *static_cast<ElfW(Addr) *>(rel_target) = sym_addr + get_addend_rel();
-          LOGV("Relocation symbol Typical ABSOLUTE: %s, original address: %16p, "
-               " new address: %16p",
-               sym_name, reinterpret_cast<void *>(orig),
-               reinterpret_cast<void *>(*static_cast<ElfW(Addr) *>(rel_target)));
-          return true;
-        } else if (r_type == R_GENERIC_GLOB_DAT) {
-          *static_cast<ElfW(Addr) *>(rel_target) = sym_addr + get_addend_norel();
-          LOGV("Relocation symbol Typical GLOB_DAT: %s, original address: %16p, "
-               " new address: %16p",
-               sym_name, reinterpret_cast<void *>(orig),
-               reinterpret_cast<void *>(*static_cast<ElfW(Addr) *>(rel_target)));
-          return true;
-        }
-      }
-      return false;
     }
+    if (Mode == RelocMode::Typical) {
+      if (r_type == R_GENERIC_ABSOLUTE) {
+        *static_cast<ElfW(Addr) *>(rel_target) = sym_addr + get_addend_rel();
+        LOGV("Relocation symbol Typical ABSOLUTE: %s, original address: %16p, "
+             " new address: %16p",
+             sym_name, reinterpret_cast<void *>(orig),
+             reinterpret_cast<void *>(*static_cast<ElfW(Addr) *>(rel_target)));
+        return true;
+      } else if (r_type == R_GENERIC_GLOB_DAT) {
+        *static_cast<ElfW(Addr) *>(rel_target) = sym_addr + get_addend_norel();
+        LOGV("Relocation symbol Typical GLOB_DAT: %s, original address: %16p, "
+             " new address: %16p",
+             sym_name, reinterpret_cast<void *>(orig),
+             reinterpret_cast<void *>(*static_cast<ElfW(Addr) *>(rel_target)));
+        return true;
+      }
+    }
+    return false;
   }
   return true;
 }
@@ -1988,7 +1986,7 @@ symbol_relocations soinfo::get_global_soinfo_export_symbols() {
     if (!find_global(sym)) {
       continue;
     }
-    result.emplace_back(symbol_relocation{get_string(sym.st_name), resolve_symbol_address(&sym), this});
+    result.emplace(get_string(sym.st_name), resolve_symbol_address(&sym));
     len++;
   }
   return result;
@@ -1999,11 +1997,9 @@ symbol_relocations soinfo::get_global_soinfo_export_symbols(const std::vector<st
   if (symbols.empty() || filters.empty()) {
     return symbols;
   }
-  symbols.erase(std::remove_if(symbols.begin(), symbols.end(),
-                               [&](symbol_relocation &sym) {
-                                 return std::find(filters.begin(), filters.end(), sym.name) != filters.end();
-                               }),
-                symbols.end());
+  for (auto &name : filters) {
+    symbols.erase(name);
+  }
   return symbols;
 }
 

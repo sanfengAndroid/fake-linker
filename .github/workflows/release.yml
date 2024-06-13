@@ -1,0 +1,38 @@
+name: release
+
+on:
+  workflow_run:
+    workflows: ["Android CI"]
+    types:
+      - completed
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success' && startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ github.sha }}-build
+          path: ./artifacts
+      - name: Extract release files
+        run: |
+          mkdir -p ./release
+          cp ./artifacts/faklinker-lib-debug.aar ./release/fakelinker-debug.aar
+          cp ./artifacts/fakelinker-lib-release.aar ./release/fakelinker-release.aar
+      - name: Upload release files
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ github.sha }}-release
+          path: ./release
+          retention-days: 1
+
+      - name: release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/fakelinker-debug.aar
+            release/fakelinker-release.aar
