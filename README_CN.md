@@ -1,6 +1,7 @@
 # fake-linker
 
 ![License](https://img.shields.io/badge/License-Apache2-blue)
+[![Android CI](https://github.com/sanfengAndroid/fake-linker/actions/workflows/android.yml/badge.svg)](https://github.com/sanfengAndroid/fake-linker/actions/workflows/android.yml)
 [English](README.md) | [简体中文](README_CN.md)
 
 `fake-linker` 是一款为 `android` 应用程序提供`Linker 修改`, `PLT Hook`, `Java Native Hook` 等功能的框架, 其实现原理是进程内动态查找和修改 `Linker` 数据, 对外提供基于 `类LD_PRELOAD` 模式的 `PLT hook` 和各种操作 `soinfo`, `namespace`的接口. 原理分析请查看[Android 动态修改 Linker 实现 LD_PRELOAD 全局库 PLT Hook](https://sanfengandroid.github.io/2021/01/10/modify-linker-to-implement-plt-hook/)
