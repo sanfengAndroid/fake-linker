@@ -24,6 +24,8 @@ repos:
     rev: v2.0.4
     hooks:
       - id: autopep8
+        args:
+          ["-i", "--indent-size=2", "--max-line-length=120", "--experimental"]
   - repo: https://github.com/asottile/reorder_python_imports
     rev: v3.13.0
     hooks:
