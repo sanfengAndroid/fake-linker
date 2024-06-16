@@ -125,6 +125,12 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/fakelinker/fakelinker
 )
 
+install(EXPORT fakelinker
+  FILE fakelinker-config.cmake
+  NAMESPACE fakelinker::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/fakelinker
+)
+
 if(FAKELINKER_BUILD_INSTALLER)
   add_executable(${FAKELINKER_INSTALLER_MODULE_NAME}
     installer/hook_installer.cpp
