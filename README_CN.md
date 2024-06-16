@@ -2,7 +2,11 @@
 
 ![License](https://img.shields.io/badge/License-Apache2-blue)
 [![Android CI](https://github.com/sanfengAndroid/fake-linker/actions/workflows/android.yml/badge.svg)](https://github.com/sanfengAndroid/fake-linker/actions/workflows/android.yml)
+[![BrowserStack fake-linker](https://app-automate.browserstack.com/badge.svg?badge_key=UEY1VUFhYndHakhDLy91NEExQXE1eTI4Q1dwMXhxak1XN2RkNTVjQWZ2WT0tLUVoK3lpbVBvTDRIaVhxcTFBckR6WGc9PQ==--00d684412af19fbe1224ccc5e7ec58adacde9570)](https://app-automate.browserstack.com/public-build/UEY1VUFhYndHakhDLy91NEExQXE1eTI4Q1dwMXhxak1XN2RkNTVjQWZ2WT0tLUVoK3lpbVBvTDRIaVhxcTFBckR6WGc9PQ==--00d684412af19fbe1224ccc5e7ec58adacde9570?redirect=true)
+[![BrowserStack fake-linker32](https://app-automate.browserstack.com/badge.svg?badge_key=Y0FEeG53d0JMYzdOVTFqbnd1OEtTZW5mbGxXdzE2YXN2TkQySllZeituaz0tLXFMLzBMMkxLdGZiZjNvMUxHK0FGV1E9PQ==--d0b7a7085348422206420ceb8ac6d3b50da0afe3)](https://app-automate.browserstack.com/public-build/Y0FEeG53d0JMYzdOVTFqbnd1OEtTZW5mbGxXdzE2YXN2TkQySllZeituaz0tLXFMLzBMMkxLdGZiZjNvMUxHK0FGV1E9PQ==--d0b7a7085348422206420ceb8ac6d3b50da0afe3?redirect=true)
+
 [English](README.md) | [简体中文](README_CN.md)
+
 
 `fake-linker` 是一款为 `android` 应用程序提供`Linker 修改`, `PLT Hook`, `Java Native Hook` 等功能的框架, 其实现原理是进程内动态查找和修改 `Linker` 数据, 对外提供基于 `类LD_PRELOAD` 模式的 `PLT hook` 和各种操作 `soinfo`, `namespace`的接口. 原理分析请查看[Android 动态修改 Linker 实现 LD_PRELOAD 全局库 PLT Hook](https://sanfengandroid.github.io/2021/01/10/modify-linker-to-implement-plt-hook/)
 

@@ -2,6 +2,9 @@
 
 ![License](https://img.shields.io/badge/License-Apache2-blue)
 [![Android CI](https://github.com/sanfengAndroid/fake-linker/actions/workflows/android.yml/badge.svg)](https://github.com/sanfengAndroid/fake-linker/actions/workflows/android.yml)
+[![BrowserStack fake-linker](https://app-automate.browserstack.com/badge.svg?badge_key=UEY1VUFhYndHakhDLy91NEExQXE1eTI4Q1dwMXhxak1XN2RkNTVjQWZ2WT0tLUVoK3lpbVBvTDRIaVhxcTFBckR6WGc9PQ==--00d684412af19fbe1224ccc5e7ec58adacde9570)](https://app-automate.browserstack.com/public-build/UEY1VUFhYndHakhDLy91NEExQXE1eTI4Q1dwMXhxak1XN2RkNTVjQWZ2WT0tLUVoK3lpbVBvTDRIaVhxcTFBckR6WGc9PQ==--00d684412af19fbe1224ccc5e7ec58adacde9570?redirect=true)
+[![BrowserStack fake-linker32](https://app-automate.browserstack.com/badge.svg?badge_key=Y0FEeG53d0JMYzdOVTFqbnd1OEtTZW5mbGxXdzE2YXN2TkQySllZeituaz0tLXFMLzBMMkxLdGZiZjNvMUxHK0FGV1E9PQ==--d0b7a7085348422206420ceb8ac6d3b50da0afe3)](https://app-automate.browserstack.com/public-build/Y0FEeG53d0JMYzdOVTFqbnd1OEtTZW5mbGxXdzE2YXN2TkQySllZeituaz0tLXFMLzBMMkxLdGZiZjNvMUxHK0FGV1E9PQ==--d0b7a7085348422206420ceb8ac6d3b50da0afe3?redirect=true)
+
 [English](README.md) | [简体中文](README_CN.md)
 
 `fake-linker` is a framework that provides features such as `Linker` modification, `PLT Hook`, and `Java Native Hook` for `android` applications. Its implementation principle involves dynamically searching for and modifying `Linker` data within the process. It offers `PLT hook` based on a `LD_PRELOAD-like` mode and various interfaces for operating on `soinfo` and `namespace`. For a detailed analysis of the principle, please refer to [Android Dynamic Modification of Linker to Implement LD_PRELOAD Global Library PLT Hook](https://sanfengandroid.github.io/2021/01/10/modify-linker-to-implement-plt-hook/).
@@ -24,7 +27,7 @@ Below is the description for the sub-projects:
 3. The `fakelinker-test` project is for normal `apk` testing on `x86`, `x86_64`, `arm`, `arm64` architectures. It includes `androidTest` and executable test programs. `androidTest` can be run via the `UI` in `Android Studio` by importing the project and running `FakelinkerGTest`, or by executing the command `./gradlew :fakelinker-test:connectedDebugAndroidTest` to connect to an `Android` device for testing. The executable test programs can be pushed to a device via `adb shell` and executed after adding executable permissions, using the path `fake-linker\fakelinker-test\src\main\cpp\build\Debug\xxxx\fakelinker_static_test`.
 4. The `Stub` project only provides private `api` interfaces and is not packaged into the `apk`.
 
-## Build Instructions
+## Build and Integrate
 
 1. Source Code Build
 
