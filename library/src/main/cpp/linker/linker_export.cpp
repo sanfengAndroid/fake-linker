@@ -127,7 +127,7 @@ ANDROID_GE_N SoinfoPtr soinfo_find_in_namespace_impl(SoinfoFindType find_type, c
   return nullptr;
 }
 
-int soinfo_get_attribute_impl(SoinfoPtr soinfo_ptr, SoinfoAttributes *attrs) {
+static int soinfo_get_attribute_impl(SoinfoPtr soinfo_ptr, SoinfoAttributes *attrs) {
   CHECK_PARAM_RET_ERROR(soinfo_ptr, kErrorSoinfoNull);
   CHECK_PARAM_RET_ERROR(attrs, kErrorParameterNull);
   auto *so = reinterpret_cast<soinfo *>(soinfo_ptr);
@@ -145,7 +145,7 @@ int soinfo_get_attribute_impl(SoinfoPtr soinfo_ptr, SoinfoAttributes *attrs) {
   return kErrorNo;
 }
 
-void soinfo_to_string_impl(SoinfoPtr soinfo_ptr) {
+static void soinfo_to_string_impl(SoinfoPtr soinfo_ptr) {
   if (!soinfo_ptr) {
     return;
   }
@@ -153,7 +153,7 @@ void soinfo_to_string_impl(SoinfoPtr soinfo_ptr) {
   LOGI("print soinfo: %s", out.c_str());
 }
 
-int soinfo_query_all_impl(MEMORY_FREE SoinfoPtr **out_soinfo_ptr_array, int *out_error) {
+static int soinfo_query_all_impl(MEMORY_FREE SoinfoPtr **out_soinfo_ptr_array, int *out_error) {
   RET_SUCCESS();
   CHECK_PARAM_INT(out_soinfo_ptr_array, kErrorParameterNull);
 
@@ -171,7 +171,7 @@ int soinfo_query_all_impl(MEMORY_FREE SoinfoPtr **out_soinfo_ptr_array, int *out
   return static_cast<int>(len);
 }
 
-ANDROID_GE_N SoinfoHandle soinfo_get_handle_impl(SoinfoPtr soinfo_ptr, int *out_error) {
+static ANDROID_GE_N SoinfoHandle soinfo_get_handle_impl(SoinfoPtr soinfo_ptr, int *out_error) {
   CHECK_API_PTR(__ANDROID_API_N__);
   RET_SUCCESS();
   CHECK_PARAM_PTR(soinfo_ptr, kErrorSoinfoNull);
@@ -179,30 +179,30 @@ ANDROID_GE_N SoinfoHandle soinfo_get_handle_impl(SoinfoPtr soinfo_ptr, int *out_
   return reinterpret_cast<void *>(info->get_handle());
 }
 
-const char *soinfo_get_name_impl(SoinfoPtr soinfo_ptr, int *out_error) {
+static const char *soinfo_get_name_impl(SoinfoPtr soinfo_ptr, int *out_error) {
   RET_SUCCESS();
   CHECK_PARAM_PTR(soinfo_ptr, kErrorSoinfoNull);
   auto *info = static_cast<soinfo *>(soinfo_ptr);
   return info->get_soname();
 }
 
-bool soinfo_is_global_impl(SoinfoPtr soinfo_ptr, int *out_error) {
+static bool soinfo_is_global_impl(SoinfoPtr soinfo_ptr, int *out_error) {
   RET_SUCCESS();
   CHECK_PARAM_BOOL(soinfo_ptr, kErrorSoinfoNull);
   auto *info = static_cast<soinfo *>(soinfo_ptr);
   return ProxyLinker::Get().IsGlobalSoinfo(info);
 }
 
-const char *soinfo_get_realpath_impl(SoinfoPtr soinfo_ptr, int *out_error) {
+static const char *soinfo_get_realpath_impl(SoinfoPtr soinfo_ptr, int *out_error) {
   RET_SUCCESS();
   CHECK_PARAM_PTR(soinfo_ptr, kErrorSoinfoNull);
   auto *info = static_cast<soinfo *>(soinfo_ptr);
   return info->realpath();
 }
 
-SoinfoPtr soinfo_get_linker_soinfo_impl() { return ProxyLinker::Get().GetLinkerSoinfo(); }
+static SoinfoPtr soinfo_get_linker_soinfo_impl() { return ProxyLinker::Get().GetLinkerSoinfo(); }
 
-SymbolAddress *soinfo_get_import_symbol_address_impl(SoinfoPtr soinfo_ptr, const char *name, int *out_error) {
+static SymbolAddress *soinfo_get_import_symbol_address_impl(SoinfoPtr soinfo_ptr, const char *name, int *out_error) {
   RET_SUCCESS();
   CHECK_PARAM_PTR(soinfo_ptr, kErrorSoinfoNull);
   CHECK_PARAM_PTR(name, kErrorParameterNull);
@@ -212,7 +212,7 @@ SymbolAddress *soinfo_get_import_symbol_address_impl(SoinfoPtr soinfo_ptr, const
   return reinterpret_cast<SymbolAddress *>(result);
 }
 
-SymbolAddress soinfo_get_export_symbol_address_impl(SoinfoPtr soinfo_ptr, const char *name, int *out_error) {
+static SymbolAddress soinfo_get_export_symbol_address_impl(SoinfoPtr soinfo_ptr, const char *name, int *out_error) {
   RET_SUCCESS();
   CHECK_PARAM_PTR(soinfo_ptr, kErrorSoinfoNull);
   CHECK_PARAM_PTR(name, kErrorParameterNull);
@@ -222,9 +222,9 @@ SymbolAddress soinfo_get_export_symbol_address_impl(SoinfoPtr soinfo_ptr, const 
   return result;
 }
 
-DlopenFun get_dlopen_inside_func_ptr_impl() { return reinterpret_cast<DlopenFun>(ProxyLinker::CallDlopen); }
+static DlopenFun get_dlopen_inside_func_ptr_impl() { return reinterpret_cast<DlopenFun>(ProxyLinker::CallDlopen); }
 
-DlsymFun get_dlsym_inside_func_ptr_impl() {
+static DlsymFun get_dlsym_inside_func_ptr_impl() {
   return [](void *handle, const char *symbol, void *caller_addr) -> void * {
     if (!caller_addr) {
       caller_addr = __builtin_return_address(0);
@@ -233,14 +233,15 @@ DlsymFun get_dlsym_inside_func_ptr_impl() {
   };
 }
 
-void *call_dlopen_inside_impl(const char *filename, int flags, void *caller_addr, const AndroidDlextinfoPtr extinfo) {
+static void *call_dlopen_inside_impl(const char *filename, int flags, void *caller_addr,
+                                     const AndroidDlextinfoPtr extinfo) {
   if (!caller_addr) {
     caller_addr = __builtin_return_address(0);
   }
   return ProxyLinker::CallDlopen(filename, flags, caller_addr, static_cast<const android_dlextinfo *>(extinfo));
 }
 
-void *call_dlsym_inside_impl(void *so, const char *name) {
+static void *call_dlsym_inside_impl(void *so, const char *name) {
   if (!so) {
     return nullptr;
   }
@@ -254,7 +255,7 @@ void *call_dlsym_inside_impl(void *so, const char *name) {
   return ProxyLinker::Get().FindSymbolByDlsym(static_cast<soinfo *>(so), name);
 }
 
-void *get_linker_export_symbol_impl(const char *name, int *out_error) {
+static void *get_linker_export_symbol_impl(const char *name, int *out_error) {
   RET_SUCCESS();
   CHECK_PARAM_PTR(name, kErrorParameterNull);
   auto so = ProxyLinker::Get().GetLinkerSoinfo();
@@ -263,7 +264,7 @@ void *get_linker_export_symbol_impl(const char *name, int *out_error) {
   return result;
 }
 
-bool soinfo_add_to_global_impl(SoinfoPtr soinfo_ptr) {
+static bool soinfo_add_to_global_impl(SoinfoPtr soinfo_ptr) {
   if (!soinfo_ptr) {
     return false;
   }
@@ -271,14 +272,14 @@ bool soinfo_add_to_global_impl(SoinfoPtr soinfo_ptr) {
   return true;
 }
 
-bool soinfo_remove_global_impl(SoinfoPtr soinfo_ptr) {
+static bool soinfo_remove_global_impl(SoinfoPtr soinfo_ptr) {
   if (!soinfo_ptr) {
     return false;
   }
   return ProxyLinker::Get().RemoveGlobalSoinfo(static_cast<soinfo *>(soinfo_ptr));
 }
 
-void add_relocation_blacklist_impl(const char *symbol_name) {
+static void add_relocation_blacklist_impl(const char *symbol_name) {
   if (symbol_name) {
     std::string name = symbol_name;
     if (std::find(filter_symbols.begin(), filter_symbols.end(), name) == filter_symbols.end()) {
@@ -287,7 +288,7 @@ void add_relocation_blacklist_impl(const char *symbol_name) {
   }
 }
 
-void remove_relocation_blacklist_impl(const char *symbol_name) {
+static void remove_relocation_blacklist_impl(const char *symbol_name) {
   if (!symbol_name) {
     return;
   }
@@ -297,9 +298,9 @@ void remove_relocation_blacklist_impl(const char *symbol_name) {
   }
 }
 
-void clear_relocation_blacklist_impl() { filter_symbols.clear(); }
+static void clear_relocation_blacklist_impl() { filter_symbols.clear(); }
 
-bool call_manual_relocation_by_soinfo_impl(SoinfoPtr global_lib, SoinfoPtr target) {
+static bool call_manual_relocation_by_soinfo_impl(SoinfoPtr global_lib, SoinfoPtr target) {
   if (!global_lib || !target) {
     return false;
   }
@@ -307,7 +308,7 @@ bool call_manual_relocation_by_soinfo_impl(SoinfoPtr global_lib, SoinfoPtr targe
                                                 filter_symbols);
 }
 
-bool call_manual_relocation_by_soinfos_impl(SoinfoPtr global_lib, int len, SoinfoPtr targets[]) {
+static bool call_manual_relocation_by_soinfos_impl(SoinfoPtr global_lib, int len, SoinfoPtr targets[]) {
   if (!global_lib || len < 1) {
     return false;
   }
@@ -322,7 +323,7 @@ bool call_manual_relocation_by_soinfos_impl(SoinfoPtr global_lib, int len, Soinf
   return ProxyLinker::Get().ManualRelinkLibraries(static_cast<soinfo *>(global_lib), len, soinfos, filter_symbols);
 }
 
-bool call_manual_relocation_by_name_impl(SoinfoPtr global_lib, const char *target_name) {
+static bool call_manual_relocation_by_name_impl(SoinfoPtr global_lib, const char *target_name) {
   if (!global_lib || !target_name) {
     return false;
   }
@@ -334,7 +335,7 @@ bool call_manual_relocation_by_name_impl(SoinfoPtr global_lib, const char *targe
                                                 filter_symbols);
 }
 
-bool call_manual_relocation_by_names_impl(SoinfoPtr global_lib, int len, const char *target_names[]) {
+static bool call_manual_relocation_by_names_impl(SoinfoPtr global_lib, int len, const char *target_names[]) {
   if (!global_lib || len < 1) {
     return false;
   }
@@ -350,8 +351,8 @@ bool call_manual_relocation_by_names_impl(SoinfoPtr global_lib, int len, const c
   return ProxyLinker::Get().ManualRelinkLibraries(static_cast<soinfo *>(global_lib), sonames, filter_symbols);
 }
 
-ANDROID_GE_N AndroidNamespacePtr android_namespace_find_impl(NamespaceFindType find_type, const void *param,
-                                                             int *out_error) {
+static ANDROID_GE_N AndroidNamespacePtr android_namespace_find_impl(NamespaceFindType find_type, const void *param,
+                                                                    int *out_error) {
   CHECK_API_PTR(__ANDROID_API_N__);
   android_namespace_t *result = nullptr;
   soinfo *so = nullptr;
@@ -379,7 +380,8 @@ ANDROID_GE_N AndroidNamespacePtr android_namespace_find_impl(NamespaceFindType f
   return result;
 }
 
-ANDROID_GE_N const char *android_namespace_get_name_impl(AndroidNamespacePtr android_namespace_ptr, int *out_error) {
+static ANDROID_GE_N const char *android_namespace_get_name_impl(AndroidNamespacePtr android_namespace_ptr,
+                                                                int *out_error) {
   CHECK_API_PTR(__ANDROID_API_N__);
   RET_SUCCESS();
   CHECK_PARAM_PTR(android_namespace_ptr, kErrorNpNull);
@@ -387,8 +389,8 @@ ANDROID_GE_N const char *android_namespace_get_name_impl(AndroidNamespacePtr and
   return anp->get_name();
 }
 
-ANDROID_GE_N int android_namespace_query_all_impl(MEMORY_FREE AndroidNamespacePtr **out_android_namespace_ptr_array,
-                                                  int *out_error) {
+static ANDROID_GE_N int
+android_namespace_query_all_impl(MEMORY_FREE AndroidNamespacePtr **out_android_namespace_ptr_array, int *out_error) {
   CHECK_API_INT(__ANDROID_API_N__);
   RET_SUCCESS();
   CHECK_PARAM_INT(out_android_namespace_ptr_array, kErrorParameterNull);
@@ -408,17 +410,19 @@ ANDROID_GE_N int android_namespace_query_all_impl(MEMORY_FREE AndroidNamespacePt
   return static_cast<int>(len);
 }
 
-AndroidNamespacePtr android_namespace_create_impl(const char *name, const char *ld_library_path,
-                                                  const char *default_library_path, uint64_t type,
-                                                  const char *permitted_when_isolated_path,
-                                                  AndroidNamespacePtr parent_namespace, const void *caller_addr) {
+static AndroidNamespacePtr android_namespace_create_impl(const char *name, const char *ld_library_path,
+                                                         const char *default_library_path, uint64_t type,
+                                                         const char *permitted_when_isolated_path,
+                                                         AndroidNamespacePtr parent_namespace,
+                                                         const void *caller_addr) {
   return ProxyLinker::Get().CallCreateNamespace(name, ld_library_path, default_library_path, type,
                                                 permitted_when_isolated_path,
                                                 static_cast<android_namespace_t *>(parent_namespace), caller_addr);
 }
 
-ANDROID_GE_N int android_namespace_get_all_soinfo_impl(AndroidNamespacePtr android_namespace_ptr,
-                                                       MEMORY_FREE SoinfoPtr **out_soinfo_ptr_array, int *out_error) {
+static ANDROID_GE_N int android_namespace_get_all_soinfo_impl(AndroidNamespacePtr android_namespace_ptr,
+                                                              MEMORY_FREE SoinfoPtr **out_soinfo_ptr_array,
+                                                              int *out_error) {
   CHECK_API_INT(__ANDROID_API_N__);
   RET_SUCCESS();
   auto *an = static_cast<android_namespace_t *>(android_namespace_ptr);
@@ -438,8 +442,8 @@ ANDROID_GE_N int android_namespace_get_all_soinfo_impl(AndroidNamespacePtr andro
   return static_cast<int>(size);
 }
 
-ANDROID_GE_N void *android_namespace_get_caller_address_impl(AndroidNamespacePtr android_namespace_ptr,
-                                                             int *out_error) {
+static ANDROID_GE_N void *android_namespace_get_caller_address_impl(AndroidNamespacePtr android_namespace_ptr,
+                                                                    int *out_error) {
   CHECK_API_PTR(__ANDROID_API_N__);
   RET_SUCCESS();
 
@@ -448,9 +452,9 @@ ANDROID_GE_N void *android_namespace_get_caller_address_impl(AndroidNamespacePtr
   return ProxyLinker::GetNamespaceCallerAddress(np);
 }
 
-ANDROID_GE_O int android_namespace_get_link_namespace_impl(AndroidNamespacePtr android_namespace_ptr,
-                                                           ONLY_READ AndroidLinkNamespacePtr *link_np_array,
-                                                           int *out_error) {
+static ANDROID_GE_O int android_namespace_get_link_namespace_impl(AndroidNamespacePtr android_namespace_ptr,
+                                                                  ONLY_READ AndroidLinkNamespacePtr *link_np_array,
+                                                                  int *out_error) {
   CHECK_API_INT(__ANDROID_API_O__);
   RET_SUCCESS();
   CHECK_PARAM_INT(android_namespace_ptr, kErrorNpNull);
@@ -466,9 +470,9 @@ ANDROID_GE_O int android_namespace_get_link_namespace_impl(AndroidNamespacePtr a
   return static_cast<int>(vec.size());
 }
 
-ANDROID_GE_N int android_namespace_get_global_soinfos_impl(AndroidNamespacePtr android_namespace_ptr,
-                                                           MEMORY_FREE SoinfoPtr **out_soinfo_ptr_array,
-                                                           int *out_error) {
+static ANDROID_GE_N int android_namespace_get_global_soinfos_impl(AndroidNamespacePtr android_namespace_ptr,
+                                                                  MEMORY_FREE SoinfoPtr **out_soinfo_ptr_array,
+                                                                  int *out_error) {
   CHECK_API_INT(__ANDROID_API_N__);
   RET_SUCCESS();
   CHECK_PARAM_INT(android_namespace_ptr, kErrorNpNull);
@@ -489,8 +493,8 @@ ANDROID_GE_N int android_namespace_get_global_soinfos_impl(AndroidNamespacePtr a
   return static_cast<int>(size);
 }
 
-ANDROID_GE_N int android_namespace_add_global_soinfo_impl(AndroidNamespacePtr android_namespace_ptr,
-                                                          SoinfoPtr global_soinfo_ptr) {
+static ANDROID_GE_N int android_namespace_add_global_soinfo_impl(AndroidNamespacePtr android_namespace_ptr,
+                                                                 SoinfoPtr global_soinfo_ptr) {
   CHECK_API_RET_ERROR(__ANDROID_API_N__);
   CHECK_PARAM_RET_ERROR(android_namespace_ptr, kErrorNpNull);
   CHECK_PARAM_RET_ERROR(global_soinfo_ptr, kErrorSoinfoNull);
@@ -501,7 +505,8 @@ ANDROID_GE_N int android_namespace_add_global_soinfo_impl(AndroidNamespacePtr an
   return ret ? kErrorNo : kErrorExec;
 }
 
-ANDROID_GE_N int android_namespace_add_soinfo_impl(AndroidNamespacePtr android_namespace_ptr, SoinfoPtr soinfo_ptr) {
+static ANDROID_GE_N int android_namespace_add_soinfo_impl(AndroidNamespacePtr android_namespace_ptr,
+                                                          SoinfoPtr soinfo_ptr) {
   CHECK_API_RET_ERROR(__ANDROID_API_N__);
   CHECK_PARAM_RET_ERROR(android_namespace_ptr, kErrorNpNull);
   CHECK_PARAM_RET_ERROR(soinfo_ptr, kErrorSoinfoNull);
@@ -509,8 +514,8 @@ ANDROID_GE_N int android_namespace_add_soinfo_impl(AndroidNamespacePtr android_n
   return kErrorNo;
 }
 
-ANDROID_GE_N int android_namespace_remove_soinfo_impl(AndroidNamespacePtr android_namespace_ptr, SoinfoPtr soinfo_ptr,
-                                                      bool clear_global_flags) {
+static ANDROID_GE_N int android_namespace_remove_soinfo_impl(AndroidNamespacePtr android_namespace_ptr,
+                                                             SoinfoPtr soinfo_ptr, bool clear_global_flags) {
   CHECK_API_RET_ERROR(__ANDROID_API_N__);
   CHECK_PARAM_RET_ERROR(android_namespace_ptr, kErrorNpNull);
   CHECK_PARAM_RET_ERROR(soinfo_ptr, kErrorSoinfoNull);
@@ -522,8 +527,8 @@ ANDROID_GE_N int android_namespace_remove_soinfo_impl(AndroidNamespacePtr androi
   return FakeLinkerError::kErrorExec;
 }
 
-ANDROID_GE_Q int android_namespace_get_white_list_impl(AndroidNamespacePtr android_namespace_ptr,
-                                                       MEMORY_FREE const char **out_white_list, int *out_error) {
+static ANDROID_GE_Q int android_namespace_get_white_list_impl(AndroidNamespacePtr android_namespace_ptr,
+                                                              MEMORY_FREE const char **out_white_list, int *out_error) {
   CHECK_API_INT(__ANDROID_API_Q__);
   CHECK_PARAM_INT(android_namespace_ptr, kErrorNpNull);
   CHECK_PARAM_INT(out_white_list, kErrorParameterNull);
@@ -546,8 +551,8 @@ ANDROID_GE_Q int android_namespace_get_white_list_impl(AndroidNamespacePtr andro
   return libs.size();
 }
 
-ANDROID_GE_Q int android_namespace_add_soinfo_whitelist_impl(AndroidNamespacePtr android_namespace_ptr,
-                                                             const char *libname) {
+static ANDROID_GE_Q int android_namespace_add_soinfo_whitelist_impl(AndroidNamespacePtr android_namespace_ptr,
+                                                                    const char *libname) {
   CHECK_API_RET_ERROR(__ANDROID_API_Q__);
   CHECK_PARAM_RET_ERROR(android_namespace_ptr, kErrorNpNull);
   CHECK_PARAM_RET_ERROR(libname, kErrorParameterNull);
@@ -555,8 +560,8 @@ ANDROID_GE_Q int android_namespace_add_soinfo_whitelist_impl(AndroidNamespacePtr
   return kErrorNo;
 }
 
-ANDROID_GE_Q int android_namespace_remove_whitelist_impl(AndroidNamespacePtr android_namespace_ptr,
-                                                         const char *libname) {
+static ANDROID_GE_Q int android_namespace_remove_whitelist_impl(AndroidNamespacePtr android_namespace_ptr,
+                                                                const char *libname) {
   CHECK_API_RET_ERROR(__ANDROID_API_Q__);
   CHECK_PARAM_RET_ERROR(android_namespace_ptr, kErrorNpNull);
   CHECK_PARAM_RET_ERROR(libname, kErrorParameterNull);
@@ -565,8 +570,8 @@ ANDROID_GE_Q int android_namespace_remove_whitelist_impl(AndroidNamespacePtr and
   return kErrorNo;
 }
 
-ANDROID_GE_N int android_namespace_add_ld_library_path_impl(AndroidNamespacePtr android_namespace_ptr,
-                                                            const char *path) {
+static ANDROID_GE_N int android_namespace_add_ld_library_path_impl(AndroidNamespacePtr android_namespace_ptr,
+                                                                   const char *path) {
   CHECK_API_RET_ERROR(__ANDROID_API_N__);
   CHECK_PARAM_RET_ERROR(android_namespace_ptr, kErrorNpNull);
   CHECK_PARAM_RET_ERROR(path, kErrorParameterNull);
@@ -574,8 +579,8 @@ ANDROID_GE_N int android_namespace_add_ld_library_path_impl(AndroidNamespacePtr 
   return kErrorNo;
 }
 
-ANDROID_GE_N int android_namespace_add_default_library_path_impl(AndroidNamespacePtr android_namespace_ptr,
-                                                                 const char *path) {
+static ANDROID_GE_N int android_namespace_add_default_library_path_impl(AndroidNamespacePtr android_namespace_ptr,
+                                                                        const char *path) {
   CHECK_API_RET_ERROR(__ANDROID_API_N__);
   CHECK_PARAM_RET_ERROR(android_namespace_ptr, kErrorNpNull);
   CHECK_PARAM_RET_ERROR(path, kErrorParameterNull);
@@ -584,8 +589,8 @@ ANDROID_GE_N int android_namespace_add_default_library_path_impl(AndroidNamespac
   return kErrorNo;
 }
 
-ANDROID_GE_N int android_namespace_add_permitted_library_path_impl(AndroidNamespacePtr android_namespace_ptr,
-                                                                   const char *path) {
+static ANDROID_GE_N int android_namespace_add_permitted_library_path_impl(AndroidNamespacePtr android_namespace_ptr,
+                                                                          const char *path) {
   CHECK_API_RET_ERROR(__ANDROID_API_N__);
   CHECK_PARAM_RET_ERROR(android_namespace_ptr, kErrorNpNull);
   CHECK_PARAM_RET_ERROR(path, kErrorParameterNull);
@@ -594,10 +599,10 @@ ANDROID_GE_N int android_namespace_add_permitted_library_path_impl(AndroidNamesp
   return kErrorNo;
 }
 
-ANDROID_GE_O int android_namespace_add_linked_namespace_impl(AndroidNamespacePtr android_namespace_ptr,
-                                                             AndroidNamespacePtr add_namespace_ptr,
-                                                             ANDROID_GE_P bool allow_all_shared_libs, int len,
-                                                             const char *shared_libs[]) {
+static ANDROID_GE_O int android_namespace_add_linked_namespace_impl(AndroidNamespacePtr android_namespace_ptr,
+                                                                    AndroidNamespacePtr add_namespace_ptr,
+                                                                    ANDROID_GE_P bool allow_all_shared_libs, int len,
+                                                                    const char *shared_libs[]) {
   CHECK_API_RET_ERROR(__ANDROID_API_O__);
   CHECK_PARAM_RET_ERROR(android_namespace_ptr, kErrorNpNull);
   CHECK_PARAM_RET_ERROR(add_namespace_ptr, kErrorParameterNull);
@@ -619,7 +624,8 @@ ANDROID_GE_O int android_namespace_add_linked_namespace_impl(AndroidNamespacePtr
   return kErrorNo;
 }
 
-ANDROID_GE_N int soinfo_add_second_namespace_impl(SoinfoPtr soinfo_ptr, AndroidNamespacePtr android_namespace_ptr) {
+static ANDROID_GE_N int soinfo_add_second_namespace_impl(SoinfoPtr soinfo_ptr,
+                                                         AndroidNamespacePtr android_namespace_ptr) {
   CHECK_API_RET_ERROR(__ANDROID_API_N__);
   CHECK_PARAM_RET_ERROR(soinfo_ptr, kErrorSoinfoNull);
   CHECK_PARAM_RET_ERROR(android_namespace_ptr, kErrorNpNull);
@@ -627,7 +633,8 @@ ANDROID_GE_N int soinfo_add_second_namespace_impl(SoinfoPtr soinfo_ptr, AndroidN
   return kErrorNo;
 }
 
-ANDROID_GE_N int soinfo_remove_second_namespace_impl(SoinfoPtr soinfo_ptr, AndroidNamespacePtr android_namespace_ptr) {
+static ANDROID_GE_N int soinfo_remove_second_namespace_impl(SoinfoPtr soinfo_ptr,
+                                                            AndroidNamespacePtr android_namespace_ptr) {
   CHECK_API_RET_ERROR(__ANDROID_API_N__);
   CHECK_PARAM_RET_ERROR(soinfo_ptr, kErrorSoinfoNull);
   CHECK_PARAM_RET_ERROR(android_namespace_ptr, kErrorNpNull);
@@ -636,7 +643,7 @@ ANDROID_GE_N int soinfo_remove_second_namespace_impl(SoinfoPtr soinfo_ptr, Andro
   return kErrorNo;
 }
 
-ANDROID_GE_N int soinfo_change_namespace_impl(SoinfoPtr soinfo_ptr, AndroidNamespacePtr android_namespace_ptr) {
+static ANDROID_GE_N int soinfo_change_namespace_impl(SoinfoPtr soinfo_ptr, AndroidNamespacePtr android_namespace_ptr) {
   CHECK_API_RET_ERROR(__ANDROID_API_N__);
   CHECK_PARAM_RET_ERROR(soinfo_ptr, kErrorSoinfoNull);
   CHECK_PARAM_RET_ERROR(android_namespace_ptr, kErrorNpNull);
@@ -645,7 +652,7 @@ ANDROID_GE_N int soinfo_change_namespace_impl(SoinfoPtr soinfo_ptr, AndroidNames
   return kErrorNo;
 }
 
-int android_log_print_impl(int prio, const char *tag, const char *fmt, ...) {
+static int android_log_print_impl(int prio, const char *tag, const char *fmt, ...) {
   va_list va;
   va_start(va, fmt);
   int ret = __android_log_vprint(prio, tag, fmt, va);
@@ -653,7 +660,8 @@ int android_log_print_impl(int prio, const char *tag, const char *fmt, ...) {
   return ret;
 }
 
-uint64_t find_library_symbol_impl(const char *library_name, const char *symbol_name, const FindSymbolType symbol_type) {
+static uint64_t find_library_symbol_impl(const char *library_name, const char *symbol_name,
+                                         const FindSymbolType symbol_type) {
   if (!library_name || !symbol_name) {
     return 0;
   }
@@ -674,7 +682,8 @@ uint64_t find_library_symbol_impl(const char *library_name, const char *symbol_n
   return 0;
 }
 
-MEMORY_FREE uint64_t *find_library_symbols_impl(const char *library_name, const FindSymbolUnit *symbols, int size) {
+static MEMORY_FREE uint64_t *find_library_symbols_impl(const char *library_name, const FindSymbolUnit *symbols,
+                                                       int size) {
   if (!library_name || !symbols || size < 1) {
     return nullptr;
   }
@@ -736,7 +745,7 @@ MEMORY_FREE uint64_t *find_library_symbols_impl(const char *library_name, const 
   return memory.release<uint64_t>();
 }
 
-bool set_ld_debug_verbosity_impl(int level) { return ProxyLinker::Get().SetLdDebugVerbosity(level); }
+static bool set_ld_debug_verbosity_impl(int level) { return ProxyLinker::Get().SetLdDebugVerbosity(level); }
 
 C_API API_PUBLIC FakeLinker g_fakelinker_export = {
   get_fakelinker_version_impl,

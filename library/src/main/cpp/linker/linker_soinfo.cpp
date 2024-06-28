@@ -297,7 +297,7 @@ typedef struct __ifunc_arg_t {
     return reinterpret_cast<Type *>(thiz)->Name;                                                                       \
   }
 
-ElfW(Addr) __bionic_call_ifunc_resolver(ElfW(Addr) resolver_addr) {
+static ElfW(Addr) __bionic_call_ifunc_resolver(ElfW(Addr) resolver_addr) {
 #if defined(__aarch64__)
   typedef ElfW(Addr) (*ifunc_resolver_t)(uint64_t, __ifunc_arg_t *);
   static __ifunc_arg_t arg;
@@ -324,14 +324,14 @@ ElfW(Addr) __bionic_call_ifunc_resolver(ElfW(Addr) resolver_addr) {
 #endif
 }
 
-inline bool check_symbol_version(const ElfW(Versym) * ver_table, uint32_t sym_idx, const ElfW(Versym) verneed) {
+static inline bool check_symbol_version(const ElfW(Versym) * ver_table, uint32_t sym_idx, const ElfW(Versym) verneed) {
   if (ver_table == nullptr)
     return true;
   const uint32_t verdef = ver_table[sym_idx];
   return (verneed == kVersymNotNeeded) ? !(verdef & kVersymHiddenBit) : verneed == (verdef & ~kVersymHiddenBit);
 }
 
-inline bool is_symbol_global_and_defined(soinfo *si, const ElfW(Sym) * s) {
+static inline bool is_symbol_global_and_defined(soinfo *si, const ElfW(Sym) * s) {
   if (ELF_ST_BIND(s->st_info) == STB_GLOBAL || ELF_ST_BIND(s->st_info) == STB_WEAK) {
     return s->st_shndx != SHN_UNDEF;
   } else if (ELF_ST_BIND(s->st_info) != STB_LOCAL) {
@@ -383,7 +383,7 @@ static bool for_each_verdef(soinfo *si, F functor) {
   return true;
 }
 
-ElfW(Versym) find_verdef_version_index(soinfo *si, const version_info *vi) {
+static ElfW(Versym) find_verdef_version_index(soinfo *si, const version_info *vi) {
   if (vi == nullptr) {
     return kVersymNotNeeded;
   }
