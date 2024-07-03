@@ -131,6 +131,16 @@ install(EXPORT fakelinker
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/fakelinker
 )
 
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+  ${CMAKE_CURRENT_BINARY_DIR}/fakelinker-config-version.cmake
+  VERSION ${FAKELINKER_MODULE_VERSION_NAME}
+  COMPATIBILITY SameMajorVersion
+)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/fakelinker-config-version.cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/fakelinker
+)
+
 if(FAKELINKER_BUILD_INSTALLER)
   add_executable(${FAKELINKER_INSTALLER_MODULE_NAME}
     installer/hook_installer.cpp
