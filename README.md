@@ -86,6 +86,7 @@ Below is the description for the sub-projects:
    FetchContent_Declare(
    fakelinker
    GIT_REPOSITORY https://github.com/sanfengAndroid/fake-linker.git
+   GIT_TAG main
    SOURCE_SUBDIR library/src/main/cpp
    )
 
