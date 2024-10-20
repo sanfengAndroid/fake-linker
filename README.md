@@ -17,7 +17,7 @@ We now offer the new v3.0.0+ version with the following major updates:
 
 1. Removed the need for different `libfakelinker.so` files for different `Android Api Levels`. The internal function table now automatically adapts to different `Android` versions.
 2. Introduced a stable C/C++ [FakeLinker](library/src/main/cpp/include/fake_linker.h) function table. Future versions guarantee backward compatibility and will not change the function pointer offsets of `FakeLinker`. The current version number can be obtained via `FakeLinker.get_fakelinker_version`.
-3. Added support for the `fake-linker` static library, allowing customization of `fake-linker` and usage of interfaces such as [elf_reader.h](library/src/main/cpp/include/elf_reader.h), [jni_helper.h](library/src/main/cpp/include/elf_reader.h), [maps_util.h](library/src/main/cpp/include/maps_util.h) individually. This enables `fake-linker` to act as a hook module and reduces the number of `so` files.
+3. Added support for the `fake-linker` static library, allowing customization of `fake-linker` and usage of interfaces such as [elf_reader.h](library/src/main/cpp/include/elf_reader.h), [jni_helper.h](library/src/main/cpp/include/jni_helper.h), [maps_util.h](library/src/main/cpp/include/maps_util.h) individually. This enables `fake-linker` to act as a hook module and reduces the number of `so` files.
 4. Optional `Java FakeLinker API`. The new version no longer requires the `Java API` mandatorily; it can be deleted as needed. You can also customize the class name for dynamic registration of the `Java API`.
 
 Below is the description for the sub-projects:
@@ -86,6 +86,7 @@ Below is the description for the sub-projects:
    FetchContent_Declare(
    fakelinker
    GIT_REPOSITORY https://github.com/sanfengAndroid/fake-linker.git
+   GIT_TAG main
    SOURCE_SUBDIR library/src/main/cpp
    )
 
