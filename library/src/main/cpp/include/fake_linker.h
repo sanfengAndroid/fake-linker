@@ -852,7 +852,7 @@ enum FakeLinkerMode {
   /**
    * The default FakeLinker class or non-default classes must return success only if the registration is successful.
    */
-  kFMForceJavaRegister = 5,
+  kFMForceJavaRegister = 8,
 };
 
 /**
