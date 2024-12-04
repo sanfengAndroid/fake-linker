@@ -13,6 +13,8 @@
 #define ANDROID_GE_R
 #define ANDROID_GE_S
 #define ANDROID_GE_T
+#define ANDROID_GE_U
+#define ANDROID_GE_V
 #define ANDROID_LE_M
 #define ANDROID_LE_L1
 #define ANDROID_LE_O1

@@ -3,12 +3,12 @@
 #include <link.h>
 #include <stdint.h>
 
-#include <linker_macros.h>
-
+#include <list>
 #include <map>
 
+#include <linker_macros.h>
+
 #include "linker_namespaces.h"
-#include "local_block_allocator.h"
 
 // https://cs.android.com/android/platform/superproject/+/master:bionic/linker/linker_soinfo.h
 
@@ -175,12 +175,14 @@ struct TlsDynamicResolverArg {
   size_t generation;
   TlsIndex index;
 };
+
 struct TlsSegment {
   size_t size = 0;
   size_t alignment = 1;
   const void *init_ptr = ""; // Field is non-null even when init_size is 0.
   size_t init_size = 0;
 };
+
 struct soinfo_tls {
   TlsSegment segment;
   size_t module_id = 0;
@@ -587,6 +589,44 @@ struct soinfoT : soinfo {
   ANDROID_GE_T size_t gap_size_;
 };
 
+struct memtag_dynamic_entries_t {
+  void *memtag_globals;
+  size_t memtag_globalssz;
+  bool has_memtag_mode;
+  unsigned memtag_mode;
+  bool memtag_heap;
+  bool memtag_stack;
+};
+
+struct soinfoU : soinfoT {
+  // version >= 7
+  /// 从 android-14.0.0_r29 开始，新增了该字段
+  /// https://cs.android.com/android/platform/superproject/+/android-14.0.0_r29:bionic/linker/linker_soinfo.h;l=451
+  ANDROID_GE_U memtag_dynamic_entries_t memtag_dynamic_entries_;
+
+  /// 从 android-14.0.0_r50 开始，新增了该字段
+  /// https://cs.android.com/android/platform/superproject/+/android-14.0.0_r50:bionic/linker/linker_soinfo.h;l=459
+  // Pad gaps between segments when memory mapping?
+  ANDROID_GE_U bool should_pad_segments_ = false;
+};
+
+struct soinfoV : soinfoT {
+  // __aarch64__ only, which does not use versioning.
+  ANDROID_GE_U memtag_dynamic_entries_t memtag_dynamic_entries_;
+  ANDROID_GE_V std::list<std::string> vma_names_;
+
+  // Pad gaps between segments when memory mapping?
+  ANDROID_GE_U bool should_pad_segments_ = false;
+
+  // 最新主分支添加了以下支持 16k 页大小字段
+  // Use app compat mode when loading 4KiB max-page-size ELFs on 16KiB page-size devices?
+  ANDROID_GE_V bool should_use_16kib_app_compat_ = false;
+
+  // RELRO region for 16KiB compat loading
+  ANDROID_GE_V ElfW(Addr) compat_relro_start_ = 0;
+  ANDROID_GE_V ElfW(Addr) compat_relro_size_ = 0;
+};
+
 struct soinfoS : soinfo {
 #ifdef __work_around_b_24465209__
   // old_name
@@ -847,6 +887,7 @@ struct soinfoQ : soinfo {
   ANDROID_GE_Q std::unique_ptr<soinfo_tls> tls_;
   ANDROID_GE_Q std::vector<TlsDynamicResolverArg> tlsdesc_args_;
 };
+
 using soinfoR = soinfoQ;
 
 struct soinfoP : soinfo {
@@ -1086,6 +1127,7 @@ struct soinfoO : soinfo {
   ANDROID_GE_N android_namespace_list_t secondary_namespaces_;
   ANDROID_GE_N uintptr_t handle_;
 };
+
 struct soinfoN1 : soinfo {
 #if defined(__work_around_b_24465209__)
   char name_[SOINFO_NAME_LEN];
@@ -1595,7 +1637,7 @@ struct soinfoL : soinfo {
   soinfo_list_t parents_;
 };
 
-const char *fix_dt_needed(const char *dt_needed, const char *sopath);
+const char *fix_dt_needed(const char *dt_needed, const char *so_path);
 
 template <typename F>
 void for_each_dt_needed(soinfo *si, F action) {

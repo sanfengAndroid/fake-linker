@@ -3,15 +3,18 @@
 //
 
 #include "linker_block_allocator.h"
-#include <cstdlib>
-#include <cstring>
+
 #include <sys/mman.h>
 #include <sys/prctl.h>
 
-static constexpr size_t kAllocateSize100 = PAGE_SIZE * 100;
-static constexpr size_t kAllocateSize = PAGE_SIZE;
-static_assert(kAllocateSize % PAGE_SIZE == 0, "Invalid kAllocateSize.");
-static_assert(kAllocateSize100 % PAGE_SIZE == 0, "Invalid kAllocateSize.");
+#include <cstdlib>
+#include <cstring>
+
+#include <android_level_compat.h>
+
+static constexpr size_t kAllocateSize100 = 4096 * 100;
+static constexpr size_t kAllocateSize = 4096;
+static constexpr size_t kAllocateSize96 = 65536 * 6;
 
 struct LinkerBlockAllocatorPage {
   LinkerBlockAllocatorPage *next;
@@ -23,7 +26,15 @@ struct FreeBlockInfo {
   size_t num_free_blocks;
 };
 
-static size_t get_block_alloca_size() { return android_api >= __ANDROID_API_Q__ ? kAllocateSize100 : kAllocateSize; }
+static size_t get_block_alloca_size() {
+  if (android_api >= __ANDROID_API_U__) {
+    return kAllocateSize96;
+  }
+  if (android_api >= __ANDROID_API_Q__) {
+    return kAllocateSize100;
+  }
+  return kAllocateSize;
+}
 
 static size_t sizeof_block_alloca_page() {
   return android_api >= __ANDROID_API_Q__ ? sizeof(LinkerBlockAllocatorPage) : kAllocateSize;

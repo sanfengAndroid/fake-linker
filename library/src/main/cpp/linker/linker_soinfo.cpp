@@ -5,6 +5,7 @@
 #include <dlfcn.h>
 #include <sys/auxv.h>
 
+#include <android_level_compat.h>
 #include <maps_util.h>
 #include <type.h>
 
@@ -12,7 +13,6 @@
 #include "linker_relocs.h"
 #include "linker_soinfo.h"
 #include "linker_util.h"
-#include "local_block_allocator.h"
 
 #if (defined(__arm__) || defined(__aarch64__))
 #include "linker_gnu_hash_neon.h"
@@ -602,6 +602,194 @@ static bool plain_relocate_impl(soinfo *so, rel_t *rels, size_t rel_count, symbo
 //
 //	return &version_infos[source_symver];
 // }
+
+static void InitApiV() {
+#ifdef __work_around_b_24465209__
+  SOINFO_MEMBER_WRAP(soinfoV, name_);
+#endif
+  SOINFO_MEMBER_WRAP(soinfoV, phdr);
+  SOINFO_MEMBER_WRAP(soinfoV, phnum);
+  SOINFO_MEMBER_WRAP(soinfoV, base);
+  SOINFO_MEMBER_WRAP(soinfoV, size);
+  SOINFO_MEMBER_WRAP(soinfoV, dynamic);
+  SOINFO_MEMBER_CAST_WRAP(soinfoV, next, soinfo *);
+  SOINFO_MEMBER_REF_WRAP(soinfoV, flags_);
+  SOINFO_MEMBER_WRAP(soinfoV, strtab_);
+  SOINFO_MEMBER_WRAP(soinfoV, symtab_);
+  SOINFO_MEMBER_WRAP(soinfoV, nbucket_);
+  SOINFO_MEMBER_WRAP(soinfoV, nchain_);
+  SOINFO_MEMBER_VER_WRAP(soinfoV, bucket_, M);
+  SOINFO_MEMBER_VER_WRAP(soinfoV, chain_, M);
+
+#ifndef __LP64__
+  // __ANDROID_API_R__   unused4
+  SOINFO_MEMBER_WRAP(soinfoV, plt_got_);
+#endif
+#ifdef USE_RELA
+  SOINFO_MEMBER_REF_WRAP(soinfoV, plt_rela_);
+  SOINFO_MEMBER_REF_WRAP(soinfoV, plt_rela_count_);
+  SOINFO_MEMBER_REF_WRAP(soinfoV, rela_);
+  SOINFO_MEMBER_REF_WRAP(soinfoV, rela_count_);
+#else
+  SOINFO_MEMBER_REF_WRAP(soinfoV, plt_rel_);
+  SOINFO_MEMBER_REF_WRAP(soinfoV, plt_rel_count_);
+  SOINFO_MEMBER_REF_WRAP(soinfoV, rel_);
+  SOINFO_MEMBER_REF_WRAP(soinfoV, rel_count_);
+#endif
+  SOINFO_MEMBER_VER_WRAP(soinfoV, preinit_array_, P);
+  SOINFO_MEMBER_WRAP(soinfoV, preinit_array_count_);
+  SOINFO_MEMBER_VER_WRAP(soinfoV, init_array_, P);
+  SOINFO_MEMBER_WRAP(soinfoV, init_array_count_);
+  SOINFO_MEMBER_VER_WRAP(soinfoV, fini_array_, P);
+  SOINFO_MEMBER_WRAP(soinfoV, fini_array_count_);
+  SOINFO_MEMBER_VER_WRAP(soinfoV, init_func_, P);
+  SOINFO_MEMBER_VER_WRAP(soinfoV, fini_func_, P);
+
+#ifdef __arm__
+  SOINFO_MEMBER_WRAP(soinfoV, ARM_exidx);
+  SOINFO_MEMBER_WRAP(soinfoV, ARM_exidx_count);
+#endif
+  SOINFO_MEMBER_WRAP(soinfoV, ref_count_);
+  SOINFO_MEMBER_REF_WRAP(soinfoV, link_map_head);
+  SOINFO_MEMBER_WRAP(soinfoV, constructors_called);
+  SOINFO_MEMBER_WRAP(soinfoV, load_bias);
+
+#ifndef __LP64__
+  SOINFO_MEMBER_WRAP(soinfoV, has_text_relocations);
+#endif
+  SOINFO_MEMBER_WRAP(soinfoV, has_DT_SYMBOLIC);
+  SOINFO_MEMBER_WRAP(soinfoV, version_);
+  SOINFO_MEMBER_WRAP(soinfoV, st_dev_);
+  SOINFO_MEMBER_WRAP(soinfoV, st_ino_);
+  SOINFO_MEMBER_REF_VER_WRAP(soinfoV, children_, T);
+  SOINFO_MEMBER_REF_VER_WRAP(soinfoV, parents_, T);
+  SOINFO_MEMBER_WRAP(soinfoV, file_offset_);
+  SOINFO_MEMBER_REF_WRAP(soinfoV, rtld_flags_);
+  SOINFO_MEMBER_REF_WRAP(soinfoV, dt_flags_1_);
+  SOINFO_MEMBER_WRAP(soinfoV, strtab_size_);
+  SOINFO_MEMBER_WRAP(soinfoV, gnu_nbucket_);
+  SOINFO_MEMBER_WRAP(soinfoV, gnu_bucket_);
+  SOINFO_MEMBER_WRAP(soinfoV, gnu_chain_);
+  SOINFO_MEMBER_WRAP(soinfoV, gnu_maskwords_);
+  SOINFO_MEMBER_WRAP(soinfoV, gnu_shift2_);
+  SOINFO_MEMBER_WRAP(soinfoV, gnu_bloom_filter_);
+  SOINFO_MEMBER_CAST_WRAP(soinfoV, local_group_root_, soinfo *);
+  SOINFO_MEMBER_WRAP(soinfoV, android_relocs_);
+  SOINFO_MEMBER_WRAP(soinfoV, android_relocs_size_);
+  SOINFO_MEMBER_STRING_TO_CHARP_WRAP(soinfoV, soname_);
+  SOINFO_MEMBER_STRING_TO_CHARP_WRAP(soinfoV, realpath_);
+  SOINFO_MEMBER_WRAP(soinfoV, versym_);
+  SOINFO_MEMBER_WRAP(soinfoV, verdef_ptr_);
+  SOINFO_MEMBER_WRAP(soinfoV, verdef_cnt_);
+  SOINFO_MEMBER_WRAP(soinfoV, verneed_ptr_);
+  SOINFO_MEMBER_WRAP(soinfoV, verneed_cnt_);
+  SOINFO_MEMBER_WRAP(soinfoV, target_sdk_version_);
+
+  SOINFO_MEMBER_REF_WRAP(soinfoV, dt_runpath_);
+  SOINFO_MEMBER_REF_WRAP(soinfoV, primary_namespace_);
+  SOINFO_MEMBER_REF_VER_WRAP(soinfoV, secondary_namespaces_, T);
+  SOINFO_MEMBER_WRAP(soinfoV, handle_);
+  SOINFO_MEMBER_WRAP(soinfoV, relr_);
+  SOINFO_MEMBER_WRAP(soinfoV, relr_count_);
+  SOINFO_MEMBER_REF_WRAP(soinfoV, tls_);
+  SOINFO_MEMBER_REF_WRAP(soinfoV, tlsdesc_args_);
+  SOINFO_MEMBER_WRAP(soinfoV, gap_start_);
+  SOINFO_MEMBER_WRAP(soinfoV, gap_size_);
+}
+
+static void InitApiU() {
+#ifdef __work_around_b_24465209__
+  SOINFO_MEMBER_WRAP(soinfoU, name_);
+#endif
+  SOINFO_MEMBER_WRAP(soinfoU, phdr);
+  SOINFO_MEMBER_WRAP(soinfoU, phnum);
+  SOINFO_MEMBER_WRAP(soinfoU, base);
+  SOINFO_MEMBER_WRAP(soinfoU, size);
+  SOINFO_MEMBER_WRAP(soinfoU, dynamic);
+  SOINFO_MEMBER_CAST_WRAP(soinfoU, next, soinfo *);
+  SOINFO_MEMBER_REF_WRAP(soinfoU, flags_);
+  SOINFO_MEMBER_WRAP(soinfoU, strtab_);
+  SOINFO_MEMBER_WRAP(soinfoU, symtab_);
+  SOINFO_MEMBER_WRAP(soinfoU, nbucket_);
+  SOINFO_MEMBER_WRAP(soinfoU, nchain_);
+  SOINFO_MEMBER_VER_WRAP(soinfoU, bucket_, M);
+  SOINFO_MEMBER_VER_WRAP(soinfoU, chain_, M);
+
+#ifndef __LP64__
+  // __ANDROID_API_R__   unused4
+  SOINFO_MEMBER_WRAP(soinfoU, plt_got_);
+#endif
+#ifdef USE_RELA
+  SOINFO_MEMBER_REF_WRAP(soinfoU, plt_rela_);
+  SOINFO_MEMBER_REF_WRAP(soinfoU, plt_rela_count_);
+  SOINFO_MEMBER_REF_WRAP(soinfoU, rela_);
+  SOINFO_MEMBER_REF_WRAP(soinfoU, rela_count_);
+#else
+  SOINFO_MEMBER_REF_WRAP(soinfoU, plt_rel_);
+  SOINFO_MEMBER_REF_WRAP(soinfoU, plt_rel_count_);
+  SOINFO_MEMBER_REF_WRAP(soinfoU, rel_);
+  SOINFO_MEMBER_REF_WRAP(soinfoU, rel_count_);
+#endif
+  SOINFO_MEMBER_VER_WRAP(soinfoU, preinit_array_, P);
+  SOINFO_MEMBER_WRAP(soinfoU, preinit_array_count_);
+  SOINFO_MEMBER_VER_WRAP(soinfoU, init_array_, P);
+  SOINFO_MEMBER_WRAP(soinfoU, init_array_count_);
+  SOINFO_MEMBER_VER_WRAP(soinfoU, fini_array_, P);
+  SOINFO_MEMBER_WRAP(soinfoU, fini_array_count_);
+  SOINFO_MEMBER_VER_WRAP(soinfoU, init_func_, P);
+  SOINFO_MEMBER_VER_WRAP(soinfoU, fini_func_, P);
+
+#ifdef __arm__
+  SOINFO_MEMBER_WRAP(soinfoU, ARM_exidx);
+  SOINFO_MEMBER_WRAP(soinfoU, ARM_exidx_count);
+#endif
+  SOINFO_MEMBER_WRAP(soinfoU, ref_count_);
+  SOINFO_MEMBER_REF_WRAP(soinfoU, link_map_head);
+  SOINFO_MEMBER_WRAP(soinfoU, constructors_called);
+  SOINFO_MEMBER_WRAP(soinfoU, load_bias);
+
+#ifndef __LP64__
+  SOINFO_MEMBER_WRAP(soinfoU, has_text_relocations);
+#endif
+  SOINFO_MEMBER_WRAP(soinfoU, has_DT_SYMBOLIC);
+  SOINFO_MEMBER_WRAP(soinfoU, version_);
+  SOINFO_MEMBER_WRAP(soinfoU, st_dev_);
+  SOINFO_MEMBER_WRAP(soinfoU, st_ino_);
+  SOINFO_MEMBER_REF_VER_WRAP(soinfoU, children_, T);
+  SOINFO_MEMBER_REF_VER_WRAP(soinfoU, parents_, T);
+  SOINFO_MEMBER_WRAP(soinfoU, file_offset_);
+  SOINFO_MEMBER_REF_WRAP(soinfoU, rtld_flags_);
+  SOINFO_MEMBER_REF_WRAP(soinfoU, dt_flags_1_);
+  SOINFO_MEMBER_WRAP(soinfoU, strtab_size_);
+  SOINFO_MEMBER_WRAP(soinfoU, gnu_nbucket_);
+  SOINFO_MEMBER_WRAP(soinfoU, gnu_bucket_);
+  SOINFO_MEMBER_WRAP(soinfoU, gnu_chain_);
+  SOINFO_MEMBER_WRAP(soinfoU, gnu_maskwords_);
+  SOINFO_MEMBER_WRAP(soinfoU, gnu_shift2_);
+  SOINFO_MEMBER_WRAP(soinfoU, gnu_bloom_filter_);
+  SOINFO_MEMBER_CAST_WRAP(soinfoU, local_group_root_, soinfo *);
+  SOINFO_MEMBER_WRAP(soinfoU, android_relocs_);
+  SOINFO_MEMBER_WRAP(soinfoU, android_relocs_size_);
+  SOINFO_MEMBER_STRING_TO_CHARP_WRAP(soinfoU, soname_);
+  SOINFO_MEMBER_STRING_TO_CHARP_WRAP(soinfoU, realpath_);
+  SOINFO_MEMBER_WRAP(soinfoU, versym_);
+  SOINFO_MEMBER_WRAP(soinfoU, verdef_ptr_);
+  SOINFO_MEMBER_WRAP(soinfoU, verdef_cnt_);
+  SOINFO_MEMBER_WRAP(soinfoU, verneed_ptr_);
+  SOINFO_MEMBER_WRAP(soinfoU, verneed_cnt_);
+  SOINFO_MEMBER_WRAP(soinfoU, target_sdk_version_);
+
+  SOINFO_MEMBER_REF_WRAP(soinfoU, dt_runpath_);
+  SOINFO_MEMBER_REF_WRAP(soinfoU, primary_namespace_);
+  SOINFO_MEMBER_REF_VER_WRAP(soinfoU, secondary_namespaces_, T);
+  SOINFO_MEMBER_WRAP(soinfoU, handle_);
+  SOINFO_MEMBER_WRAP(soinfoU, relr_);
+  SOINFO_MEMBER_WRAP(soinfoU, relr_count_);
+  SOINFO_MEMBER_REF_WRAP(soinfoU, tls_);
+  SOINFO_MEMBER_REF_WRAP(soinfoU, tlsdesc_args_);
+  SOINFO_MEMBER_WRAP(soinfoU, gap_start_);
+  SOINFO_MEMBER_WRAP(soinfoU, gap_size_);
+}
 
 static void InitApiT() {
 #ifdef __work_around_b_24465209__
@@ -1529,8 +1717,11 @@ void soinfo::Init() {
 #else
   useGnuHashNeon = false;
 #endif
-
-  if (android_api >= __ANDROID_API_T__) {
+  if (android_api >= __ANDROID_API_V__) {
+    InitApiV();
+  } else if (android_api >= __ANDROID_API_U__) {
+    InitApiU();
+  } else if (android_api >= __ANDROID_API_T__) {
     InitApiT();
   } else if (android_api >= __ANDROID_API_S__) {
     InitApiS();

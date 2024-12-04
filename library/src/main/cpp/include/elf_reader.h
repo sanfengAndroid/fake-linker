@@ -1,5 +1,6 @@
 #pragma once
 
+#include <list>
 #include <string>
 #include <vector>
 
@@ -38,6 +39,9 @@ struct ElfDiskInfo {
   Address base;
 };
 
+#define MAYBE_MAP_FLAG(x, from, to) (((x) & (from)) ? (to) : 0)
+#define PFLAGS_TO_PROT(x)                                                                                              \
+  (MAYBE_MAP_FLAG((x), PF_X, PROT_EXEC) | MAYBE_MAP_FLAG((x), PF_R, PROT_READ) | MAYBE_MAP_FLAG((x), PF_W, PROT_WRITE))
 
 class ElfReader {
 public:
@@ -50,16 +54,27 @@ public:
   bool LoadFromDisk(const char *library_name);
 
   const char *name() const { return name_.c_str(); }
+
   size_t phdr_count() const { return phdr_num_; }
+
   ElfW(Addr) load_start() const { return reinterpret_cast<ElfW(Addr)>(load_start_); }
+
   size_t load_size() const { return load_size_; }
+
   ElfW(Addr) gap_start() const { return reinterpret_cast<ElfW(Addr)>(gap_start_); }
+
   size_t gap_size() const { return gap_size_; }
+
   ElfW(Addr) load_bias() const { return load_bias_; }
+
   const ElfW(Phdr) * loaded_phdr() const { return loaded_phdr_; }
+
   const ElfW(Dyn) * dynamic() const { return dynamic_; }
+
   const char *get_string(ElfW(Word) index) const;
+
   bool is_mapped_by_caller() const { return mapped_by_caller_; }
+
   ElfW(Addr) entry_point() const { return header_.e_entry + load_bias_; }
 
   const ElfW(Sym) * GnuHashLookupSymbol(const char *name);
@@ -93,7 +108,16 @@ private:
   bool ReadSectionHeadersFromMemory();
   bool ReadDynamicSection();
   bool ReadDynamicSectionFromMemory();
+  bool ReadPadSegmentNote();
   bool ReserveAddressSpace(address_space_params *address_space);
+  [[nodiscard]] bool MapSegment(size_t seg_idx, size_t len);
+  [[nodiscard]] bool CompatMapSegment(size_t seg_idx, size_t len);
+  void ZeroFillSegment(const ElfW(Phdr) * phdr);
+  void DropPaddingPages(const ElfW(Phdr) * phdr, uint64_t seg_file_end);
+  [[nodiscard]] bool MapBssSection(const ElfW(Phdr) * phdr, ElfW(Addr) seg_page_end, ElfW(Addr) seg_file_end);
+  [[nodiscard]] bool IsEligibleFor16KiBAppCompat(ElfW(Addr) * vaddr);
+  [[nodiscard]] bool HasAtMostOneRelroSegment(const ElfW(Phdr) * *relro_phdr);
+  [[nodiscard]] bool Setup16KiBAppCompat();
   bool LoadSegments();
   bool FindPhdr();
   bool FindGnuPropertySection();
@@ -147,6 +171,16 @@ public:
   // Is map owned by the caller
   bool mapped_by_caller_;
 
+  // Pad gaps between segments when memory mapping?
+  bool should_pad_segments_ = false;
+
+  // Use app compat mode when loading 4KiB max-page-size ELFs on 16KiB page-size devices?
+  bool should_use_16kib_app_compat_ = false;
+
+  // RELRO region for 16KiB compat loading
+  ElfW(Addr) compat_relro_start_ = 0;
+  ElfW(Addr) compat_relro_size_ = 0;
+
   // Only used by AArch64 at the moment.
   GnuPropertySection note_gnu_property_ __unused;
 
@@ -182,7 +216,8 @@ size_t phdr_table_get_load_size(const ElfW(Phdr) * phdr_table, size_t phdr_count
 size_t phdr_table_get_maximum_alignment(const ElfW(Phdr) * phdr_table, size_t phdr_count);
 
 int phdr_table_protect_segments(const ElfW(Phdr) * phdr_table, size_t phdr_count, ElfW(Addr) load_bias,
-                                const GnuPropertySection *prop = nullptr);
+                                bool should_pad_segments, bool should_use_16kib_app_compat,
+                                const GnuPropertySection *prop __unused);
 
 int phdr_table_unprotect_segments(const ElfW(Phdr) * phdr_table, size_t phdr_count, ElfW(Addr) load_bias);
 
@@ -204,4 +239,14 @@ void phdr_table_get_dynamic_section(const ElfW(Phdr) * phdr_table, size_t phdr_c
 
 const char *phdr_table_get_interpreter_name(const ElfW(Phdr) * phdr_table, size_t phdr_count, ElfW(Addr) load_bias);
 
+bool page_size_migration_supported();
+
+int remap_memtag_globals_segments(const ElfW(Phdr) * phdr_table, size_t phdr_count, ElfW(Addr) load_bias);
+
+void protect_memtag_globals_ro_segments(const ElfW(Phdr) * phdr_table, size_t phdr_count, ElfW(Addr) load_bias);
+
+void name_memtag_globals_segments(const ElfW(Phdr) * phdr_table, size_t phdr_count, ElfW(Addr) load_bias,
+                                  const char *soname, std::list<std::string> *vma_names);
+
+bool get_16kb_appcompat_mode();
 } // namespace fakelinker

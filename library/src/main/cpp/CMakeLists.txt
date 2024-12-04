@@ -70,6 +70,7 @@ set(FAKE_LINKER_SRC
   linker/local_block_allocator.cpp
   linker/linker_export.cpp
   linker/elf_reader.cpp
+  linker/linker_phdr_16kib_compat.cpp
   linker/linker_mapped_file_fragment.cpp
   linker/linker_note_gnu_property.cpp
   linker/linker_symbol.cpp
