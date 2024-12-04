@@ -2,13 +2,13 @@
 // Created by beich on 2020/11/12.
 //
 
+#include <fcntl.h>
+#include <sys/stat.h>
+
 #include <cinttypes>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
-#include <fcntl.h>
-#include <memory>
-#include <sys/stat.h>
 
 #include "alog.h"
 #include "macros.h"
@@ -49,9 +49,10 @@ bool MapsHelper::GetMemoryProtect(void *address) {
 bool MapsHelper::ReadLibraryMap() {
   bool started = false;
   int32_t found_inode = 0;
+  int protect = 0;
   while (GetMapsLine()) {
     if (!started) {
-      if (!FormatLine() || !MatchPath() || inode_ == 0) {
+      if (!FormatLine() || !MatchPath() || inode_ == 0 || file_offset_ != 0) {
         continue;
       }
       found_inode = inode_;
@@ -59,9 +60,16 @@ bool MapsHelper::ReadLibraryMap() {
     } else if (!FormatLine()) {
       break;
     }
-    // 库映射可能是不连续的
+    // 库映射可能是不连续的, 但不会出现交叉
     if (found_inode != inode_ && inode_ != 0) {
-      break;
+      // 严格判断库是否正确, 一个库至少有读写执行内存段
+      if ((protect & (kMPRead | kMPWrite | kMPExecute)) != (kMPRead | kMPWrite | kMPExecute)) {
+        break;
+      } else {
+        started = false;
+        protect = 0;
+        page_.clear();
+      }
     }
     if (inode_ == 0) {
       continue;
@@ -70,6 +78,7 @@ bool MapsHelper::ReadLibraryMap() {
     page.start = start_address_;
     page.end = end_address_;
     page.old_protect = FormatProtect();
+    protect |= page.old_protect;
     page.file_offset = file_offset_;
     page.inode = inode_;
     page.path = path_;
@@ -119,6 +128,8 @@ Address MapsHelper::FindLibraryBase(const char *library_name) {
   if (!library_name || !OpenMaps()) {
     return result;
   }
+
+  int protect = 0;
   MakeLibraryName(library_name);
   while (GetMapsLine()) {
     if (!FormatLine()) {
@@ -127,14 +138,17 @@ Address MapsHelper::FindLibraryBase(const char *library_name) {
     if (path_[0] == '[') {
       continue;
     }
-    if (file_offset_ != 0) {
-      continue;
-    }
     if (!MatchPath()) {
       continue;
     }
-    result = start_address_;
-    break;
+    if (file_offset_ == 0) {
+      result = start_address_;
+      protect = 0;
+    }
+    protect |= FormatProtect();
+    if ((protect & (kMPRead | kMPExecute)) != (kMPRead | kMPExecute) && result != 0) {
+      break;
+    }
   }
   return result;
 }
@@ -219,7 +233,7 @@ std::string MapsHelper::ToString() const {
   auto ProtToStr = [&tmp](int prot) -> const char * {
     tmp[0] = (prot & kMPRead) == kMPRead ? 'r' : '-';
     tmp[1] = (prot & kMPWrite) == kMPWrite ? 'w' : '-';
-    tmp[2] = (prot & kMPEexcute) == kMPEexcute ? 'x' : '-';
+    tmp[2] = (prot & kMPExecute) == kMPExecute ? 'x' : '-';
     if (prot & kMPShared) {
       tmp[3] = 's';
     } else if (prot & kMPPrivate) {
@@ -295,7 +309,7 @@ int MapsHelper::FormatProtect() {
       port |= kMPWrite;
       break;
     case 'x':
-      port |= kMPEexcute;
+      port |= kMPExecute;
       break;
     case 's':
       port |= kMPShared;
@@ -351,7 +365,7 @@ bool MapsHelper::MakeLibraryName(const char *library_name) {
 bool MapsHelper::VerifyLibraryMap() {
   for (auto &page : page_) {
     // 模拟器下查找arm库没有可执行权限
-    if ((page.old_protect & (kMPEexcute | kMPWrite)) != 0) {
+    if ((page.old_protect & (kMPExecute | kMPWrite)) != 0) {
       return true;
     }
   }

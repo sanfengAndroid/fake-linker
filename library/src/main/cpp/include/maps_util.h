@@ -3,8 +3,9 @@
 //
 #pragma once
 
-#include <string>
 #include <sys/mman.h>
+
+#include <string>
 #include <vector>
 
 #include "macros.h"
@@ -24,11 +25,11 @@ enum MapsProt {
   kMPNone = PROT_NONE,
   kMPRead = PROT_READ,
   kMPWrite = PROT_WRITE,
-  kMPEexcute = PROT_EXEC,
+  kMPExecute = PROT_EXEC,
   // 与 mman.h 中不同
   kMPShared = 8,
   kMPPrivate = 16,
-  kMPRWX = kMPRead | kMPWrite | kMPEexcute,
+  kMPRWX = kMPRead | kMPWrite | kMPExecute,
 };
 
 class MapsHelper {
