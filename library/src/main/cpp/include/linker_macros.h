@@ -19,6 +19,8 @@
 #define ANDROID_LE_L1
 #define ANDROID_LE_O1
 #define ANDROID_LE_S
+#define ANDROID_LE_U
+#define ANDROID_LE_V
 
 #define MEMORY_FREE
 #define ONLY_READ

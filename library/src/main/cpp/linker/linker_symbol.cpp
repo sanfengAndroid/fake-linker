@@ -1,6 +1,8 @@
 #include "linker_symbol.h"
 
-#include "elf_reader.h"
+#include <android_level_compat.h>
+#include <elf_reader.h>
+
 #include "linker_globals.h"
 
 #if defined(__LP64__)
@@ -15,8 +17,13 @@ LinkerSymbol linker_symbol;
 void LinkerSymbol::InitSymbolName() {
   solist.name = "__dl__ZL6solist";
   g_ld_debug_verbosity.name = "__dl_g_ld_debug_verbosity";
+  g_linker_debug_config.name = "__dl_g_linker_debug_config";
   g_linker_logger.name = "__dl_g_linker_logger";
-  g_dl_mutex.name = "__dl__ZL10g_dl_mutex";
+  if (android_api >= __ANDROID_API_V__) {
+    g_dl_mutex.name = "__dl_g_dl_mutex";
+  } else {
+    g_dl_mutex.name = "__dl__ZL10g_dl_mutex";
+  }
   linker_dl_err_buf.name = "__dl__ZL19__linker_dl_err_buf";
 
   if (android_api >= __ANDROID_API_R__) {
@@ -127,6 +134,7 @@ bool LinkerSymbol::LoadSymbol() {
 
   APPEND_SYMBOL(solist);
   APPEND_SYMBOL(g_ld_debug_verbosity);
+  APPEND_SYMBOL(g_linker_debug_config);
   APPEND_SYMBOL(g_linker_logger);
   APPEND_SYMBOL(g_dl_mutex);
   APPEND_SYMBOL(linker_dl_err_buf);
@@ -165,12 +173,13 @@ bool LinkerSymbol::LoadSymbol() {
     if (!reader.LoadFromDisk(library)) {
       return false;
     }
-    internalAddresses = reader.FindInternalSymbols(internalSymbols);
+    internalAddresses = reader.FindInternalSymbols(internalSymbols, android_api >= __ANDROID_API_V__);
     if (internalAddresses.size() != internalSymbols.size()) {
       LOGE("find linker internal symbols failed.");
       return false;
     }
     if (!solist.Set(internalAddresses[0])) {
+      LOGE("find linker solist symbol failed.");
       return false;
     }
   }
@@ -190,6 +199,7 @@ bool LinkerSymbol::LoadSymbol() {
 
   ASSIGN_SYMBOL(solist);
   ASSIGN_SYMBOL(g_ld_debug_verbosity);
+  ASSIGN_SYMBOL(g_linker_debug_config);
   ASSIGN_SYMBOL(g_linker_logger);
   ASSIGN_SYMBOL(g_dl_mutex);
   ASSIGN_SYMBOL(linker_dl_err_buf);

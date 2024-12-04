@@ -545,6 +545,9 @@ bool ProxyLinker::SetLdDebugVerbosity(int level) {
   if (int *p = linker_symbol.g_ld_debug_verbosity.Get()) {
     *p = level;
     return true;
+  } else if (auto *config = linker_symbol.g_linker_debug_config.Get()) {
+    config->any = true;
+    return true;
   }
   return false;
 }

@@ -70,9 +70,32 @@ struct LibrarySymbol : SymbolItem<soinfo, false> {
   static constexpr int type = 2;
 };
 
+ANDROID_GE_V struct LinkerDebugConfig {
+  // Set automatically if any of the more specific options are set.
+  bool any;
+
+  // Messages relating to calling ctors/dtors/ifuncs.
+  bool calls;
+  // Messages relating to CFI.
+  bool cfi;
+  // Messages relating to the dynamic section.
+  bool dynamic;
+  // Messages relating to symbol lookup.
+  bool lookup;
+  // Messages relating to relocation processing.
+  bool reloc;
+  // Messages relating to ELF properties.
+  bool props;
+  // TODO: "config" and "zip" seem likely to want to be separate?
+
+  bool timing;
+  bool statistics;
+};
+
 struct LinkerSymbol {
   InternalSymbol<soinfo, true> solist;
-  InternalSymbol<int> g_ld_debug_verbosity{{.force = false}};
+  ANDROID_LE_U InternalSymbol<int> g_ld_debug_verbosity{{.force = false}};
+  ANDROID_GE_V InternalSymbol<LinkerDebugConfig> g_linker_debug_config{{.force = false}};
   InternalSymbol<uint32_t> g_linker_logger{{.force = false}};
   InternalSymbol<pthread_mutex_t> g_dl_mutex;
   InternalSymbol<char> linker_dl_err_buf;
