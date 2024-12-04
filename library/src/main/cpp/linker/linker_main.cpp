@@ -1,7 +1,7 @@
 #include <android/api-level.h>
-#include <cstring>
 #include <dlfcn.h>
-#include <sys/system_properties.h>
+
+#include <cstring>
 
 #include <alog.h>
 #include <fake_linker.h>
@@ -12,9 +12,7 @@
 
 
 #include "art/hook_jni_native_interface_impl.h"
-#include "linker_globals.h"
 #include "linker_symbol.h"
-#include "linker_util.h"
 
 int g_log_level = FAKELINKER_LOG_LEVEL;
 int g_version_code = FAKELINKER_MODULE_VERSION;
@@ -25,7 +23,6 @@ JNINativeInterface *original_functions;
 bool init_success = false;
 
 using FakeLinkerModulePtr = void (*)(JNIEnv *, SoinfoPtr, const FakeLinker *);
-
 
 static void Init() {
   static bool initialized = false;

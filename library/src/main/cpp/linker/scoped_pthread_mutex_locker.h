@@ -3,7 +3,10 @@
 //
 
 #pragma once
+
 #include <pthread.h>
+
+#include <macros.h>
 
 class ScopedPthreadMutexLocker {
 public:

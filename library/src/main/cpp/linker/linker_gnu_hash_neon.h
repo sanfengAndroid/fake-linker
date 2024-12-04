@@ -29,6 +29,7 @@
 #pragma once
 
 #include <stdint.h>
+
 #include <utility>
 
 std::pair<uint32_t, uint32_t> calculate_gnu_hash_neon(const char *name);

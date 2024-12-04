@@ -10,7 +10,6 @@
  * */
 #include "linker_globals.h"
 
-#include <algorithm>
 #include <dlfcn.h>
 #include <elf.h>
 #include <sys/mman.h>
@@ -25,7 +24,6 @@
 #include "linker_namespaces.h"
 #include "linker_soinfo.h"
 #include "linker_symbol.h"
-#include "linker_util.h"
 #include "scoped_pthread_mutex_locker.h"
 
 #define DEFAULT_NAMESPACE_NAME "(default)"
@@ -143,7 +141,7 @@ bool ProxyLinker::AddGlobalSoinfoToNamespace(soinfo *global, android_namespace_t
   return true;
 }
 
-ANDROID_GE_N bool ProxyLinker::RemoveSoinfoFromNamespcae(soinfo *so, android_namespace_t *np, bool clear_global_flags) {
+ANDROID_GE_N bool ProxyLinker::RemoveSoinfoFromNamespace(soinfo *so, android_namespace_t *np, bool clear_global_flags) {
   if (__predict_false(so == nullptr) || __predict_false(np == nullptr)) {
     return false;
   }

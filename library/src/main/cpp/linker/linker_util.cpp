@@ -4,9 +4,9 @@
 
 #include "linker_util.h"
 
-#include <algorithm>
-#include <cinttypes>
 #include <libgen.h>
+
+#include <cinttypes>
 
 #include <alog.h>
 #include <macros.h>
@@ -327,11 +327,9 @@ bool safe_add(off64_t *out, off64_t a, size_t b) {
   return true;
 }
 
-size_t page_offset(off64_t offset) { return static_cast<size_t>(offset & (PAGE_SIZE - 1)); }
+size_t page_offset(off64_t offset) { return static_cast<size_t>(offset & (page_size() - 1)); }
 
-constexpr off64_t kPageMask = ~static_cast<off64_t>(PAGE_SIZE - 1);
-
-off64_t page_start(off64_t offset) { return offset & kPageMask; }
+off64_t page_start(off64_t offset) { return offset & ~static_cast<off64_t>(page_size() - 1); }
 
 void DL_WARN_documented_change(int api_level, const char *doc_fragment, const char *fmt, ...) {
   LOGW("Deprecated api: %d, %s", api_level, doc_fragment);
@@ -343,12 +341,12 @@ void DL_WARN_documented_change(int api_level, const char *doc_fragment, const ch
 
 static std::string current_msg;
 
-void add_dlwarning(const char *sopath, const char *message, const char *value) {
+void add_dlwarning(const char *so_path, const char *message, const char *value) {
   if (!current_msg.empty()) {
     current_msg += '\n';
   }
 
-  current_msg = current_msg + basename(sopath) + ": " + message;
+  current_msg = current_msg + basename(so_path) + ": " + message;
 
   if (value != nullptr) {
     current_msg = current_msg + " \"" + value + "\"";

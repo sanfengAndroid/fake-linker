@@ -7,17 +7,17 @@
 #include <dlfcn.h>
 #include <libgen.h>
 
+#include <type.h>
+
 #include "linker_common_types.h"
 #include "linker_globals.h"
 #include "linker_util.h"
 
-#include <type.h>
 
 ANDROID_GE_O
 android_namespace_link_t::android_namespace_link_t(android_namespace_t *linked_namespace,
                                                    const std::unordered_set<std::string> &shared_lib_sonames) :
-    linked_namespace_(linked_namespace),
-    shared_lib_sonames_(shared_lib_sonames) {}
+    linked_namespace_(linked_namespace), shared_lib_sonames_(shared_lib_sonames) {}
 
 #define AN_FUN(Ret, Name) Ret (*Name)(android_namespace_t * thiz)
 #define CALL_MEMBER(Name) npTable.Name(this)

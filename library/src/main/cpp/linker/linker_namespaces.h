@@ -1,4 +1,5 @@
 #pragma once
+
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -30,8 +31,7 @@ ANDROID_GE_P struct android_namespace_link_t_P : android_namespace_link_t {
 
   android_namespace_link_t_P(android_namespace_t *linked_namespace,
                              const std::unordered_set<std::string> &shared_lib_sonames, bool allow_all_shared_libs) :
-      android_namespace_link_t(linked_namespace, shared_lib_sonames),
-      allow_all_shared_libs_(allow_all_shared_libs) {}
+      android_namespace_link_t(linked_namespace, shared_lib_sonames), allow_all_shared_libs_(allow_all_shared_libs) {}
 };
 
 ANDROID_GE_O struct android_namespace_link_t_O : android_namespace_link_t {

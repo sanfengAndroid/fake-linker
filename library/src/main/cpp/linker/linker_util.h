@@ -4,6 +4,7 @@
 #pragma once
 
 #include <link.h>
+
 #include <string>
 
 #include "linker_namespaces.h"
@@ -33,7 +34,7 @@ off64_t page_start(off64_t offset);
 
 void DL_WARN_documented_change(int api_level, const char *doc_fragment, const char *fmt, ...);
 
-void add_dlwarning(const char *sopath, const char *message, const char *value = nullptr);
+void add_dlwarning(const char *so_path, const char *message, const char *value = nullptr);
 
 bool get_transparent_hugepages_supported();
 

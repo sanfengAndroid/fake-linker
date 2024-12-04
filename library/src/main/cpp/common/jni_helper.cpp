@@ -3,32 +3,33 @@
 //
 
 #include "jni_helper.h"
+
 #include "proxy_jni.h"
 #include "scoped_utf_chars.h"
 
 #define STR(x) #x
-#define CHECK_EXECEPTION_BEFORE(env)                                                                                   \
+#define CHECK_EXCEPTION_BEFORE(env)                                                                                    \
   if (__predict_false(env.ExceptionCheck())) {                                                                         \
     return __FILE__ ":" STR(__LINE__) ",There is an unhandled exception, "                                             \
                                       "this operation will be ignored";                                                \
   }
 
-#define CLEAR_EXCEPTION_RETURN(env, Tips)                                                                              \
+#define CLEAR_EXCEPTION_RETURN(env, tips)                                                                              \
   if (__predict_false(env.ExceptionCheck())) {                                                                         \
     env.ExceptionClear();                                                                                              \
-    return Tips;                                                                                                       \
+    return tips;                                                                                                       \
   }
 
-#define CHECK_JNI_NULL_OBJECT_RETURN(obj, Tips)                                                                        \
+#define CHECK_JNI_NULL_OBJECT_RETURN(obj, tips)                                                                        \
   if (__predict_false(obj == nullptr)) {                                                                               \
-    return Tips;                                                                                                       \
+    return tips;                                                                                                       \
   }
 
 std::string JNIHelper::GetClassName(JNIEnv *env, jclass clazz) {
   fakelinker::ProxyJNIEnv proxy(env);
 
   CHECK_JNI_NULL_OBJECT_RETURN(clazz, "call GetClassName jclass is nullptr");
-  CHECK_EXECEPTION_BEFORE(proxy);
+  CHECK_EXCEPTION_BEFORE(proxy);
   auto name = reinterpret_cast<jstring>(proxy.CallObjectMethod(clazz, JNIHelper::Get().java_lang_Class_getName));
   CLEAR_EXCEPTION_RETURN(proxy, "call Class.getName() exception occurs");
   ScopedUtfChars sof(env, name);
@@ -39,7 +40,7 @@ std::string JNIHelper::GetObjectClassName(JNIEnv *env, jobject obj) {
   fakelinker::ProxyJNIEnv proxy(env);
 
   CHECK_JNI_NULL_OBJECT_RETURN(obj, "call GetObjectClassName jobject is nullptr");
-  CHECK_EXECEPTION_BEFORE(proxy);
+  CHECK_EXCEPTION_BEFORE(proxy);
 
   ScopedLocalRef<jclass> clazz(&proxy, (jclass)proxy.CallObjectMethod(obj, JNIHelper::Get().java_lang_Object_getClass));
   CLEAR_EXCEPTION_RETURN(proxy, "call GetObjectClassName exception occurs");
@@ -49,8 +50,8 @@ std::string JNIHelper::GetObjectClassName(JNIEnv *env, jobject obj) {
 std::string JNIHelper::ToString(JNIEnv *env, jobject l) {
   fakelinker::ProxyJNIEnv proxy(env);
 
-  CHECK_JNI_NULL_OBJECT_RETURN(l, "call ToString jobejct is nullptr");
-  CHECK_EXECEPTION_BEFORE(proxy);
+  CHECK_JNI_NULL_OBJECT_RETURN(l, "call ToString jobject is nullptr");
+  CHECK_EXCEPTION_BEFORE(proxy);
 
   auto name = reinterpret_cast<jstring>(proxy.CallObjectMethod(l, JNIHelper::Get().java_lang_Object_toString));
 
@@ -63,7 +64,7 @@ std::string JNIHelper::ToString(JNIEnv *env, jmethodID methodID) {
   fakelinker::ProxyJNIEnv proxy(env);
 
   CHECK_JNI_NULL_OBJECT_RETURN(methodID, "call ToString jmethodID is nullptr");
-  CHECK_EXECEPTION_BEFORE(proxy);
+  CHECK_EXCEPTION_BEFORE(proxy);
   ScopedLocalRef<jobject> method(&proxy, proxy.ToReflectedMethod(JNIHelper::Get().java_lang_Object, methodID, false));
   CLEAR_EXCEPTION_RETURN(proxy, "call Method.toString exception occurs");
   return ToString(env, method.get());
@@ -72,7 +73,7 @@ std::string JNIHelper::ToString(JNIEnv *env, jmethodID methodID) {
 std::string JNIHelper::ToString(JNIEnv *env, jfieldID fieldID) {
   fakelinker::ProxyJNIEnv proxy(env);
   CHECK_JNI_NULL_OBJECT_RETURN(fieldID, "call ToString jfieldID is nullptr");
-  CHECK_EXECEPTION_BEFORE(proxy);
+  CHECK_EXCEPTION_BEFORE(proxy);
 
   ScopedLocalRef<jobject> filed(&proxy, proxy.ToReflectedField(JNIHelper::Get().java_lang_Object, fieldID, false));
 
@@ -103,7 +104,7 @@ std::string JNIHelper::GetMethodName(JNIEnv *env, jmethodID mid) {
   fakelinker::ProxyJNIEnv proxy(env);
 
   CHECK_JNI_NULL_OBJECT_RETURN(mid, "call GetMethodName jmethodID is nullptr");
-  CHECK_EXECEPTION_BEFORE(proxy);
+  CHECK_EXCEPTION_BEFORE(proxy);
   jobject obj = proxy.ToReflectedMethod(JNIHelper::Get().java_lang_reflect_Method, mid, false);
   ScopedLocalRef<jobject> method_obj(&proxy, obj);
   auto name = reinterpret_cast<jstring>(
@@ -116,7 +117,7 @@ std::string JNIHelper::GetMethodName(JNIEnv *env, jmethodID mid) {
 std::string JNIHelper::GetFieldName(JNIEnv *env, jfieldID fieldId) {
   fakelinker::ProxyJNIEnv proxy(env);
   CHECK_JNI_NULL_OBJECT_RETURN(fieldId, "call GetFieldName jfieldID is nullptr");
-  CHECK_EXECEPTION_BEFORE(proxy);
+  CHECK_EXCEPTION_BEFORE(proxy);
   ScopedLocalRef<jobject> field_obj(env,
                                     proxy.ToReflectedField(JNIHelper::Get().java_lang_reflect_Field, fieldId, false));
 
@@ -130,7 +131,7 @@ std::string JNIHelper::GetFieldName(JNIEnv *env, jfieldID fieldId) {
 bool JNIHelper::IsClassObject(JNIEnv *env, jobject obj) {
   fakelinker::ProxyJNIEnv proxy(env);
   CHECK_JNI_NULL_OBJECT_RETURN(obj, "call IsClassObject jobject is nullptr");
-  CHECK_EXECEPTION_BEFORE(proxy);
+  CHECK_EXCEPTION_BEFORE(proxy);
   return proxy.IsInstanceOf(obj, JNIHelper::Get().java_lang_Class);
 }
 

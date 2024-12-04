@@ -14,7 +14,6 @@
 #include "linker_globals.h"
 #include "linker_soinfo.h"
 #include "linker_util.h"
-#include "local_block_allocator.h"
 
 using namespace fakelinker;
 
@@ -519,7 +518,7 @@ static ANDROID_GE_N int android_namespace_remove_soinfo_impl(AndroidNamespacePtr
   CHECK_API_RET_ERROR(__ANDROID_API_N__);
   CHECK_PARAM_RET_ERROR(android_namespace_ptr, kErrorNpNull);
   CHECK_PARAM_RET_ERROR(soinfo_ptr, kErrorSoinfoNull);
-  if (ProxyLinker::Get().RemoveSoinfoFromNamespcae(static_cast<soinfo *>(soinfo_ptr),
+  if (ProxyLinker::Get().RemoveSoinfoFromNamespace(static_cast<soinfo *>(soinfo_ptr),
                                                    static_cast<android_namespace_t *>(android_namespace_ptr),
                                                    clear_global_flags)) {
     return FakeLinkerError::kErrorNo;

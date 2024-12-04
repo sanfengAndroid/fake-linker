@@ -616,4 +616,5 @@ private:
 };
 
 } // namespace fakelinker
+
 #undef PROXY_CALL

@@ -4,8 +4,7 @@
 #pragma once
 
 #include <linker_macros.h>
-
-#include "macros.h"
+#include <macros.h>
 
 
 struct LinkerBlockAllocatorPage;

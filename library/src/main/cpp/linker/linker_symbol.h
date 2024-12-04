@@ -3,6 +3,7 @@
 #include <android/log.h>
 #include <pthread.h>
 #include <stddef.h>
+
 #include <unordered_map>
 
 #include "linked_list.h"
@@ -41,6 +42,7 @@ struct SymbolItem {
   }
 
   bool CheckApi(int api) { return api >= min_api && api < max_api; }
+
   T *Get() {
     if (!pointer) {
       __android_log_print(

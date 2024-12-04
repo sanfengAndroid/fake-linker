@@ -3,9 +3,10 @@
 //
 
 #include "linker_mapped_file_fragment.h"
-#include "linker_util.h"
 
 #include <sys/mman.h>
+
+#include "linker_util.h"
 
 MappedFileFragment::MappedFileFragment() : map_start_(nullptr), map_size_(0), data_(nullptr), size_(0) {}
 

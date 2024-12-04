@@ -6,8 +6,8 @@
 
 #include <sys/auxv.h>
 
-#include "../linker/linker_soinfo.h"
 #include "linker.h"
+#include "linker_soinfo.h"
 
 GnuPropertySection::GnuPropertySection(soinfo *si) :
     GnuPropertySection(si->phdr(), si->phnum(), si->load_bias(), si->realpath()) {}

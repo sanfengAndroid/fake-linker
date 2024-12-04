@@ -3,8 +3,6 @@
 //
 #pragma once
 
-#include <unordered_map>
-
 #include <fake_linker.h>
 #include <macros.h>
 
@@ -36,7 +34,7 @@ public:
 
   ANDROID_GE_N bool AddGlobalSoinfoToNamespace(soinfo *global, android_namespace_t *np);
 
-  ANDROID_GE_N bool RemoveSoinfoFromNamespcae(soinfo *so, android_namespace_t *np, bool clear_global_flags);
+  ANDROID_GE_N bool RemoveSoinfoFromNamespace(soinfo *so, android_namespace_t *np, bool clear_global_flags);
 
   ANDROID_GE_N void AddSoinfoToDefaultNamespace(soinfo *si);
 

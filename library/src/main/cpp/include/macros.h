@@ -4,11 +4,12 @@
 
 #pragma once
 
-#include "alog.h"
-
 #include <stdint.h>
 #include <stdlib.h>
+#include <sys/auxv.h>
 #include <sys/user.h>
+
+#include "alog.h"
 
 typedef uint64_t Address;
 
@@ -24,7 +25,7 @@ extern bool init_success;
 #define CHECK(predicate)                                                                                               \
   do {                                                                                                                 \
     if (!(predicate)) {                                                                                                \
-      async_safe_fatal("%s:%d: %s CHECK '" #predicate "' failed", __FILE__, __LINE__, __FUNCTION__);                   \
+      async_safe_fatal("%s:%d: %s CHECK '%s' failed", __FILE__, __LINE__, __FUNCTION__, #predicate);                   \
     }                                                                                                                  \
   } while (0)
 
@@ -44,15 +45,28 @@ extern bool init_success;
     }                                                                                                                  \
   } while (0)
 
+inline size_t page_size() {
+#ifdef PAGE_SIZE
+  return PAGE_SIZE;
+#else
+  static const size_t page_size = getauxval(AT_PAGESZ);
+  return page_size;
+#endif
+}
+
+#ifndef PAGE_MASK
+#define PAGE_MASK (~(page_size() - 1))
+#endif
+
 // Returns the address of the page containing address 'x'.
-#define PAGE_START(x)  ((x)&PAGE_MASK)
+#define PAGE_START(x)  ((x) & PAGE_MASK)
 
 // Returns the offset of address 'x' in its page.
 #define PAGE_OFFSET(x) ((x) & ~PAGE_MASK)
 
 // Returns the address of the next page after address 'x', unless 'x' is
 // itself at the start of a page.
-#define PAGE_END(x)    PAGE_START((x) + (PAGE_SIZE - 1))
+#define PAGE_END(x)    PAGE_START((x) + (page_size() - 1))
 
 #define DISALLOW_COPY_AND_ASSIGN(TypeName)                                                                             \
   TypeName(const TypeName &) = delete;                                                                                 \
@@ -98,7 +112,6 @@ inline T *untag_address(T *p) {
   return p;
 #endif
 }
-
 
 #define powerof2(x)                                                                                                    \
   ({                                                                                                                   \

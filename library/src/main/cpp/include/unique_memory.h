@@ -8,7 +8,7 @@ public:
 
   unique_memory(size_t size, bool check = false);
 
-  unique_memory(void *ptr, size_t size = 0, bool isMmap = false) : size_(size), isMmap_(isMmap) { reset(ptr); }
+  unique_memory(void *ptr, size_t size = 0, bool is_mmap = false) : size_(size), is_mmap_(is_mmap) { reset(ptr); }
 
   ~unique_memory() { reset(); }
 
@@ -54,5 +54,5 @@ public:
 private:
   void *ptr_ = nullptr;
   size_t size_ = 0;
-  bool isMmap_ = false;
+  bool is_mmap_ = false;
 };

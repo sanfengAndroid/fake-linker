@@ -1,10 +1,10 @@
 //
 // Created by beich on 2020/12/18.
 //
-
 #pragma once
 
 #include <jni.h>
+
 #include <string>
 
 class JNIHelper {

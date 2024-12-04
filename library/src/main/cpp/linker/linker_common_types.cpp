@@ -6,7 +6,6 @@
 
 #include <sys/mman.h>
 
-#include "elf_reader.h"
 #include "linker_symbol.h"
 
 

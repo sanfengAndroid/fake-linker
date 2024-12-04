@@ -3,10 +3,9 @@
 //
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 
 #include "linked_list.h"
-#include "linker_util.h"
 
 struct symbol_relocation;
 

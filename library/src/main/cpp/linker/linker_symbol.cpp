@@ -2,6 +2,7 @@
 
 #include "elf_reader.h"
 #include "linker_globals.h"
+
 #if defined(__LP64__)
 #define LP_TAIL "Pm"
 #else
@@ -65,7 +66,6 @@ void LinkerSymbol::InitSymbolName() {
 
   linker_soinfo.name = android_api >= __ANDROID_API_O__ ? "ld-android.so" : "libdl.so";
 }
-
 
 #define APPEND_SYMBOL(var)                                                                                             \
   if (var.CheckApi(android_api)) {                                                                                     \

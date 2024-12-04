@@ -1,8 +1,9 @@
 #pragma once
 
 #include <errno.h>
-#include <string>
 #include <unistd.h>
+
+#include <string>
 
 template <typename Closer>
 class unique_fd_impl final {
@@ -10,11 +11,14 @@ public:
   unique_fd_impl() {}
 
   explicit unique_fd_impl(int fd) { reset(fd); }
+
   ~unique_fd_impl() { reset(); }
 
   unique_fd_impl(const unique_fd_impl &) = delete;
   void operator=(const unique_fd_impl &) = delete;
+
   unique_fd_impl(unique_fd_impl &&other) noexcept { reset(other.release()); }
+
   unique_fd_impl &operator=(unique_fd_impl &&s) noexcept {
     int fd = s.fd_;
     s.fd_ = -1;
@@ -27,10 +31,15 @@ public:
   int get() const { return fd_; }
 
   bool operator>=(int rhs) const { return get() >= rhs; }
+
   bool operator<(int rhs) const { return get() < rhs; }
+
   bool operator==(int rhs) const { return get() == rhs; }
+
   bool operator!=(int rhs) const { return get() != rhs; }
+
   bool operator==(const unique_fd_impl &rhs) const { return get() == rhs.get(); }
+
   bool operator!=(const unique_fd_impl &rhs) const { return get() != rhs.get(); }
 
   // Catch bogus error checks (i.e.: "!fd" instead of "fd != -1").
@@ -118,14 +127,18 @@ struct DefaultCloser {
 // char*).
 struct borrowed_fd {
   /* implicit */ borrowed_fd(int fd) : fd_(fd) {} // NOLINT
+
   template <typename T>
   /* implicit */ borrowed_fd(const unique_fd_impl<T> &ufd) : fd_(ufd.get()) {} // NOLINT
 
   int get() const { return fd_; }
 
   bool operator>=(int rhs) const { return get() >= rhs; }
+
   bool operator<(int rhs) const { return get() < rhs; }
+
   bool operator==(int rhs) const { return get() == rhs; }
+
   bool operator!=(int rhs) const { return get() != rhs; }
 
 private:

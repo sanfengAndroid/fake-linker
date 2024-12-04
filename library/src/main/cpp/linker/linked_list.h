@@ -5,8 +5,8 @@
 #pragma once
 
 #include <linker_macros.h>
+#include <macros.h>
 
-#include "macros.h"
 // https://cs.android.com/android/platform/superproject/+/master:bionic/linker/linked_list.h
 
 template <typename T>
@@ -256,6 +256,7 @@ public:
   static_assert(alignof(LinkedListHeader) == alignof(LinkedListEntry<T>), "");
 
   constexpr LinkedListT() : header_(nullptr) {}
+
   ~LinkedListT() {
     clear();
     if (header_ != nullptr) {

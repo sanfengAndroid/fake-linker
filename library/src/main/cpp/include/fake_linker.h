@@ -396,7 +396,7 @@ typedef struct {
    * @brief Manually relocate the target library again. Blacklisted symbols set
    * will be excluded in global_lib exported symbols
    *
-   * @param  global_lib  pecify a library as a global library, it can be a
+   * @param  global_lib  specify a library as a global library, it can be a
    * global library or a non-global library.
    * @param  target_name Specify the library name, find soinfo internally
    * @return Return true if the relocation is successful
@@ -577,7 +577,7 @@ typedef struct {
    * @param       android_namespace_ptr android namespace pointer
    * @param[out]  white_list  save the whitelist pointer
    * @param[out]  out_error   Write error code on error
-   * @return whilelist lenth or 0
+   * @return whitelist length or 0
    */
   ANDROID_GE_Q FunPtr(int, android_namespace_get_white_list, AndroidNamespacePtr android_namespace_ptr,
                       MEMORY_FREE const char **out_white_list, int *out_error);
@@ -683,7 +683,7 @@ typedef struct {
    *
    * @note Requires Android 7.0+
    *
-   * @param  soinfo_ptr  soinfo poiner
+   * @param  soinfo_ptr  soinfo pointer
    * @param  android_namespace_ptr android namespace pointer
    * @return Return error code or kErrorNo
    */
