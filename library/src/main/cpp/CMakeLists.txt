@@ -13,6 +13,8 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_C_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
+option(FAKELINKER_INSTALL_PRIVATE_HEADERS "Install private header files for static linking" OFF)
+
 if(NOT ${CMAKE_BUILD_TYPE} STREQUAL "Debug")
   set(CMAKE_BUILD_TYPE "Release")
 endif()
@@ -97,8 +99,15 @@ target_include_directories(fakelinker_static PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/fakelinker>
 )
-target_link_libraries(fakelinker_static ${log-lib})
 
+if(FAKELINKER_INSTALL_PRIVATE_HEADERS)
+  target_include_directories(fakelinker_static PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/fakelinker>
+  )
+endif()
+
+target_link_libraries(fakelinker_static ${log-lib})
 
 add_library(fakelinker SHARED
   linker/linker_dynamic.cpp
@@ -117,7 +126,6 @@ set_target_properties(fakelinker PROPERTIES
   "${LINK_FLAGS} -Wl,--gc-sections,-s,--version-script=\"${CMAKE_CURRENT_SOURCE_DIR}/symbol.map.txt\""
 )
 
-
 install(TARGETS fakelinker fakelinker_static
   EXPORT fakelinker
 )
@@ -125,6 +133,13 @@ install(TARGETS fakelinker fakelinker_static
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/fakelinker/fakelinker
 )
+
+if(FAKELINKER_INSTALL_PRIVATE_HEADERS)
+  install(DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/linker"
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/fakelinker/fakelinker
+    FILES_MATCHING PATTERN "*.h"
+  )
+endif()
 
 install(EXPORT fakelinker
   FILE fakelinker-config.cmake
