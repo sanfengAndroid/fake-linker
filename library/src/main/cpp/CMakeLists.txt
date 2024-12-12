@@ -14,6 +14,7 @@ set(CMAKE_C_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
 option(FAKELINKER_INSTALL_PRIVATE_HEADERS "Install private header files for static linking" OFF)
+option(FAKELINKER_BUILD_SHARED_LIBRARY "Enable shared library build" ON)
 
 if(NOT ${CMAKE_BUILD_TYPE} STREQUAL "Debug")
   set(CMAKE_BUILD_TYPE "Release")
@@ -22,14 +23,6 @@ endif()
 if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Os -fomit-frame-pointer")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os -fomit-frame-pointer")
-endif()
-
-if(${CMAKE_ANDROID_ARCH_ABI} STREQUAL "arm64-v8a" OR ${CMAKE_ANDROID_ARCH_ABI} STREQUAL "x86_64")
-  add_compile_definitions(USE_RELA)
-  set(MODULE_SUFFIX "64")
-else()
-  add_compile_definitions(__work_around_b_24465209__)
-  set(MODULE_SUFFIX "32")
 endif()
 
 if(${CMAKE_ANDROID_ARCH_ABI} STREQUAL "arm64-v8a" OR ${CMAKE_ANDROID_ARCH_ABI} STREQUAL "armeabi-v7a")
@@ -109,24 +102,35 @@ endif()
 
 target_link_libraries(fakelinker_static ${log-lib})
 
-add_library(fakelinker SHARED
-  linker/linker_dynamic.cpp
-)
-target_link_libraries(fakelinker PRIVATE
-  fakelinker_static
-  ${log}
-)
-target_include_directories(fakelinker PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/fakelinker>
-)
+if(${CMAKE_ANDROID_ARCH_ABI} STREQUAL "arm64-v8a" OR ${CMAKE_ANDROID_ARCH_ABI} STREQUAL "x86_64")
+  target_compile_definitions(fakelinker_static PUBLIC USE_RELA)
+else()
+  target_compile_definitions(fakelinker_static PUBLIC __work_around_b_24465209__)
+endif()
 
-set_target_properties(fakelinker PROPERTIES
-  LINK_FLAGS_RELEASE
-  "${LINK_FLAGS} -Wl,--gc-sections,-s,--version-script=\"${CMAKE_CURRENT_SOURCE_DIR}/symbol.map.txt\""
-)
+if(FAKELINKER_BUILD_SHARED_LIBRARY)
+  add_library(fakelinker SHARED
+    linker/linker_dynamic.cpp
+  )
+  target_link_libraries(fakelinker PRIVATE
+    fakelinker_static
+    ${log}
+  )
+  target_include_directories(fakelinker PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/fakelinker>
+  )
 
-install(TARGETS fakelinker fakelinker_static
+  set_target_properties(fakelinker PROPERTIES
+    LINK_FLAGS_RELEASE
+    "${LINK_FLAGS} -Wl,--gc-sections,-s,--version-script=\"${CMAKE_CURRENT_SOURCE_DIR}/symbol.map.txt\""
+  )
+  install(TARGETS fakelinker
+    EXPORT fakelinker
+  )
+endif()
+
+install(TARGETS fakelinker_static
   EXPORT fakelinker
 )
 
