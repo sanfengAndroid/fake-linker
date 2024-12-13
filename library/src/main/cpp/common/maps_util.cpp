@@ -62,8 +62,8 @@ bool MapsHelper::ReadLibraryMap() {
     }
     // 库映射可能是不连续的, 但不会出现交叉
     if (found_inode != inode_ && inode_ != 0) {
-      // 严格判断库是否正确, 一个库至少有读写执行内存段
-      if ((protect & (kMPRead | kMPWrite | kMPExecute)) != (kMPRead | kMPWrite | kMPExecute)) {
+      // 严格判断库是否正确, 一个库至少有读执行内存段
+      if ((protect & (kMPRead | kMPExecute)) == (kMPRead | kMPExecute)) {
         break;
       } else {
         started = false;
