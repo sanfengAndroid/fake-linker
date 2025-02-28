@@ -24,15 +24,14 @@ bool init_success = false;
 
 using FakeLinkerModulePtr = void (*)(JNIEnv *, SoinfoPtr, const FakeLinker *);
 
-static void Init() {
+static void Init(fakelinker::LinkerSymbolCategory category) {
   static bool initialized = false;
   if (!initialized) {
     soinfo::Init();
     android_namespace_t::Init();
-    fakelinker::linker_symbol.InitSymbolName();
   }
   if (!init_success) {
-    init_success = fakelinker::linker_symbol.LoadSymbol();
+    init_success = fakelinker::linker_symbol.LoadSymbol(category);
   }
   initialized = true;
 }
@@ -133,7 +132,30 @@ C_API int init_fakelinker(JNIEnv *env, FakeLinkerMode mode, const char *java_cla
   static bool native_hook_initialized = false;
   static bool java_register_initialized = false;
   if (mode & FakeLinkerMode::kFMSoinfo) {
-    Init();
+    int symbol_type = fakelinker::LinkerSymbolCategory::kLinkerAll;
+    if (mode &
+        (FakeLinkerMode::kInitLinkerDebug | FakeLinkerMode::kInitLinkerDlopenDlSym |
+         FakeLinkerMode::kInitLinkerNamespace | FakeLinkerMode::kInitLinkerHandler |
+         FakeLinkerMode::kInitLinkerMemory)) {
+      symbol_type = 0;
+      if (mode & FakeLinkerMode::kInitLinkerDebug) {
+        symbol_type |= fakelinker::LinkerSymbolCategory::kLinkerDebug;
+      }
+      if (mode & FakeLinkerMode::kInitLinkerDlopenDlSym) {
+        symbol_type |= fakelinker::LinkerSymbolCategory::kDlopenDlSym;
+      }
+      if (mode & FakeLinkerMode::kInitLinkerNamespace) {
+        symbol_type |= fakelinker::LinkerSymbolCategory::kNamespace;
+      }
+      if (mode & FakeLinkerMode::kInitLinkerHandler) {
+        symbol_type |= fakelinker::LinkerSymbolCategory::kSoinfoHandler;
+      }
+      if (mode & FakeLinkerMode::kInitLinkerMemory) {
+        symbol_type |= fakelinker::LinkerSymbolCategory::kSoinfoMemory;
+      }
+    }
+
+    Init(static_cast<fakelinker::LinkerSymbolCategory>(symbol_type));
     if (!init_success) {
       return 1;
     }

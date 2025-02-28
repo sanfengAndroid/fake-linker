@@ -52,6 +52,8 @@ public:
 
   T get() const { return mLocalRef; }
 
+  operator bool() const { return mLocalRef != nullptr; }
+
 private:
   JNIEnv *const mEnv;
   T mLocalRef;

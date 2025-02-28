@@ -9,6 +9,7 @@
 #include <linker_macros.h>
 
 #include "linker_namespaces.h"
+#include "linker_tls.h"
 
 // https://cs.android.com/android/platform/superproject/+/master:bionic/linker/linker_soinfo.h
 
@@ -28,15 +29,22 @@ typedef ElfW(Rela) rel_t;
 typedef ElfW(Rel) rel_t;
 #endif
 
-#define FLAG_LINKED           0x00000001
-#define FLAG_EXE              0x00000004 // The main executable
-#define FLAG_LINKER           0x00000010 // The linker itself
-#define FLAG_GNU_HASH         0x00000040 // uses gnu hash
-#define FLAG_MAPPED_BY_CALLER 0x00000080 // the map is reserved by the caller
-#define FLAG_IMAGE_LINKED     0x00000100 // Is image linked - this is a guard on link_image.
-#define FLAG_RESERVED         0x00000200 // This flag was set when there is at least one
-#define FLAG_PRELINKED        0x00000400 // prelink_image has successfully processed this soinfo
-#define FLAG_NEW_SOINFO       0x40000000 // new soinfo format
+#define FLAG_LINKED                 0x00000001
+#define FLAG_EXE                    0x00000004 // The main executable
+#define FLAG_LINKER                 0x00000010 // The linker itself
+#define FLAG_GNU_HASH               0x00000040 // uses gnu hash
+#define FLAG_MAPPED_BY_CALLER       0x00000080 // the map is reserved by the caller
+#define FLAG_IMAGE_LINKED           0x00000100 // Is image linked - this is a guard on link_image.
+#define FLAG_RESERVED               0x00000200 // This flag was set when there is at least one
+#define FLAG_PRELINKED              0x00000400 // prelink_image has successfully processed this soinfo
+#define FLAG_NEW_SOINFO             0x40000000 // new soinfo format
+
+/* TODO: upstreamed to FreeBSD as https://github.com/freebsd/freebsd-src/pull/1141/. */
+#define DT_AARCH64_MEMTAG_MODE      0x70000009
+#define DT_AARCH64_MEMTAG_HEAP      0x7000000b
+#define DT_AARCH64_MEMTAG_STACK     0x7000000c
+#define DT_AARCH64_MEMTAG_GLOBALS   0x7000000d
+#define DT_AARCH64_MEMTAG_GLOBALSSZ 0x7000000f
 
 ElfW(Addr) call_ifunc_resolver(ElfW(Addr) resolver_addr);
 
@@ -166,211 +174,300 @@ ANDROID_GE_N struct android_dlextinfoN : android_dlextinfo {
   android_namespace_t *library_namespace;
 };
 
-struct TlsIndex {
-  size_t module_id;
-  size_t offset;
-};
-
-struct TlsDynamicResolverArg {
-  size_t generation;
-  TlsIndex index;
-};
-
-struct TlsSegment {
-  size_t size = 0;
-  size_t alignment = 1;
-  const void *init_ptr = ""; // Field is non-null even when init_size is 0.
-  size_t init_size = 0;
-};
-
-struct soinfo_tls {
-  TlsSegment segment;
-  size_t module_id = 0;
-};
-
 typedef std::map<std::string, ElfW(Addr)> symbol_relocations;
 
+struct memtag_dynamic_entries_t {
+  void *memtag_globals;
+  size_t memtag_globalssz;
+  bool has_memtag_mode;
+  unsigned memtag_mode;
+  bool memtag_heap;
+  bool memtag_stack;
+};
+
 struct soinfo {
+  /*************** custom additions ********************/
   static void Init();
 
+  const char *get_soname();
+
+  /**
+   * @brief Get the minimum space occupied by soinfo, which is less than or equal to the actual size
+   *
+   * @return size_t minimum size
+   */
+  size_t soinfo_minimum_size();
+
+  /**
+   * @brief 按照系统重定位的方式修复重定位
+   *
+   */
+  bool relocate();
+
+  /**
+   * @brief 仅重定位已知的符号项, 保存地址的 delta 值
+   *
+   */
+  bool relocate_special(const symbol_relocations &relocs);
+
+  /*************** custom additions end *****************/
+
   const ElfW(Phdr) * phdr();
+  void set_phdr(const ElfW(Phdr) * phdr);
 
   size_t phnum();
+  void set_phnum(size_t phnum);
 
   ElfW(Addr) base();
+  void set_base(ElfW(Addr) base);
 
   size_t size();
+  void set_size(size_t size);
 
   ElfW(Dyn) * dynamic();
+  void set_dynamic(ElfW(Dyn) * dynamic);
 
   soinfo *next();
+  void set_next(soinfo *next);
 
-  uint32_t &flags();
+  uint32_t flags();
+  void set_flags(uint32_t flags);
 
   const char *strtab();
+  void set_strtab(const char *strtab);
 
   ElfW(Sym) * symtab();
+  void set_symtab(ElfW(Sym) * symtab);
 
   size_t nbucket();
+  void set_nbucket(size_t count);
 
   size_t nchain();
+  void set_nchain(size_t count);
+  uint32_t *bucket();
+  void set_bucket(uint32_t *bucket);
 
-  ANDROID_GE_M uint32_t *bucket_M();
-
-  ANDROID_LE_L1 unsigned *bucket();
-
-  ANDROID_GE_M uint32_t *chain_M();
-
-  ANDROID_LE_L1 uint32_t *chain();
+  uint32_t *chain();
+  void set_chain(uint32_t *);
 
 #ifndef __LP64__
 
   ElfW(Addr) * *plt_got();
+  void set_plt_got(ElfW(Addr) * *plt_got);
 
 #endif
 
 #ifdef USE_RELA
-  ElfW(Rela) * &plt_rela();
-  size_t &plt_rela_count();
+  ElfW(Rela) * plt_rela();
+  void set_plt_rela(ElfW(Rela) * plt_rela);
 
-  ElfW(Rela) * &rela();
-  size_t &rela_count();
+  size_t plt_rela_count();
+  void set_plt_rela_count(size_t count);
+
+  ElfW(Rela) * rela();
+  void set_rela(ElfW(Rela) * rela);
+
+  size_t rela_count();
+  void set_rela_count(size_t count);
 #else
 
-  ElfW(Rel) * &plt_rel();
+  ElfW(Rel) * plt_rel();
+  void set_plt_rel(ElfW(Rel) * plt_rel);
 
-  size_t &plt_rel_count();
+  size_t plt_rel_count();
+  void set_plt_rel_count(size_t count);
 
-  ElfW(Rel) * &rel();
+  ElfW(Rel) * rel();
+  void set_rel(ElfW(Rel) * rel);
 
-  size_t &rel_count();
+  size_t rel_count();
+  void set_rel_count(size_t count);
 
 #endif
 
   ANDROID_LE_O1 linker_function_t *preinit_array();
+  ANDROID_LE_O1 void set_preinit_array(linker_function_t *preinit_array);
 
   ANDROID_GE_P linker_ctor_function_t *preinit_array_P();
+  ANDROID_GE_P void set_preinit_array_P(linker_ctor_function_t *preinit_array_P);
+  void **get_preinit_array_wrapper();
+  void set_preinit_array_wrapper(void **preinit_array);
 
   size_t preinit_array_count();
+  void set_preinit_array_count(size_t count);
 
   ANDROID_LE_O1 linker_function_t *init_array();
+  ANDROID_LE_O1 void set_init_array(linker_function_t *init_array);
 
   ANDROID_GE_P linker_ctor_function_t *init_array_P();
+  ANDROID_GE_P void set_init_array_P(linker_ctor_function_t *init_array_P);
+  void **get_init_array_wrapper();
+  void set_init_array_wrapper(void **init_array);
 
   size_t init_array_count();
+  void set_init_array_count(size_t count);
 
   ANDROID_LE_O1 linker_function_t *fini_array();
-
-  ANDROID_GE_P linker_dtor_function_t *fini_array_P();
+  ANDROID_LE_O1 void set_fini_array(linker_function_t *fini_array);
 
   size_t fini_array_count();
+  void set_fini_array_count(size_t count);
 
   ANDROID_LE_O1 linker_function_t init_func();
+  ANDROID_LE_O1 void set_init_func(linker_function_t init_func);
 
   ANDROID_GE_P linker_ctor_function_t init_func_P();
+  ANDROID_GE_P void set_init_func_P(linker_ctor_function_t init_func_P);
+  void *get_init_func_wrapper();
+  void set_init_func_wrapper(void *init_func);
 
   ANDROID_LE_O1 linker_function_t fini_func();
-
-  ANDROID_GE_P linker_dtor_function_t fini_func_P();
+  ANDROID_LE_O1 void set_fini_func(linker_function_t fini_func);
 
 #ifdef __arm__
   uint32_t *ARM_exidx();
+  void set_ARM_exidx(uint32_t *ARM_exidx);
+
   size_t ARM_exidx_count();
+  void set_ARM_exidx_count(size_t ARM_exidx_count);
 #endif
 
   size_t ref_count();
+  void set_ref_count(size_t ref_count);
 
-  link_map &link_map_head();
+  const link_map &link_map_head();
+  void set_link_map_head(const link_map &link_map_head);
 
   bool constructors_called();
+  void set_constructors_called(bool constructors_called);
 
   ElfW(Addr) load_bias();
+  void set_load_bias(ElfW(Addr) load_bias);
 
 #ifndef __LP64__
 
   bool has_text_relocations();
+  void set_has_text_relocations(bool has_text_relocations);
 
 #endif
 
   bool has_DT_SYMBOLIC();
+  void set_has_DT_SYMBOLIC(bool has_DT_SYMBOLIC);
 
   uint32_t version();
+  void set_version(uint32_t version);
 
   dev_t st_dev();
+  void set_st_dev(dev_t st_dev);
 
   ino_t st_ino();
+  void set_st_ino(ino_t st_ino);
 
   ANDROID_GE_L1 off64_t file_offset();
+  ANDROID_GE_L1 void set_file_offset(off64_t file_offset);
 
-  ANDROID_GE_M uint32_t &rtld_flags();
+  ANDROID_GE_M uint32_t rtld_flags();
+  ANDROID_GE_M void set_rtld_flags(uint32_t rtld_flags);
 
-  ANDROID_LE_L1 int &rtld_flags_L();
+  ANDROID_LE_L1 int rtld_flags_L();
+  ANDROID_LE_L1 void set_rtld_flags_L(int rtld_flags_L);
 
-  ANDROID_GE_M uint32_t &dt_flags_1();
+  ANDROID_GE_M uint32_t dt_flags_1();
+  ANDROID_GE_M void set_dt_flags_1(uint32_t dt_flags_1);
 
   ANDROID_GE_L1 size_t strtab_size();
+  ANDROID_GE_L1 void set_strtab_size(size_t strtab_size);
 
   ANDROID_GE_M size_t gnu_nbucket();
+  ANDROID_GE_M void set_gnu_nbucket(size_t gnu_nbucket);
 
   ANDROID_GE_M uint32_t *gnu_bucket();
+  ANDROID_GE_M void set_gnu_bucket(uint32_t *gnu_bucket);
 
   ANDROID_GE_M uint32_t *gnu_chain();
+  ANDROID_GE_M void set_gnu_chain(uint32_t *gnu_chain);
 
   ANDROID_GE_M uint32_t gnu_maskwords();
+  ANDROID_GE_M void set_gnu_maskwords(uint32_t gnu_maskwords);
 
   ANDROID_GE_M uint32_t gnu_shift2();
+  ANDROID_GE_M void set_gnu_shift2(uint32_t gnu_shift2);
 
   ANDROID_GE_M ElfW(Addr) * gnu_bloom_filter();
+  ANDROID_GE_M void set_gnu_bloom_filter(ElfW(Addr) * gnu_bloom_filter);
 
   ANDROID_GE_M soinfo *local_group_root();
+  ANDROID_GE_M void set_local_group_root(soinfo *local_group_root);
 
   ANDROID_GE_M uint8_t *android_relocs();
+  ANDROID_GE_M void set_android_relocs(uint8_t *android_relocs);
 
   ANDROID_GE_M size_t android_relocs_size();
+  ANDROID_GE_M void set_android_relocs_size(size_t android_relocs_size);
 
   ANDROID_GE_M const char *soname();
+  ANDROID_GE_M void set_soname(const char *soname);
 
   ANDROID_GE_M const char *realpath();
+  ANDROID_GE_M void set_realpath(const char *realpath);
 
   ANDROID_GE_M const ElfW(Versym) * versym();
+  ANDROID_GE_M void set_versym(const ElfW(Versym) * versym);
 
   ANDROID_GE_M ElfW(Addr) verdef_ptr();
+  ANDROID_GE_M void set_verdef_ptr(ElfW(Addr) verdef_ptr);
 
   ANDROID_GE_M size_t verdef_cnt();
+  ANDROID_GE_M void set_verdef_cnt(size_t verdef_cnt);
 
   ANDROID_GE_M ElfW(Addr) verneed_ptr();
+  ElfW(Addr) get_verneed_ptr();
+  ANDROID_GE_M void set_verneed_ptr(ElfW(Addr) verneed_ptr);
 
   ANDROID_GE_M size_t verneed_cnt();
+  size_t get_verneed_cnt();
+  ANDROID_GE_M void set_verneed_cnt(size_t verneed_cnt);
 
   ANDROID_GE_M int target_sdk_version();
+  ANDROID_GE_M void set_target_sdk_version(int target_sdk_version);
 
-  ANDROID_GE_N std::vector<std::string> &dt_runpath();
+  ANDROID_GE_N const std::vector<std::string> &dt_runpath();
+  ANDROID_GE_N void set_dt_runpath(std::vector<std::string> &dt_runpath);
 
-  ANDROID_GE_N android_namespace_t *&primary_namespace();
+  ANDROID_GE_N android_namespace_t *primary_namespace();
+  ANDROID_GE_N void set_primary_namespace(android_namespace_t *primary_namespace);
 
   ANDROID_GE_N uintptr_t handle();
+  ANDROID_GE_N void set_handle(uintptr_t handle);
 
   ANDROID_GE_P ElfW(Relr) * relr();
+  ANDROID_GE_P void set_relr(ElfW(Relr) * relr);
 
   ANDROID_GE_P size_t relr_count();
+  ANDROID_GE_P void set_relr_count(size_t relr_count);
 
   ANDROID_GE_Q std::unique_ptr<soinfo_tls> &tls();
+  ANDROID_GE_Q void set_tls(std::unique_ptr<soinfo_tls> tls);
+
+  soinfo_tls *get_tls() { return has_min_version(5) ? tls().get() : nullptr; }
 
   ANDROID_GE_Q std::vector<TlsDynamicResolverArg> &tlsdesc_args();
+  ANDROID_GE_Q void set_tlsdesc_args(std::vector<TlsDynamicResolverArg> &tlsdesc_args);
 
   ANDROID_GE_T ElfW(Addr) gap_start();
+  ANDROID_GE_T void set_gap_start(ElfW(Addr) gap_start);
 
   ANDROID_GE_T size_t gap_size();
+  ANDROID_GE_T void set_gap_size(size_t gap_size);
 
   /*****************************************************************/
-
-  const char *get_soname();
 
   ElfW(Addr) resolve_symbol_address(const ElfW(Sym) * s);
 
   bool has_min_version(uint32_t min_version __unused);
 
   ANDROID_GE_M const ElfW(Versym) * get_versym_table();
+  const ElfW(Versym) * get_versym(size_t n);
 
   const char *get_string(ElfW(Word) index);
 
@@ -381,8 +478,6 @@ struct soinfo {
   soinfo_list_t_wrapper get_parents();
 
   ANDROID_GE_L1 uint32_t get_rtld_flags();
-
-  ANDROID_GE_M void set_dt_flags_1(uint32_t flag);
 
   bool is_linked();
 
@@ -398,7 +493,11 @@ struct soinfo {
    * */
   void *find_export_symbol_address(const char *name);
 
+  void *find_export_symbol_by_prefix(const char *prefix);
+
   void *find_import_symbol_address(const char *name);
+
+  void *find_export_symbol_by_index(size_t index);
 
   const ElfW(Sym) * find_export_symbol_by_name(SymbolName &symbol_name, const version_info *vi);
 
@@ -422,6 +521,10 @@ struct soinfo {
    * */
   const ElfW(Sym) * elf_lookup(SymbolName &symbol_name, const version_info *vi);
 
+  const ElfW(Sym) * find_symbol_by_name(SymbolName &symbol_name, const version_info *vi) {
+    return is_gnu_hash() ? gnu_lookup(symbol_name, vi) : elf_lookup(symbol_name, vi);
+  }
+
   std::pair<uint32_t, uint32_t> get_export_symbol_gnu_table_size();
 
   size_t get_symbols_count();
@@ -429,9 +532,9 @@ struct soinfo {
   /*
    * 只获取全局符号,不获取弱符号,使用c++时可能存在很多弱符号,这些符号对重定向无意义
    * */
-  symbol_relocations get_global_soinfo_export_symbols();
+  symbol_relocations get_global_soinfo_export_symbols(bool only_func);
 
-  symbol_relocations get_global_soinfo_export_symbols(const std::vector<std::string> &filters);
+  symbol_relocations get_global_soinfo_export_symbols(bool only_func, const std::vector<std::string> &filters);
 
   bool again_process_relocation(symbol_relocations &rels);
 
@@ -441,7 +544,7 @@ struct soinfo {
 
   ANDROID_GE_R SymbolLookupLib get_lookup_lib();
 
-  ANDROID_GE_N android_namespace_t *&get_primary_namespace();
+  ANDROID_GE_N android_namespace_t *get_primary_namespace();
 
   ANDROID_GE_N void add_secondary_namespace(android_namespace_t *secondary_ns);
 
@@ -452,6 +555,104 @@ struct soinfo {
   ANDROID_GE_N android_namespace_list_t_wrapper get_secondary_namespaces();
 
   ANDROID_GE_N uintptr_t get_handle();
+
+  void set_should_use_16kib_app_compat(bool should_use_16kib_app_compat);
+  bool should_use_16kib_app_compat();
+
+  bool is_linker() const {
+    const char *name = const_cast<soinfo *>(this)->get_soname();
+    return !name || name[0] == '\0';
+  }
+
+  memtag_dynamic_entries_t *memtag_dynamic_entries() const;
+
+  void *memtag_globals() const {
+    const memtag_dynamic_entries_t *entries = memtag_dynamic_entries();
+    return entries ? entries->memtag_globals : nullptr;
+  }
+
+  void set_memtag_globals(void *tag) {
+    memtag_dynamic_entries_t *entries = memtag_dynamic_entries();
+    if (entries) {
+      entries->memtag_globals = tag;
+    }
+  }
+
+  size_t memtag_globalssz() const {
+    const memtag_dynamic_entries_t *entries = memtag_dynamic_entries();
+    return entries ? entries->memtag_globalssz : 0U;
+  }
+
+  void set_memtag_globalssz(size_t value) {
+    memtag_dynamic_entries_t *entries = memtag_dynamic_entries();
+    if (entries) {
+      entries->memtag_globalssz = value;
+    }
+  }
+
+  bool has_memtag_mode() const {
+    const memtag_dynamic_entries_t *entries = memtag_dynamic_entries();
+    return entries ? entries->has_memtag_mode : false;
+  }
+
+  void set_has_memtag_mode(bool value) {
+    memtag_dynamic_entries_t *entries = memtag_dynamic_entries();
+    if (entries) {
+      entries->has_memtag_mode = value;
+    }
+  }
+
+  unsigned memtag_mode() const {
+    const memtag_dynamic_entries_t *entries = memtag_dynamic_entries();
+    return entries ? entries->memtag_mode : 0U;
+  }
+
+  void set_memtag_mode(unsigned value) {
+    memtag_dynamic_entries_t *entries = memtag_dynamic_entries();
+    if (entries) {
+      entries->memtag_mode = value;
+    }
+  }
+
+  bool memtag_heap() const {
+    const memtag_dynamic_entries_t *entries = memtag_dynamic_entries();
+    return entries ? entries->memtag_heap : false;
+  }
+
+  void set_memtag_heap(bool value) {
+    memtag_dynamic_entries_t *entries = memtag_dynamic_entries();
+    if (entries) {
+      entries->memtag_heap = value;
+    }
+  }
+
+  bool memtag_stack() const {
+    const memtag_dynamic_entries_t *entries = memtag_dynamic_entries();
+    return entries ? entries->memtag_stack : false;
+  }
+
+  void set_memtag_stack(bool value) {
+    memtag_dynamic_entries_t *entries = memtag_dynamic_entries();
+    if (entries) {
+      entries->memtag_stack = value;
+    }
+  }
+
+  bool should_pad_segments();
+
+  void set_should_pad_segments(bool should_pad_segments);
+
+  bool should_tag_memtag_globals() const {
+    if (!is_linker() && memtag_globals() && memtag_globalssz() > 0 && false) {
+      return true;
+    }
+    return false;
+  }
+
+  ElfW(Addr) apply_memtag_if_mte_globals(ElfW(Addr) sym_addr) const;
+
+  bool lookup_version_info(const VersionTracker &version_tracker, ElfW(Word) sym, const char *sym_name,
+                           const version_info **vi);
 
   static ElfW(Addr) call_ifunc_resolver(ElfW(Addr) resolver_addr);
 };
@@ -587,15 +788,6 @@ struct soinfoT : soinfo {
   // version >= 6
   ANDROID_GE_T ElfW(Addr) gap_start_;
   ANDROID_GE_T size_t gap_size_;
-};
-
-struct memtag_dynamic_entries_t {
-  void *memtag_globals;
-  size_t memtag_globalssz;
-  bool has_memtag_mode;
-  unsigned memtag_mode;
-  bool memtag_heap;
-  bool memtag_stack;
 };
 
 struct soinfoU : soinfoT {
@@ -1647,3 +1839,6 @@ void for_each_dt_needed(soinfo *si, F action) {
     }
   }
 }
+
+const ElfW(Sym) *
+  soinfo_do_lookup(const char *name, const version_info *vi, soinfo **si_found_in, const SymbolLookupList &lookup_list);

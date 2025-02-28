@@ -14,108 +14,46 @@
 namespace fakelinker {
 LinkerSymbol linker_symbol;
 
-void LinkerSymbol::InitSymbolName() {
-  solist.name = "__dl__ZL6solist";
-  g_ld_debug_verbosity.name = "__dl_g_ld_debug_verbosity";
-  g_linker_debug_config.name = "__dl_g_linker_debug_config";
-  g_linker_logger.name = "__dl_g_linker_logger";
-  if (android_api >= __ANDROID_API_V__) {
-    g_dl_mutex.name = "__dl_g_dl_mutex";
-  } else {
-    g_dl_mutex.name = "__dl__ZL10g_dl_mutex";
-  }
-  linker_dl_err_buf.name = "__dl__ZL19__linker_dl_err_buf";
-
-  if (android_api >= __ANDROID_API_R__) {
-    link_image.name = "__dl__ZN6soinfo10link_imageERK16SymbolLookupListPS_PK17android_"
-                      "dlextinfo" LP_TAIL;
-  } else if (android_api == __ANDROID_API_Q__) {
-    link_image.name = "__dl__ZN6soinfo10link_imageERK10LinkedListIS_"
-                      "19SoinfoListAllocatorES4_PK17android_dlextinfo" LP_TAIL;
-  } else if (android_api >= __ANDROID_API_M__) {
-    link_image.name = "__dl__ZN6soinfo10link_imageERK10LinkedListIS_"
-                      "19SoinfoListAllocatorES4_PK17android_dlextinfo";
-  } else if (android_api == __ANDROID_API_L_MR1__) {
-    // todo Android 5.1 x86_64 该方法被内联了,需要单独适配
-    link_image.name = "__dl__ZN6soinfo9LinkImageEPK17android_dlextinfo";
-  } else {
-    link_image.name = "__dl__ZL17soinfo_link_imageP6soinfoPK17android_dlextinfo";
+template <typename T, LinkerSymbolCategory Category, int Type, bool IsPointer, bool Required>
+bool ProcessSymbol(LinkerSymbolCategory category,
+                   std::function<uint64_t(const char *name, int symbol_type, bool find_prefix)> symbol_finder,
+                   SymbolItem<T, Category, Type, IsPointer, Required> &symbol, bool find_prefix,
+                   std::initializer_list<const char *> names) {
+  // 按需加载不同类别符号
+  if ((category & symbol.category) != symbol.category) {
+    LOGD("skip target symbol %s category %d, required category %d", names.size() > 0 ? *names.begin() : "",
+         symbol.category, category);
+    return true;
   }
 
-  g_default_namespace.name = "__dl_g_default_namespace";
+  if (!symbol.CheckApi()) {
+    LOGD("skip target symbol %s api level [%d, %d), current api level %d", names.size() > 0 ? *names.begin() : "",
+         symbol.min_api, symbol.max_api, android_api);
 
-
-  if (android_api <= __ANDROID_API_N_MR1__) {
-    g_soinfo_handles_map.name = "__dl__ZL20g_soinfo_handles_map";
-  } else {
-    g_soinfo_handles_map.name = "__dl_g_soinfo_handles_map";
+    return true;
   }
-
-  g_ld_preloads.name = "__dl__ZL13g_ld_preloads";
-
-  dlopen.name = "android_dlopen_ext";
-  dlopenN.name = "__dl__Z9do_dlopenPKciPK17android_dlextinfoPv";
-  dlopenO.name = "__loader_android_dlopen_ext";
-
-  dlsym.name = "dlsym";
-  dlsymN.name = "__dl__Z8do_dlsymPvPKcS1_S_PS_";
-  dlsymO.name = "__loader_dlsym";
-
-  create_namespaceO.name = "__loader_android_create_namespace";
-
-  create_namespaceN.name = is64BitBuild() ? "__dl__Z16create_namespacePKvPKcS2_S2_mS2_P19android_namespace_t"
-                                          : "__dl__Z16create_namespacePKvPKcS2_S2_yS2_P19android_namespace_t";
-
-  g_soinfo_allocator.name = "__dl__ZL18g_soinfo_allocator";
-  g_soinfo_links_allocator.name = "__dl__ZL24g_soinfo_links_allocator";
-  g_namespace_allocator.name = "__dl__ZL21g_namespace_allocator";
-  g_namespace_list_allocator.name = "__dl__ZL26g_namespace_list_allocator";
-
-  linker_soinfo.name = android_api >= __ANDROID_API_O__ ? "ld-android.so" : "libdl.so";
+  if (names.size() == 0) {
+    LOGD("skip target symbol no name");
+    return true;
+  }
+  for (const char *name : names) {
+    uint64_t address = symbol_finder(name, Type, false);
+    if (address == 0 && find_prefix) {
+      address = symbol_finder(name, Type, true);
+    }
+    if (address != 0) {
+      symbol.Set(address);
+      return true;
+    }
+  }
+  bool res = !Required;
+  if (!res) {
+    symbol.name = *names.begin();
+  }
+  return res;
 }
 
-#define APPEND_SYMBOL(var)                                                                                             \
-  if (var.CheckApi(android_api)) {                                                                                     \
-    if (var.name == nullptr) {                                                                                         \
-      LOGE("Failed to check the symbol name `%s`, the current api `%d in [%d - %d)` requires a name but it is empty",  \
-           #var, android_api, var.min_api, var.max_api);                                                               \
-      return false;                                                                                                    \
-    }                                                                                                                  \
-    if constexpr (decltype(var)::type == 0) {                                                                          \
-      internalSymbols.push_back(var.name);                                                                             \
-    } else if constexpr (decltype(var)::type == 1) {                                                                   \
-      exportSymbols.push_back(var.name);                                                                               \
-    } else if constexpr (decltype(var)::type == 2) {                                                                   \
-      librarySymbols.push_back(var.name);                                                                              \
-    }                                                                                                                  \
-  }
-
-#define ASSIGN_SYMBOL(var)                                                                                             \
-  if (var.CheckApi(android_api)) {                                                                                     \
-    if constexpr (decltype(var)::type == 0) {                                                                          \
-      if (!var.Set(internalAddresses[internal_index++])) {                                                             \
-        LOGE("Failed to find Linker internal symbols '%s': %s", #var, var.name);                                       \
-        return false;                                                                                                  \
-      }                                                                                                                \
-    } else if constexpr (decltype(var)::type == 1) {                                                                   \
-      if (!var.Set(exportAddresses[export_index++])) {                                                                 \
-        LOGE("Failed to find Linker export symbols '%s': %s", #var, var.name);                                         \
-        return false;                                                                                                  \
-      }                                                                                                                \
-    }                                                                                                                  \
-  }
-
-#define ASSIGN_LIBRARY(var)                                                                                            \
-  if (var.CheckApi(android_api)) {                                                                                     \
-    if constexpr (decltype(var)::type == 2) {                                                                          \
-      if (!var.SetValue(libraryAddresses[library_index++])) {                                                          \
-        LOGE("Failed to find library soinfo '%s': %s", #var, var.name);                                                \
-        return false;                                                                                                  \
-      }                                                                                                                \
-    }                                                                                                                  \
-  }
-
-bool LinkerSymbol::LoadSymbol() {
+bool LinkerSymbol::LoadSymbol(LinkerSymbolCategory category) {
   const char *platform;
 #if defined(__arm__)
   platform = "arm";
@@ -128,97 +66,88 @@ bool LinkerSymbol::LoadSymbol() {
 #endif
   LOGE("Current operating platform: %s, api level: %d", platform, android_api);
 
-  std::vector<std::string> internalSymbols;
-  std::vector<const char *> exportSymbols;
-  std::vector<const char *> librarySymbols;
-
-  APPEND_SYMBOL(solist);
-  APPEND_SYMBOL(g_ld_debug_verbosity);
-  APPEND_SYMBOL(g_linker_debug_config);
-  APPEND_SYMBOL(g_linker_logger);
-  APPEND_SYMBOL(g_dl_mutex);
-  APPEND_SYMBOL(linker_dl_err_buf);
-  APPEND_SYMBOL(link_image);
-  APPEND_SYMBOL(g_default_namespace);
-  APPEND_SYMBOL(g_soinfo_handles_map);
-  APPEND_SYMBOL(g_ld_preloads);
-  APPEND_SYMBOL(dlopen);
-  APPEND_SYMBOL(dlopenN);
-  APPEND_SYMBOL(dlopenO);
-  APPEND_SYMBOL(dlsym);
-  APPEND_SYMBOL(dlsymN);
-  APPEND_SYMBOL(dlsymO);
-  APPEND_SYMBOL(create_namespaceN);
-  APPEND_SYMBOL(create_namespaceO);
-  APPEND_SYMBOL(g_soinfo_allocator);
-  APPEND_SYMBOL(g_soinfo_links_allocator);
-  APPEND_SYMBOL(g_namespace_allocator);
-  APPEND_SYMBOL(g_namespace_list_allocator);
-
-  APPEND_SYMBOL(linker_soinfo);
-
-  const char *library = is64BitBuild() ? "/linker64" : "/linker";
-
-  std::vector<Address> internalAddresses;
-  std::vector<Address> exportAddresses;
-  std::vector<soinfo *> libraryAddresses;
-
-  int internal_index = 0;
-  int export_index = 0;
-  int library_index = 0;
-
-
-  if (!internalSymbols.empty()) {
-    ElfReader reader;
-    if (!reader.LoadFromDisk(library)) {
-      return false;
+  ElfReader reader;
+  if (!reader.LoadFromDisk(is64BitBuild() ? "/linker64" : "/linker")) {
+    return false;
+  }
+  if (!reader.CacheInternalSymbols()) {
+    return false;
+  }
+  auto SymbolFinder = [&](const char *name, int symbol_type, bool find_prefix) -> uint64_t {
+    if (symbol_type == InternalSymbol<void, kLinkerBase>::type) {
+      return find_prefix ? reader.FindInternalSymbol(name) : reader.FindInternalSymbolByPrefix(name);
     }
-    internalAddresses = reader.FindInternalSymbols(internalSymbols, android_api >= __ANDROID_API_V__);
-    if (internalAddresses.size() != internalSymbols.size()) {
-      LOGE("find linker internal symbols failed.");
-      return false;
+    if (symbol_type == ExportSymbol<void, kLinkerBase>::type) {
+      return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(linker_soinfo.Get()->find_export_symbol_address(name)));
     }
-    if (!solist.Set(internalAddresses[0])) {
-      LOGE("find linker solist symbol failed.");
-      return false;
+    if (symbol_type == LibrarySymbol<kLinkerBase>::type) {
+      return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(ProxyLinker::Get().FindSoinfoByName(name)));
     }
+    LOGE("not supported find symbol type: %d", symbol_type);
+    return 0;
+  };
+  bool find_prefix = android_api >= __ANDROID_API_U__;
+
+#define PROCESS_SYMBOL(symbol, ...)                                                                                    \
+  if (!ProcessSymbol(category, SymbolFinder, symbol, find_prefix, {__VA_ARGS__})) {                                    \
+    LOGE("find linker %s symbol failed.", #symbol);                                                                    \
+    return false;                                                                                                      \
   }
 
-  if (!librarySymbols.empty()) {
-    for (auto &name : librarySymbols) {
-      libraryAddresses.push_back(ProxyLinker::Get().FindSoinfoByName(name));
-    }
-  }
+  PROCESS_SYMBOL(solist, "__dl__ZL6solist");
+  PROCESS_SYMBOL(g_ld_debug_verbosity, "__dl_g_ld_debug_verbosity");
+  PROCESS_SYMBOL(g_linker_debug_config, "__dl_g_linker_debug_config");
+  PROCESS_SYMBOL(g_linker_logger, "__dl_g_linker_logger");
 
-  ASSIGN_LIBRARY(linker_soinfo);
-  if (!exportSymbols.empty()) {
-    for (auto name : exportSymbols) {
-      exportAddresses.push_back(reinterpret_cast<Address>(linker_soinfo.Get()->find_export_symbol_address(name)));
-    }
+  if (android_api >= __ANDROID_API_U__) {
+    PROCESS_SYMBOL(g_dl_mutex, "__dl_g_dl_mutex", "__dl__ZL10g_dl_mutex");
+  } else {
+    PROCESS_SYMBOL(g_dl_mutex, "__dl__ZL10g_dl_mutex");
   }
+  PROCESS_SYMBOL(linker_dl_err_buf, "__dl__ZL19__linker_dl_err_buf");
 
-  ASSIGN_SYMBOL(solist);
-  ASSIGN_SYMBOL(g_ld_debug_verbosity);
-  ASSIGN_SYMBOL(g_linker_debug_config);
-  ASSIGN_SYMBOL(g_linker_logger);
-  ASSIGN_SYMBOL(g_dl_mutex);
-  ASSIGN_SYMBOL(linker_dl_err_buf);
-  ASSIGN_SYMBOL(link_image);
-  ASSIGN_SYMBOL(g_default_namespace);
-  ASSIGN_SYMBOL(g_soinfo_handles_map);
-  ASSIGN_SYMBOL(g_ld_preloads);
-  ASSIGN_SYMBOL(dlopen);
-  ASSIGN_SYMBOL(dlopenN);
-  ASSIGN_SYMBOL(dlopenO);
-  ASSIGN_SYMBOL(dlsym);
-  ASSIGN_SYMBOL(dlsymN);
-  ASSIGN_SYMBOL(dlsymO);
-  ASSIGN_SYMBOL(create_namespaceN);
-  ASSIGN_SYMBOL(create_namespaceO);
-  ASSIGN_SYMBOL(g_soinfo_allocator);
-  ASSIGN_SYMBOL(g_soinfo_links_allocator);
-  ASSIGN_SYMBOL(g_namespace_allocator);
-  ASSIGN_SYMBOL(g_namespace_list_allocator);
+  if (android_api >= __ANDROID_API_R__) {
+    PROCESS_SYMBOL(link_image,
+                   "__dl__ZN6soinfo10link_imageERK16SymbolLookupListPS_PK17android_"
+                   "dlextinfo" LP_TAIL);
+  } else if (android_api == __ANDROID_API_Q__) {
+    PROCESS_SYMBOL(link_image,
+                   "__dl__ZN6soinfo10link_imageERK10LinkedListIS_"
+                   "19SoinfoListAllocatorES4_PK17android_dlextinfo" LP_TAIL);
+  } else if (android_api >= __ANDROID_API_M__) {
+    PROCESS_SYMBOL(link_image,
+                   "__dl__ZN6soinfo10link_imageERK10LinkedListIS_"
+                   "19SoinfoListAllocatorES4_PK17android_dlextinfo");
+  } else if (android_api == __ANDROID_API_L_MR1__) {
+    // todo Android 5.1 x86_64 该方法被内联了,需要单独适配
+    PROCESS_SYMBOL(link_image, "__dl__ZN6soinfo9LinkImageEPK17android_dlextinfo");
+  } else {
+    PROCESS_SYMBOL(link_image, "__dl__ZL17soinfo_link_imageP6soinfoPK17android_dlextinfo");
+  }
+  PROCESS_SYMBOL(g_default_namespace, "__dl_g_default_namespace");
+  if (android_api <= __ANDROID_API_N_MR1__) {
+    PROCESS_SYMBOL(g_soinfo_handles_map, "__dl__ZL20g_soinfo_handles_map");
+  } else {
+    PROCESS_SYMBOL(g_soinfo_handles_map, "__dl_g_soinfo_handles_map");
+  }
+  PROCESS_SYMBOL(g_ld_preloads, "__dl__ZL13g_ld_preloads");
+  PROCESS_SYMBOL(dlopen, "android_dlopen_ext");
+  PROCESS_SYMBOL(dlopenN, "__dl__Z9do_dlopenPKciPK17android_dlextinfoPv");
+  PROCESS_SYMBOL(dlopenO, "__loader_android_dlopen_ext");
+  PROCESS_SYMBOL(dlsym, "dlsym");
+  PROCESS_SYMBOL(dlsymN, "__dl__Z8do_dlsymPvPKcS1_S_PS_");
+  PROCESS_SYMBOL(dlsymO, "__loader_dlsym");
+  PROCESS_SYMBOL(create_namespaceO, "__loader_android_create_namespace");
+  PROCESS_SYMBOL(create_namespaceN,
+                 is64BitBuild() ? "__dl__Z16create_namespacePKvPKcS2_S2_mS2_P19android_namespace_t"
+                                : "__dl__Z16create_namespacePKvPKcS2_S2_yS2_P19android_namespace_t");
+
+  PROCESS_SYMBOL(g_soinfo_allocator, "__dl__ZL18g_soinfo_allocator");
+  PROCESS_SYMBOL(g_soinfo_links_allocator, "__dl__ZL24g_soinfo_links_allocator");
+  PROCESS_SYMBOL(g_namespace_allocator, "__dl__ZL21g_namespace_allocator");
+  PROCESS_SYMBOL(g_namespace_list_allocator, "__dl__ZL26g_namespace_list_allocator");
+
+  PROCESS_SYMBOL(linker_soinfo, android_api >= __ANDROID_API_O__ ? "ld-android.so" : "libdl.so");
   return true;
 }
 

@@ -32,126 +32,142 @@
 #define TIMING                 0
 #define STATS                  0
 
+
 constexpr ElfW(Versym) kVersymNotNeeded = 0;
 constexpr ElfW(Versym) kVersymGlobal = 1;
 constexpr ElfW(Versym) kVersymHiddenBit = 0x8000;
 
 bool useGnuHashNeon = false;
 
-#define SOINFO_FUN(Ret, Name)       Ret (*Name)(soinfo * thiz)
-#define SOINFO_CONST_FUN(Ret, Name) Ret (*Name)(const soinfo *thiz)
+static bool soinfo_undefine_log = false;
+
+template <typename ReturnType, const char *Name>
+static ReturnType default_get(soinfo *thiz) {
+  async_safe_fatal("soinfo unimplemented get method: %s", Name);
+}
+
+template <typename ReturnType, const char *Name>
+static void default_set(soinfo *thiz, ReturnType value) {
+  if (soinfo_undefine_log) {
+    LOGE("soinfo unimplemented set method: %s", Name);
+  } else {
+    async_safe_fatal("soinfo unimplemented set method: %s", Name);
+  }
+}
+
+#define SOINFO_FUN(Ret, Name)                                                                                          \
+  static constexpr const char __##Name[] = #Name;                                                                      \
+  Ret (*Name)(soinfo * thiz) = &default_get<Ret, __##Name>
+#define SOINFO_SET_FUN(Ret, Name) void (*set_##Name)(soinfo * thiz, Ret value) = &default_set<Ret, __##Name>
+
+#define SOINFO_SET_GET_FUN(Ret, Name)                                                                                  \
+  SOINFO_FUN(Ret, Name);                                                                                               \
+  SOINFO_SET_FUN(Ret, Name)
 
 struct SoinfoFunTable {
-  SOINFO_FUN(const char *, name_);
+  SOINFO_SET_GET_FUN(const char *, name_);
 
-  SOINFO_FUN(const ElfW(Phdr) *, phdr);
+  SOINFO_SET_GET_FUN(const ElfW(Phdr) *, phdr);
 
-  SOINFO_FUN(size_t, phnum);
+  SOINFO_SET_GET_FUN(size_t, phnum);
 
-  SOINFO_FUN(ElfW(Addr), base);
+  SOINFO_SET_GET_FUN(ElfW(Addr), base);
 
-  SOINFO_FUN(size_t, size);
+  SOINFO_SET_GET_FUN(size_t, size);
 
-  SOINFO_FUN(ElfW(Dyn) *, dynamic);
+  SOINFO_SET_GET_FUN(ElfW(Dyn) *, dynamic);
 
-  SOINFO_FUN(soinfo *, next);
+  SOINFO_SET_GET_FUN(soinfo *, next);
 
-  SOINFO_FUN(uint32_t &, flags_);
+  SOINFO_SET_GET_FUN(uint32_t, flags_);
 
-  SOINFO_FUN(const char *, strtab_);
+  SOINFO_SET_GET_FUN(const char *, strtab_);
 
-  SOINFO_FUN(ElfW(Sym) *, symtab_);
+  SOINFO_SET_GET_FUN(ElfW(Sym) *, symtab_);
 
-  SOINFO_FUN(size_t, nbucket_);
+  SOINFO_SET_GET_FUN(size_t, nbucket_);
 
-  SOINFO_FUN(size_t, nchain_);
+  SOINFO_SET_GET_FUN(size_t, nchain_);
 
-  ANDROID_LE_L1 SOINFO_FUN(unsigned *, bucket_);
+  SOINFO_SET_GET_FUN(uint32_t *, bucket_);
 
-  ANDROID_LE_L1 SOINFO_FUN(unsigned *, chain_);
-
-  ANDROID_GE_M SOINFO_FUN(uint32_t *, bucket_M);
-
-  ANDROID_GE_M SOINFO_FUN(uint32_t *, chain_M);
+  SOINFO_SET_GET_FUN(uint32_t *, chain_);
 
 #ifndef __LP64__
 
-  SOINFO_FUN(ElfW(Addr) **, plt_got_);
+  SOINFO_SET_GET_FUN(ElfW(Addr) **, plt_got_);
 
 #endif
 
 #ifdef USE_RELA
-  SOINFO_FUN(ElfW(Rela) *&, plt_rela_);
+  SOINFO_SET_GET_FUN(ElfW(Rela) *, plt_rela_);
 
-  SOINFO_FUN(size_t &, plt_rela_count_);
+  SOINFO_SET_GET_FUN(size_t, plt_rela_count_);
 
-  SOINFO_FUN(ElfW(Rela) *&, rela_);
+  SOINFO_SET_GET_FUN(ElfW(Rela) *, rela_);
 
-  SOINFO_FUN(size_t &, rela_count_);
+  SOINFO_SET_GET_FUN(size_t, rela_count_);
 #else
 
-  SOINFO_FUN(ElfW(Rel) *&, plt_rel_);
+  SOINFO_SET_GET_FUN(ElfW(Rel) *, plt_rel_);
 
-  SOINFO_FUN(size_t &, plt_rel_count_);
+  SOINFO_SET_GET_FUN(size_t, plt_rel_count_);
 
-  SOINFO_FUN(ElfW(Rel) *&, rel_);
+  SOINFO_SET_GET_FUN(ElfW(Rel) *, rel_);
 
-  SOINFO_FUN(size_t &, rel_count_);
+  SOINFO_SET_GET_FUN(size_t, rel_count_);
 
 #endif
 
-  ANDROID_LE_O1 SOINFO_FUN(linker_function_t *, preinit_array_);
+  ANDROID_LE_O1 SOINFO_SET_GET_FUN(linker_function_t *, preinit_array_);
 
-  ANDROID_GE_P SOINFO_FUN(linker_ctor_function_t *, preinit_array_P);
+  ANDROID_GE_P SOINFO_SET_GET_FUN(linker_ctor_function_t *, preinit_array_P);
 
-  SOINFO_FUN(size_t, preinit_array_count_);
+  SOINFO_SET_GET_FUN(size_t, preinit_array_count_);
 
-  ANDROID_LE_O1 SOINFO_FUN(linker_function_t *, init_array_);
+  ANDROID_LE_O1 SOINFO_SET_GET_FUN(linker_function_t *, init_array_);
 
-  ANDROID_GE_P SOINFO_FUN(linker_ctor_function_t *, init_array_P);
+  ANDROID_GE_P SOINFO_SET_GET_FUN(linker_ctor_function_t *, init_array_P);
 
-  SOINFO_FUN(size_t, init_array_count_);
+  SOINFO_SET_GET_FUN(size_t, init_array_count_);
 
-  ANDROID_LE_O1 SOINFO_FUN(linker_function_t *, fini_array_);
+  ANDROID_LE_O1 SOINFO_SET_GET_FUN(linker_function_t *, fini_array_);
 
-  ANDROID_GE_P SOINFO_FUN(linker_dtor_function_t *, fini_array_P);
+  SOINFO_SET_GET_FUN(size_t, fini_array_count_);
 
-  SOINFO_FUN(size_t, fini_array_count_);
+  ANDROID_LE_O1 SOINFO_SET_GET_FUN(linker_function_t, init_func_);
 
-  ANDROID_LE_O1 SOINFO_FUN(linker_function_t, init_func_);
+  ANDROID_GE_P SOINFO_SET_GET_FUN(linker_ctor_function_t, init_func_P);
 
-  ANDROID_GE_P SOINFO_FUN(linker_ctor_function_t, init_func_P);
+  ANDROID_LE_O1 SOINFO_SET_GET_FUN(linker_function_t, fini_func_);
 
-  ANDROID_LE_O1 SOINFO_FUN(linker_function_t, fini_func_);
-
-  ANDROID_GE_P SOINFO_FUN(linker_dtor_function_t, fini_func_P);
 
 #ifdef __arm__
-  SOINFO_FUN(uint32_t *, ARM_exidx);
-  SOINFO_FUN(size_t, ARM_exidx_count);
+  SOINFO_SET_GET_FUN(uint32_t *, ARM_exidx);
+  SOINFO_SET_GET_FUN(size_t, ARM_exidx_count);
 #endif
 
-  SOINFO_FUN(size_t, ref_count_);
+  SOINFO_SET_GET_FUN(size_t, ref_count_);
 
-  SOINFO_FUN(link_map &, link_map_head);
+  SOINFO_SET_GET_FUN(const link_map &, link_map_head);
 
-  SOINFO_FUN(bool, constructors_called);
+  SOINFO_SET_GET_FUN(bool, constructors_called);
 
-  SOINFO_FUN(ElfW(Addr), load_bias);
+  SOINFO_SET_GET_FUN(ElfW(Addr), load_bias);
 
 #ifndef __LP64__
 
-  SOINFO_FUN(bool, has_text_relocations);
+  SOINFO_SET_GET_FUN(bool, has_text_relocations);
 
 #endif
 
-  SOINFO_FUN(bool, has_DT_SYMBOLIC);
+  SOINFO_SET_GET_FUN(bool, has_DT_SYMBOLIC);
 
-  SOINFO_FUN(uint32_t, version_);
+  SOINFO_SET_GET_FUN(uint32_t, version_);
 
-  SOINFO_FUN(dev_t, st_dev_);
+  SOINFO_SET_GET_FUN(dev_t, st_dev_);
 
-  SOINFO_FUN(ino_t, st_ino_);
+  SOINFO_SET_GET_FUN(ino_t, st_ino_);
 
   ANDROID_LE_S SOINFO_FUN(soinfo_list_t &, children_);
   // 实际类型被内联
@@ -161,79 +177,87 @@ struct SoinfoFunTable {
 
   ANDROID_GE_T SOINFO_FUN(soinfo_list_t_T &, parents_T);
 
-  ANDROID_GE_L1 SOINFO_FUN(off64_t, file_offset_);
+  ANDROID_GE_L1 SOINFO_SET_GET_FUN(off64_t, file_offset_);
 
-  ANDROID_GE_M SOINFO_FUN(uint32_t &, rtld_flags_);
+  ANDROID_GE_M SOINFO_SET_GET_FUN(uint32_t, rtld_flags_);
 
-  ANDROID_LE_L1 SOINFO_FUN(int &, rtld_flags_L);
+  ANDROID_LE_L1 SOINFO_SET_GET_FUN(int, rtld_flags_L);
 
-  ANDROID_GE_M SOINFO_FUN(uint32_t &, dt_flags_1_);
+  ANDROID_GE_M SOINFO_SET_GET_FUN(uint32_t, dt_flags_1_);
 
-  ANDROID_GE_L1 SOINFO_FUN(size_t, strtab_size_);
+  ANDROID_GE_L1 SOINFO_SET_GET_FUN(size_t, strtab_size_);
 
-  ANDROID_GE_M SOINFO_FUN(size_t, gnu_nbucket_);
+  ANDROID_GE_M SOINFO_SET_GET_FUN(size_t, gnu_nbucket_);
 
-  ANDROID_GE_M SOINFO_FUN(uint32_t *, gnu_bucket_);
+  ANDROID_GE_M SOINFO_SET_GET_FUN(uint32_t *, gnu_bucket_);
 
-  ANDROID_GE_M SOINFO_FUN(uint32_t *, gnu_chain_);
+  ANDROID_GE_M SOINFO_SET_GET_FUN(uint32_t *, gnu_chain_);
 
-  ANDROID_GE_M SOINFO_FUN(uint32_t, gnu_maskwords_);
+  ANDROID_GE_M SOINFO_SET_GET_FUN(uint32_t, gnu_maskwords_);
 
-  ANDROID_GE_M SOINFO_FUN(uint32_t, gnu_shift2_);
+  ANDROID_GE_M SOINFO_SET_GET_FUN(uint32_t, gnu_shift2_);
 
-  ANDROID_GE_M SOINFO_FUN(ElfW(Addr) *, gnu_bloom_filter_);
+  ANDROID_GE_M SOINFO_SET_GET_FUN(ElfW(Addr) *, gnu_bloom_filter_);
 
-  ANDROID_GE_M SOINFO_FUN(soinfo *, local_group_root_);
+  ANDROID_GE_M SOINFO_SET_GET_FUN(soinfo *, local_group_root_);
 
-  ANDROID_GE_M SOINFO_FUN(uint8_t *, android_relocs_);
+  ANDROID_GE_M SOINFO_SET_GET_FUN(uint8_t *, android_relocs_);
 
-  ANDROID_GE_M SOINFO_FUN(size_t, android_relocs_size_);
+  ANDROID_GE_M SOINFO_SET_GET_FUN(size_t, android_relocs_size_);
 
-  ANDROID_GE_M SOINFO_FUN(const char *, soname_);
+  ANDROID_GE_M SOINFO_SET_GET_FUN(const char *, soname_);
 
-  ANDROID_GE_M SOINFO_FUN(const char *, realpath_);
+  ANDROID_GE_M SOINFO_SET_GET_FUN(const char *, realpath_);
 
-  ANDROID_GE_M SOINFO_FUN(const ElfW(Versym) *, versym_);
+  ANDROID_GE_M SOINFO_SET_GET_FUN(const ElfW(Versym) *, versym_);
 
-  ANDROID_GE_M SOINFO_FUN(ElfW(Addr), verdef_ptr_);
+  ANDROID_GE_M SOINFO_SET_GET_FUN(ElfW(Addr), verdef_ptr_);
 
-  ANDROID_GE_M SOINFO_FUN(size_t, verdef_cnt_);
+  ANDROID_GE_M SOINFO_SET_GET_FUN(size_t, verdef_cnt_);
 
-  ANDROID_GE_M SOINFO_FUN(ElfW(Addr), verneed_ptr_);
+  ANDROID_GE_M SOINFO_SET_GET_FUN(ElfW(Addr), verneed_ptr_);
 
-  ANDROID_GE_M SOINFO_FUN(size_t, verneed_cnt_);
+  ANDROID_GE_M SOINFO_SET_GET_FUN(size_t, verneed_cnt_);
 
-  ANDROID_GE_M SOINFO_FUN(int, target_sdk_version_);
+  ANDROID_GE_M SOINFO_SET_GET_FUN(int, target_sdk_version_);
 
-  ANDROID_GE_N SOINFO_FUN(std::vector<std::string> &, dt_runpath_);
+  ANDROID_GE_N SOINFO_SET_GET_FUN(const std::vector<std::string> &, dt_runpath_);
 
-  ANDROID_GE_N SOINFO_FUN(android_namespace_t *&, primary_namespace_);
+  ANDROID_GE_N SOINFO_SET_GET_FUN(android_namespace_t *, primary_namespace_);
 
   ANDROID_GE_N SOINFO_FUN(android_namespace_list_t &, secondary_namespaces_);
 
   ANDROID_GE_T SOINFO_FUN(android_namespace_list_t_T &, secondary_namespaces_T);
 
-  ANDROID_GE_N SOINFO_FUN(uintptr_t, handle_);
+  ANDROID_GE_N SOINFO_SET_GET_FUN(uintptr_t, handle_);
 
-  ANDROID_GE_P SOINFO_FUN(ElfW(Relr) *, relr_);
+  ANDROID_GE_P SOINFO_SET_GET_FUN(ElfW(Relr) *, relr_);
 
-  ANDROID_GE_P SOINFO_FUN(size_t, relr_count_);
+  ANDROID_GE_P SOINFO_SET_GET_FUN(size_t, relr_count_);
 
   ANDROID_GE_Q SOINFO_FUN(std::unique_ptr<soinfo_tls> &, tls_);
+  ANDROID_GE_Q SOINFO_SET_FUN(std::unique_ptr<soinfo_tls>, tls_);
 
-  ANDROID_GE_Q SOINFO_FUN(std::vector<TlsDynamicResolverArg> &, tlsdesc_args_);
+  ANDROID_GE_Q SOINFO_SET_GET_FUN(std::vector<TlsDynamicResolverArg> &, tlsdesc_args_);
 
-  ANDROID_GE_T SOINFO_FUN(ElfW(Addr), gap_start_);
+  ANDROID_GE_T SOINFO_SET_GET_FUN(ElfW(Addr), gap_start_);
 
-  ANDROID_GE_T SOINFO_FUN(size_t, gap_size_);
+  ANDROID_GE_T SOINFO_SET_GET_FUN(size_t, gap_size_);
+
+  ANDROID_GE_V SOINFO_FUN(memtag_dynamic_entries_t *, memtag_dynamic_entries_);
 
   /**
    *  All version common
    */
   SOINFO_FUN(const char *, get_soname);
+  SOINFO_FUN(size_t, soinfo_minimum_size);
 };
 
 static SoinfoFunTable funTable;
+
+#undef SOINFO_FUN
+#undef SOINFO_SET_FUN
+#undef SOINFO_SET_GET_FUN
 
 #if defined(__aarch64__)
 /**
@@ -267,33 +291,57 @@ typedef struct __ifunc_arg_t {
 
 #define SOINFO_MEMBER_NULL(Type, Name, ...) funTable.Name = nullptr;
 
-#define SOINFO_MEMBER_WRAP(Type, Name)                                                                                 \
-  funTable.Name = [](soinfo *thiz) -> member_type_trait<decltype(&Type::Name)>::type {                                 \
+#define SOINFO_MEMBER_GET_WRAP(Type, Name)                                                                             \
+  funTable.Name = [](soinfo *thiz) -> member_type_trait_t<decltype(&Type::Name)> {                                     \
     return reinterpret_cast<Type *>(thiz)->Name;                                                                       \
   }
 
+#define SOINFO_MEMBER_SET_WRAP(Type, Name)                                                                             \
+  funTable.set_##Name = [](soinfo *thiz, member_type_trait_t<decltype(&Type::Name)> value) {                           \
+    reinterpret_cast<Type *>(thiz)->Name = value;                                                                      \
+  }
+
+#define SOINFO_MEMBER_WRAP(Type, Name)                                                                                 \
+  SOINFO_MEMBER_GET_WRAP(Type, Name);                                                                                  \
+  SOINFO_MEMBER_SET_WRAP(Type, Name)
+
+
 #define SOINFO_MEMBER_VER_WRAP(Type, Name, Ver)                                                                        \
-  funTable.Name##Ver = [](soinfo *thiz) -> member_type_trait<decltype(&Type::Name)>::type {                            \
+  funTable.Name##Ver = [](soinfo *thiz) -> member_type_trait_t<decltype(&Type::Name)> {                                \
     return reinterpret_cast<Type *>(thiz)->Name;                                                                       \
+  };                                                                                                                   \
+  funTable.set_##Name##Ver = [](soinfo *thiz, member_type_trait_t<decltype(&Type::Name)> value) {                      \
+    reinterpret_cast<Type *>(thiz)->Name = value;                                                                      \
   }
 
 #define SOINFO_MEMBER_CAST_WRAP(Type, Name, Ret)                                                                       \
   funTable.Name = [](soinfo *thiz) -> Ret {                                                                            \
     return (Ret) reinterpret_cast<Type *>(thiz)->Name;                                                                 \
+  };                                                                                                                   \
+  funTable.set_##Name = [](soinfo *thiz, Ret value) {                                                                  \
+    reinterpret_cast<Type *>(thiz)->Name = static_cast<member_type_trait_t<decltype(&Type::Name)>>(value);             \
   }
 
 #define SOINFO_MEMBER_STRING_TO_CHARP_WRAP(Type, Name)                                                                 \
   funTable.Name = [](soinfo *thiz) -> const char * {                                                                   \
     return reinterpret_cast<Type *>(thiz)->Name.c_str();                                                               \
+  };                                                                                                                   \
+  funTable.set_##Name = [](soinfo *thiz, const char *value) {                                                          \
+    reinterpret_cast<Type *>(thiz)->Name = (value);                                                                    \
   }
 
 #define SOINFO_MEMBER_REF_WRAP(Type, Name)                                                                             \
-  funTable.Name = [](soinfo *thiz) -> member_ref_type_trait<decltype(&Type::Name)>::type {                             \
+  funTable.Name = [](soinfo *thiz) -> member_ref_type_trait_t<decltype(&Type::Name)> {                                 \
+    return reinterpret_cast<Type *>(thiz)->Name;                                                                       \
+  }
+
+#define SOINFO_MEMBER_CONST_REF_WRAP(Type, Name)                                                                       \
+  funTable.Name = [](soinfo *thiz) -> const_member_ref_type_trait_t<decltype(&Type::Name)> {                           \
     return reinterpret_cast<Type *>(thiz)->Name;                                                                       \
   }
 
 #define SOINFO_MEMBER_REF_VER_WRAP(Type, Name, Ver)                                                                    \
-  funTable.Name##Ver = [](soinfo *thiz) -> member_ref_type_trait<decltype(&Type::Name)>::type {                        \
+  funTable.Name##Ver = [](soinfo *thiz) -> member_ref_type_trait_t<decltype(&Type::Name)> {                            \
     return reinterpret_cast<Type *>(thiz)->Name;                                                                       \
   }
 
@@ -518,7 +566,7 @@ static bool process_relocation(soinfo *so, const rel_t &reloc, symbol_relocation
   if (is_tls_reloc(r_type)) {
     return false;
   }
-  if (__predict_false(sym_name == nullptr)) {
+  if (sym_name == nullptr) {
     return false;
   }
   if (ELF_ST_BIND(so->symtab()[r_sym].st_info) == STB_LOCAL) {
@@ -585,27 +633,87 @@ static bool plain_relocate_impl(soinfo *so, rel_t *rels, size_t rel_count, symbo
   return true;
 }
 
-// bool VersionTracker::init(const soinfo *si_from) {
-//	if (!si_from->has_min_version(2)) {
-//		return true;
-//	}
-//
-//	return init_verneed(si_from) && init_verdef(si_from);
-// }
-//
-// const version_info *VersionTracker::get_version_info(ElfW(Versym)
-// source_symver) const { 	if (source_symver < 2 || 		source_symver
-// >=
-// version_infos.size() || 		version_infos[source_symver].name ==
-// nullptr) { 		return nullptr;
-//	}
-//
-//	return &version_infos[source_symver];
-// }
+bool VersionTracker::init(soinfo *si_from) {
+  if (!si_from->has_min_version(2)) {
+    return true;
+  }
+
+  return init_verneed(si_from) && init_verdef(si_from);
+}
+
+const version_info *VersionTracker::get_version_info(ElfW(Versym) source_symver) const {
+  if (source_symver < 2 || source_symver >= version_infos.size() || version_infos[source_symver].name == nullptr) {
+    return nullptr;
+  }
+  return &version_infos[source_symver];
+}
+
+bool VersionTracker::init_verneed(soinfo *si_from) {
+  uintptr_t verneed_ptr = si_from->get_verneed_ptr();
+
+  if (verneed_ptr == 0) {
+    return true;
+  }
+
+  size_t verneed_cnt = si_from->get_verneed_cnt();
+
+  for (size_t i = 0, offset = 0; i < verneed_cnt; ++i) {
+    const ElfW(Verneed) *verneed = reinterpret_cast<ElfW(Verneed) *>(verneed_ptr + offset);
+    size_t vernaux_offset = offset + verneed->vn_aux;
+    offset += verneed->vn_next;
+
+    if (verneed->vn_version != 1) {
+      LOGE("unsupported verneed[%zd] vn_version: %d (expected 1)", i, verneed->vn_version);
+      return false;
+    }
+
+    const char *target_soname = si_from->get_string(verneed->vn_file);
+    // find it in dependencies
+    soinfo *target_si = si_from->get_children().find_if([&](soinfo *si) {
+      return strcmp(si->get_soname(), target_soname) == 0;
+    });
+
+    if (target_si == nullptr) {
+      LOGE("cannot find \"%s\" from verneed[%zd] in DT_NEEDED list for \"%s\"", target_soname, i, si_from->realpath());
+      return false;
+    }
+
+    for (size_t j = 0; j < verneed->vn_cnt; ++j) {
+      const ElfW(Vernaux) *vernaux = reinterpret_cast<ElfW(Vernaux) *>(verneed_ptr + vernaux_offset);
+      vernaux_offset += vernaux->vna_next;
+
+      const ElfW(Word) elf_hash = vernaux->vna_hash;
+      const char *ver_name = si_from->get_string(vernaux->vna_name);
+      ElfW(Half) source_index = vernaux->vna_other;
+
+      add_version_info(source_index, elf_hash, ver_name, target_si);
+    }
+  }
+
+  return true;
+}
+
+bool VersionTracker::init_verdef(soinfo *si_from) {
+  return for_each_verdef(si_from, [&](size_t, const ElfW(Verdef) * verdef, const ElfW(Verdaux) * verdaux) {
+    add_version_info(verdef->vd_ndx, verdef->vd_hash, si_from->get_string(verdaux->vda_name), si_from);
+    return false;
+  });
+}
+
+void VersionTracker::add_version_info(size_t source_index, ElfW(Word) elf_hash, const char *ver_name,
+                                      soinfo *target_si) {
+  if (source_index >= version_infos.size()) {
+    version_infos.resize(source_index + 1);
+  }
+
+  version_infos[source_index].elf_hash = elf_hash;
+  version_infos[source_index].name = ver_name;
+  version_infos[source_index].target_si = target_si;
+}
 
 static void InitApiV() {
 #ifdef __work_around_b_24465209__
-  SOINFO_MEMBER_WRAP(soinfoV, name_);
+  SOINFO_MEMBER_GET_WRAP(soinfoV, name_);
 #endif
   SOINFO_MEMBER_WRAP(soinfoV, phdr);
   SOINFO_MEMBER_WRAP(soinfoV, phnum);
@@ -613,44 +721,44 @@ static void InitApiV() {
   SOINFO_MEMBER_WRAP(soinfoV, size);
   SOINFO_MEMBER_WRAP(soinfoV, dynamic);
   SOINFO_MEMBER_CAST_WRAP(soinfoV, next, soinfo *);
-  SOINFO_MEMBER_REF_WRAP(soinfoV, flags_);
+  SOINFO_MEMBER_WRAP(soinfoV, flags_);
   SOINFO_MEMBER_WRAP(soinfoV, strtab_);
   SOINFO_MEMBER_WRAP(soinfoV, symtab_);
   SOINFO_MEMBER_WRAP(soinfoV, nbucket_);
   SOINFO_MEMBER_WRAP(soinfoV, nchain_);
-  SOINFO_MEMBER_VER_WRAP(soinfoV, bucket_, M);
-  SOINFO_MEMBER_VER_WRAP(soinfoV, chain_, M);
+  SOINFO_MEMBER_WRAP(soinfoV, bucket_);
+  SOINFO_MEMBER_WRAP(soinfoV, chain_);
 
 #ifndef __LP64__
   // __ANDROID_API_R__   unused4
   SOINFO_MEMBER_WRAP(soinfoV, plt_got_);
 #endif
 #ifdef USE_RELA
-  SOINFO_MEMBER_REF_WRAP(soinfoV, plt_rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoV, plt_rela_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoV, rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoV, rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoV, plt_rela_);
+  SOINFO_MEMBER_WRAP(soinfoV, plt_rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoV, rela_);
+  SOINFO_MEMBER_WRAP(soinfoV, rela_count_);
 #else
-  SOINFO_MEMBER_REF_WRAP(soinfoV, plt_rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoV, plt_rel_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoV, rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoV, rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoV, plt_rel_);
+  SOINFO_MEMBER_WRAP(soinfoV, plt_rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoV, rel_);
+  SOINFO_MEMBER_WRAP(soinfoV, rel_count_);
 #endif
   SOINFO_MEMBER_VER_WRAP(soinfoV, preinit_array_, P);
   SOINFO_MEMBER_WRAP(soinfoV, preinit_array_count_);
   SOINFO_MEMBER_VER_WRAP(soinfoV, init_array_, P);
   SOINFO_MEMBER_WRAP(soinfoV, init_array_count_);
-  SOINFO_MEMBER_VER_WRAP(soinfoV, fini_array_, P);
+  SOINFO_MEMBER_WRAP(soinfoV, fini_array_);
   SOINFO_MEMBER_WRAP(soinfoV, fini_array_count_);
   SOINFO_MEMBER_VER_WRAP(soinfoV, init_func_, P);
-  SOINFO_MEMBER_VER_WRAP(soinfoV, fini_func_, P);
+  SOINFO_MEMBER_WRAP(soinfoV, fini_func_);
 
 #ifdef __arm__
   SOINFO_MEMBER_WRAP(soinfoV, ARM_exidx);
   SOINFO_MEMBER_WRAP(soinfoV, ARM_exidx_count);
 #endif
   SOINFO_MEMBER_WRAP(soinfoV, ref_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoV, link_map_head);
+  SOINFO_MEMBER_CONST_REF_WRAP(soinfoV, link_map_head);
   SOINFO_MEMBER_WRAP(soinfoV, constructors_called);
   SOINFO_MEMBER_WRAP(soinfoV, load_bias);
 
@@ -664,8 +772,8 @@ static void InitApiV() {
   SOINFO_MEMBER_REF_VER_WRAP(soinfoV, children_, T);
   SOINFO_MEMBER_REF_VER_WRAP(soinfoV, parents_, T);
   SOINFO_MEMBER_WRAP(soinfoV, file_offset_);
-  SOINFO_MEMBER_REF_WRAP(soinfoV, rtld_flags_);
-  SOINFO_MEMBER_REF_WRAP(soinfoV, dt_flags_1_);
+  SOINFO_MEMBER_WRAP(soinfoV, rtld_flags_);
+  SOINFO_MEMBER_WRAP(soinfoV, dt_flags_1_);
   SOINFO_MEMBER_WRAP(soinfoV, strtab_size_);
   SOINFO_MEMBER_WRAP(soinfoV, gnu_nbucket_);
   SOINFO_MEMBER_WRAP(soinfoV, gnu_bucket_);
@@ -685,8 +793,8 @@ static void InitApiV() {
   SOINFO_MEMBER_WRAP(soinfoV, verneed_cnt_);
   SOINFO_MEMBER_WRAP(soinfoV, target_sdk_version_);
 
-  SOINFO_MEMBER_REF_WRAP(soinfoV, dt_runpath_);
-  SOINFO_MEMBER_REF_WRAP(soinfoV, primary_namespace_);
+  SOINFO_MEMBER_CONST_REF_WRAP(soinfoV, dt_runpath_);
+  SOINFO_MEMBER_WRAP(soinfoV, primary_namespace_);
   SOINFO_MEMBER_REF_VER_WRAP(soinfoV, secondary_namespaces_, T);
   SOINFO_MEMBER_WRAP(soinfoV, handle_);
   SOINFO_MEMBER_WRAP(soinfoV, relr_);
@@ -699,7 +807,7 @@ static void InitApiV() {
 
 static void InitApiU() {
 #ifdef __work_around_b_24465209__
-  SOINFO_MEMBER_WRAP(soinfoU, name_);
+  SOINFO_MEMBER_GET_WRAP(soinfoU, name_);
 #endif
   SOINFO_MEMBER_WRAP(soinfoU, phdr);
   SOINFO_MEMBER_WRAP(soinfoU, phnum);
@@ -707,44 +815,44 @@ static void InitApiU() {
   SOINFO_MEMBER_WRAP(soinfoU, size);
   SOINFO_MEMBER_WRAP(soinfoU, dynamic);
   SOINFO_MEMBER_CAST_WRAP(soinfoU, next, soinfo *);
-  SOINFO_MEMBER_REF_WRAP(soinfoU, flags_);
+  SOINFO_MEMBER_WRAP(soinfoU, flags_);
   SOINFO_MEMBER_WRAP(soinfoU, strtab_);
   SOINFO_MEMBER_WRAP(soinfoU, symtab_);
   SOINFO_MEMBER_WRAP(soinfoU, nbucket_);
   SOINFO_MEMBER_WRAP(soinfoU, nchain_);
-  SOINFO_MEMBER_VER_WRAP(soinfoU, bucket_, M);
-  SOINFO_MEMBER_VER_WRAP(soinfoU, chain_, M);
+  SOINFO_MEMBER_WRAP(soinfoU, bucket_);
+  SOINFO_MEMBER_WRAP(soinfoU, chain_);
 
 #ifndef __LP64__
   // __ANDROID_API_R__   unused4
   SOINFO_MEMBER_WRAP(soinfoU, plt_got_);
 #endif
 #ifdef USE_RELA
-  SOINFO_MEMBER_REF_WRAP(soinfoU, plt_rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoU, plt_rela_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoU, rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoU, rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoU, plt_rela_);
+  SOINFO_MEMBER_WRAP(soinfoU, plt_rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoU, rela_);
+  SOINFO_MEMBER_WRAP(soinfoU, rela_count_);
 #else
-  SOINFO_MEMBER_REF_WRAP(soinfoU, plt_rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoU, plt_rel_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoU, rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoU, rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoU, plt_rel_);
+  SOINFO_MEMBER_WRAP(soinfoU, plt_rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoU, rel_);
+  SOINFO_MEMBER_WRAP(soinfoU, rel_count_);
 #endif
   SOINFO_MEMBER_VER_WRAP(soinfoU, preinit_array_, P);
   SOINFO_MEMBER_WRAP(soinfoU, preinit_array_count_);
   SOINFO_MEMBER_VER_WRAP(soinfoU, init_array_, P);
   SOINFO_MEMBER_WRAP(soinfoU, init_array_count_);
-  SOINFO_MEMBER_VER_WRAP(soinfoU, fini_array_, P);
+  SOINFO_MEMBER_WRAP(soinfoU, fini_array_);
   SOINFO_MEMBER_WRAP(soinfoU, fini_array_count_);
   SOINFO_MEMBER_VER_WRAP(soinfoU, init_func_, P);
-  SOINFO_MEMBER_VER_WRAP(soinfoU, fini_func_, P);
+  SOINFO_MEMBER_WRAP(soinfoU, fini_func_);
 
 #ifdef __arm__
   SOINFO_MEMBER_WRAP(soinfoU, ARM_exidx);
   SOINFO_MEMBER_WRAP(soinfoU, ARM_exidx_count);
 #endif
   SOINFO_MEMBER_WRAP(soinfoU, ref_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoU, link_map_head);
+  SOINFO_MEMBER_CONST_REF_WRAP(soinfoU, link_map_head);
   SOINFO_MEMBER_WRAP(soinfoU, constructors_called);
   SOINFO_MEMBER_WRAP(soinfoU, load_bias);
 
@@ -758,8 +866,8 @@ static void InitApiU() {
   SOINFO_MEMBER_REF_VER_WRAP(soinfoU, children_, T);
   SOINFO_MEMBER_REF_VER_WRAP(soinfoU, parents_, T);
   SOINFO_MEMBER_WRAP(soinfoU, file_offset_);
-  SOINFO_MEMBER_REF_WRAP(soinfoU, rtld_flags_);
-  SOINFO_MEMBER_REF_WRAP(soinfoU, dt_flags_1_);
+  SOINFO_MEMBER_WRAP(soinfoU, rtld_flags_);
+  SOINFO_MEMBER_WRAP(soinfoU, dt_flags_1_);
   SOINFO_MEMBER_WRAP(soinfoU, strtab_size_);
   SOINFO_MEMBER_WRAP(soinfoU, gnu_nbucket_);
   SOINFO_MEMBER_WRAP(soinfoU, gnu_bucket_);
@@ -779,8 +887,8 @@ static void InitApiU() {
   SOINFO_MEMBER_WRAP(soinfoU, verneed_cnt_);
   SOINFO_MEMBER_WRAP(soinfoU, target_sdk_version_);
 
-  SOINFO_MEMBER_REF_WRAP(soinfoU, dt_runpath_);
-  SOINFO_MEMBER_REF_WRAP(soinfoU, primary_namespace_);
+  SOINFO_MEMBER_CONST_REF_WRAP(soinfoU, dt_runpath_);
+  SOINFO_MEMBER_WRAP(soinfoU, primary_namespace_);
   SOINFO_MEMBER_REF_VER_WRAP(soinfoU, secondary_namespaces_, T);
   SOINFO_MEMBER_WRAP(soinfoU, handle_);
   SOINFO_MEMBER_WRAP(soinfoU, relr_);
@@ -793,7 +901,7 @@ static void InitApiU() {
 
 static void InitApiT() {
 #ifdef __work_around_b_24465209__
-  SOINFO_MEMBER_WRAP(soinfoT, name_);
+  SOINFO_MEMBER_GET_WRAP(soinfoT, name_);
 #endif
   SOINFO_MEMBER_WRAP(soinfoT, phdr);
   SOINFO_MEMBER_WRAP(soinfoT, phnum);
@@ -801,44 +909,44 @@ static void InitApiT() {
   SOINFO_MEMBER_WRAP(soinfoT, size);
   SOINFO_MEMBER_WRAP(soinfoT, dynamic);
   SOINFO_MEMBER_CAST_WRAP(soinfoT, next, soinfo *);
-  SOINFO_MEMBER_REF_WRAP(soinfoT, flags_);
+  SOINFO_MEMBER_WRAP(soinfoT, flags_);
   SOINFO_MEMBER_WRAP(soinfoT, strtab_);
   SOINFO_MEMBER_WRAP(soinfoT, symtab_);
   SOINFO_MEMBER_WRAP(soinfoT, nbucket_);
   SOINFO_MEMBER_WRAP(soinfoT, nchain_);
-  SOINFO_MEMBER_VER_WRAP(soinfoT, bucket_, M);
-  SOINFO_MEMBER_VER_WRAP(soinfoT, chain_, M);
+  SOINFO_MEMBER_WRAP(soinfoT, bucket_);
+  SOINFO_MEMBER_WRAP(soinfoT, chain_);
 
 #ifndef __LP64__
   // __ANDROID_API_R__   unused4
   SOINFO_MEMBER_WRAP(soinfoT, plt_got_);
 #endif
 #ifdef USE_RELA
-  SOINFO_MEMBER_REF_WRAP(soinfoT, plt_rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoT, plt_rela_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoT, rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoT, rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoT, plt_rela_);
+  SOINFO_MEMBER_WRAP(soinfoT, plt_rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoT, rela_);
+  SOINFO_MEMBER_WRAP(soinfoT, rela_count_);
 #else
-  SOINFO_MEMBER_REF_WRAP(soinfoT, plt_rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoT, plt_rel_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoT, rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoT, rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoT, plt_rel_);
+  SOINFO_MEMBER_WRAP(soinfoT, plt_rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoT, rel_);
+  SOINFO_MEMBER_WRAP(soinfoT, rel_count_);
 #endif
   SOINFO_MEMBER_VER_WRAP(soinfoT, preinit_array_, P);
   SOINFO_MEMBER_WRAP(soinfoT, preinit_array_count_);
   SOINFO_MEMBER_VER_WRAP(soinfoT, init_array_, P);
   SOINFO_MEMBER_WRAP(soinfoT, init_array_count_);
-  SOINFO_MEMBER_VER_WRAP(soinfoT, fini_array_, P);
+  SOINFO_MEMBER_WRAP(soinfoT, fini_array_);
   SOINFO_MEMBER_WRAP(soinfoT, fini_array_count_);
   SOINFO_MEMBER_VER_WRAP(soinfoT, init_func_, P);
-  SOINFO_MEMBER_VER_WRAP(soinfoT, fini_func_, P);
+  SOINFO_MEMBER_WRAP(soinfoT, fini_func_);
 
 #ifdef __arm__
   SOINFO_MEMBER_WRAP(soinfoT, ARM_exidx);
   SOINFO_MEMBER_WRAP(soinfoT, ARM_exidx_count);
 #endif
   SOINFO_MEMBER_WRAP(soinfoT, ref_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoT, link_map_head);
+  SOINFO_MEMBER_CONST_REF_WRAP(soinfoT, link_map_head);
   SOINFO_MEMBER_WRAP(soinfoT, constructors_called);
   SOINFO_MEMBER_WRAP(soinfoT, load_bias);
 
@@ -852,8 +960,8 @@ static void InitApiT() {
   SOINFO_MEMBER_REF_VER_WRAP(soinfoT, children_, T);
   SOINFO_MEMBER_REF_VER_WRAP(soinfoT, parents_, T);
   SOINFO_MEMBER_WRAP(soinfoT, file_offset_);
-  SOINFO_MEMBER_REF_WRAP(soinfoT, rtld_flags_);
-  SOINFO_MEMBER_REF_WRAP(soinfoT, dt_flags_1_);
+  SOINFO_MEMBER_WRAP(soinfoT, rtld_flags_);
+  SOINFO_MEMBER_WRAP(soinfoT, dt_flags_1_);
   SOINFO_MEMBER_WRAP(soinfoT, strtab_size_);
   SOINFO_MEMBER_WRAP(soinfoT, gnu_nbucket_);
   SOINFO_MEMBER_WRAP(soinfoT, gnu_bucket_);
@@ -873,8 +981,8 @@ static void InitApiT() {
   SOINFO_MEMBER_WRAP(soinfoT, verneed_cnt_);
   SOINFO_MEMBER_WRAP(soinfoT, target_sdk_version_);
 
-  SOINFO_MEMBER_REF_WRAP(soinfoT, dt_runpath_);
-  SOINFO_MEMBER_REF_WRAP(soinfoT, primary_namespace_);
+  SOINFO_MEMBER_CONST_REF_WRAP(soinfoT, dt_runpath_);
+  SOINFO_MEMBER_WRAP(soinfoT, primary_namespace_);
   SOINFO_MEMBER_REF_VER_WRAP(soinfoT, secondary_namespaces_, T);
   SOINFO_MEMBER_WRAP(soinfoT, handle_);
   SOINFO_MEMBER_WRAP(soinfoT, relr_);
@@ -887,7 +995,7 @@ static void InitApiT() {
 
 static void InitApiS() {
 #ifdef __work_around_b_24465209__
-  SOINFO_MEMBER_WRAP(soinfoS, name_);
+  SOINFO_MEMBER_GET_WRAP(soinfoS, name_);
 #endif
   SOINFO_MEMBER_WRAP(soinfoS, phdr);
   SOINFO_MEMBER_WRAP(soinfoS, phnum);
@@ -895,44 +1003,44 @@ static void InitApiS() {
   SOINFO_MEMBER_WRAP(soinfoS, size);
   SOINFO_MEMBER_WRAP(soinfoS, dynamic);
   SOINFO_MEMBER_CAST_WRAP(soinfoS, next, soinfo *);
-  SOINFO_MEMBER_REF_WRAP(soinfoS, flags_);
+  SOINFO_MEMBER_WRAP(soinfoS, flags_);
   SOINFO_MEMBER_WRAP(soinfoS, strtab_);
   SOINFO_MEMBER_WRAP(soinfoS, symtab_);
   SOINFO_MEMBER_WRAP(soinfoS, nbucket_);
   SOINFO_MEMBER_WRAP(soinfoS, nchain_);
-  SOINFO_MEMBER_VER_WRAP(soinfoS, bucket_, M);
-  SOINFO_MEMBER_VER_WRAP(soinfoS, chain_, M);
+  SOINFO_MEMBER_WRAP(soinfoS, bucket_);
+  SOINFO_MEMBER_WRAP(soinfoS, chain_);
 
 #ifndef __LP64__
   // __ANDROID_API_R__   unused4
   SOINFO_MEMBER_WRAP(soinfoS, plt_got_);
 #endif
 #ifdef USE_RELA
-  SOINFO_MEMBER_REF_WRAP(soinfoS, plt_rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoS, plt_rela_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoS, rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoS, rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoS, plt_rela_);
+  SOINFO_MEMBER_WRAP(soinfoS, plt_rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoS, rela_);
+  SOINFO_MEMBER_WRAP(soinfoS, rela_count_);
 #else
-  SOINFO_MEMBER_REF_WRAP(soinfoS, plt_rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoS, plt_rel_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoS, rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoS, rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoS, plt_rel_);
+  SOINFO_MEMBER_WRAP(soinfoS, plt_rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoS, rel_);
+  SOINFO_MEMBER_WRAP(soinfoS, rel_count_);
 #endif
   SOINFO_MEMBER_VER_WRAP(soinfoS, preinit_array_, P);
   SOINFO_MEMBER_WRAP(soinfoS, preinit_array_count_);
   SOINFO_MEMBER_VER_WRAP(soinfoS, init_array_, P);
   SOINFO_MEMBER_WRAP(soinfoS, init_array_count_);
-  SOINFO_MEMBER_VER_WRAP(soinfoS, fini_array_, P);
+  SOINFO_MEMBER_WRAP(soinfoS, fini_array_);
   SOINFO_MEMBER_WRAP(soinfoS, fini_array_count_);
   SOINFO_MEMBER_VER_WRAP(soinfoS, init_func_, P);
-  SOINFO_MEMBER_VER_WRAP(soinfoS, fini_func_, P);
+  SOINFO_MEMBER_WRAP(soinfoS, fini_func_);
 
 #ifdef __arm__
   SOINFO_MEMBER_WRAP(soinfoS, ARM_exidx);
   SOINFO_MEMBER_WRAP(soinfoS, ARM_exidx_count);
 #endif
   SOINFO_MEMBER_WRAP(soinfoS, ref_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoS, link_map_head);
+  SOINFO_MEMBER_CONST_REF_WRAP(soinfoS, link_map_head);
   SOINFO_MEMBER_WRAP(soinfoS, constructors_called);
   SOINFO_MEMBER_WRAP(soinfoS, load_bias);
 
@@ -948,8 +1056,8 @@ static void InitApiS() {
   SOINFO_MEMBER_REF_WRAP(soinfoS, parents_);
 
   SOINFO_MEMBER_WRAP(soinfoS, file_offset_);
-  SOINFO_MEMBER_REF_WRAP(soinfoS, rtld_flags_);
-  SOINFO_MEMBER_REF_WRAP(soinfoS, dt_flags_1_);
+  SOINFO_MEMBER_WRAP(soinfoS, rtld_flags_);
+  SOINFO_MEMBER_WRAP(soinfoS, dt_flags_1_);
   SOINFO_MEMBER_WRAP(soinfoS, strtab_size_);
 
   SOINFO_MEMBER_WRAP(soinfoS, gnu_nbucket_);
@@ -970,8 +1078,8 @@ static void InitApiS() {
   SOINFO_MEMBER_WRAP(soinfoS, verneed_cnt_);
   SOINFO_MEMBER_WRAP(soinfoS, target_sdk_version_);
 
-  SOINFO_MEMBER_REF_WRAP(soinfoS, dt_runpath_);
-  SOINFO_MEMBER_REF_WRAP(soinfoS, primary_namespace_);
+  SOINFO_MEMBER_CONST_REF_WRAP(soinfoS, dt_runpath_);
+  SOINFO_MEMBER_WRAP(soinfoS, primary_namespace_);
   SOINFO_MEMBER_REF_WRAP(soinfoS, secondary_namespaces_);
   SOINFO_MEMBER_WRAP(soinfoS, handle_);
 
@@ -987,7 +1095,7 @@ static void InitApiS() {
 
 static void InitApiQ() {
 #ifdef __work_around_b_24465209__
-  SOINFO_MEMBER_WRAP(soinfoQ, name_);
+  SOINFO_MEMBER_GET_WRAP(soinfoQ, name_);
 #endif
   SOINFO_MEMBER_WRAP(soinfoQ, phdr);
   SOINFO_MEMBER_WRAP(soinfoQ, phnum);
@@ -995,44 +1103,44 @@ static void InitApiQ() {
   SOINFO_MEMBER_WRAP(soinfoQ, size);
   SOINFO_MEMBER_WRAP(soinfoQ, dynamic);
   SOINFO_MEMBER_CAST_WRAP(soinfoQ, next, soinfo *);
-  SOINFO_MEMBER_REF_WRAP(soinfoQ, flags_);
+  SOINFO_MEMBER_WRAP(soinfoQ, flags_);
   SOINFO_MEMBER_WRAP(soinfoQ, strtab_);
   SOINFO_MEMBER_WRAP(soinfoQ, symtab_);
   SOINFO_MEMBER_WRAP(soinfoQ, nbucket_);
   SOINFO_MEMBER_WRAP(soinfoQ, nchain_);
-  SOINFO_MEMBER_VER_WRAP(soinfoQ, bucket_, M);
-  SOINFO_MEMBER_VER_WRAP(soinfoQ, chain_, M);
+  SOINFO_MEMBER_WRAP(soinfoQ, bucket_);
+  SOINFO_MEMBER_WRAP(soinfoQ, chain_);
 
 #ifndef __LP64__
   // __ANDROID_API_R__   unused4
   SOINFO_MEMBER_WRAP(soinfoQ, plt_got_);
 #endif
 #ifdef USE_RELA
-  SOINFO_MEMBER_REF_WRAP(soinfoQ, plt_rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoQ, plt_rela_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoQ, rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoQ, rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoQ, plt_rela_);
+  SOINFO_MEMBER_WRAP(soinfoQ, plt_rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoQ, rela_);
+  SOINFO_MEMBER_WRAP(soinfoQ, rela_count_);
 #else
-  SOINFO_MEMBER_REF_WRAP(soinfoQ, plt_rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoQ, plt_rel_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoQ, rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoQ, rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoQ, plt_rel_);
+  SOINFO_MEMBER_WRAP(soinfoQ, plt_rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoQ, rel_);
+  SOINFO_MEMBER_WRAP(soinfoQ, rel_count_);
 #endif
   SOINFO_MEMBER_VER_WRAP(soinfoQ, preinit_array_, P);
   SOINFO_MEMBER_WRAP(soinfoQ, preinit_array_count_);
   SOINFO_MEMBER_VER_WRAP(soinfoQ, init_array_, P);
   SOINFO_MEMBER_WRAP(soinfoQ, init_array_count_);
-  SOINFO_MEMBER_VER_WRAP(soinfoQ, fini_array_, P);
+  SOINFO_MEMBER_WRAP(soinfoQ, fini_array_);
   SOINFO_MEMBER_WRAP(soinfoQ, fini_array_count_);
   SOINFO_MEMBER_VER_WRAP(soinfoQ, init_func_, P);
-  SOINFO_MEMBER_VER_WRAP(soinfoQ, fini_func_, P);
+  SOINFO_MEMBER_WRAP(soinfoQ, fini_func_);
 
 #ifdef __arm__
   SOINFO_MEMBER_WRAP(soinfoQ, ARM_exidx);
   SOINFO_MEMBER_WRAP(soinfoQ, ARM_exidx_count);
 #endif
   SOINFO_MEMBER_WRAP(soinfoQ, ref_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoQ, link_map_head);
+  SOINFO_MEMBER_CONST_REF_WRAP(soinfoQ, link_map_head);
   SOINFO_MEMBER_WRAP(soinfoQ, constructors_called);
   SOINFO_MEMBER_WRAP(soinfoQ, load_bias);
 
@@ -1048,8 +1156,8 @@ static void InitApiQ() {
   SOINFO_MEMBER_REF_WRAP(soinfoQ, parents_);
 
   SOINFO_MEMBER_WRAP(soinfoQ, file_offset_);
-  SOINFO_MEMBER_REF_WRAP(soinfoQ, rtld_flags_);
-  SOINFO_MEMBER_REF_WRAP(soinfoQ, dt_flags_1_);
+  SOINFO_MEMBER_WRAP(soinfoQ, rtld_flags_);
+  SOINFO_MEMBER_WRAP(soinfoQ, dt_flags_1_);
   SOINFO_MEMBER_WRAP(soinfoQ, strtab_size_);
 
   SOINFO_MEMBER_WRAP(soinfoQ, gnu_nbucket_);
@@ -1070,8 +1178,8 @@ static void InitApiQ() {
   SOINFO_MEMBER_WRAP(soinfoQ, verneed_cnt_);
   SOINFO_MEMBER_WRAP(soinfoQ, target_sdk_version_);
 
-  SOINFO_MEMBER_REF_WRAP(soinfoQ, dt_runpath_);
-  SOINFO_MEMBER_REF_WRAP(soinfoQ, primary_namespace_);
+  SOINFO_MEMBER_CONST_REF_WRAP(soinfoQ, dt_runpath_);
+  SOINFO_MEMBER_WRAP(soinfoQ, primary_namespace_);
   SOINFO_MEMBER_REF_WRAP(soinfoQ, secondary_namespaces_);
   SOINFO_MEMBER_WRAP(soinfoQ, handle_);
 
@@ -1084,7 +1192,7 @@ static void InitApiQ() {
 
 static void InitApiP() {
 #ifdef __work_around_b_24465209__
-  SOINFO_MEMBER_WRAP(soinfoP, name_);
+  SOINFO_MEMBER_GET_WRAP(soinfoP, name_);
 #endif
   SOINFO_MEMBER_WRAP(soinfoP, phdr);
   SOINFO_MEMBER_WRAP(soinfoP, phnum);
@@ -1092,44 +1200,44 @@ static void InitApiP() {
   SOINFO_MEMBER_WRAP(soinfoP, size);
   SOINFO_MEMBER_WRAP(soinfoP, dynamic);
   SOINFO_MEMBER_CAST_WRAP(soinfoP, next, soinfo *);
-  SOINFO_MEMBER_REF_WRAP(soinfoP, flags_);
+  SOINFO_MEMBER_WRAP(soinfoP, flags_);
   SOINFO_MEMBER_WRAP(soinfoP, strtab_);
   SOINFO_MEMBER_WRAP(soinfoP, symtab_);
   SOINFO_MEMBER_WRAP(soinfoP, nbucket_);
   SOINFO_MEMBER_WRAP(soinfoP, nchain_);
-  SOINFO_MEMBER_VER_WRAP(soinfoP, bucket_, M);
-  SOINFO_MEMBER_VER_WRAP(soinfoP, chain_, M);
+  SOINFO_MEMBER_WRAP(soinfoP, bucket_);
+  SOINFO_MEMBER_WRAP(soinfoP, chain_);
 
 #ifndef __LP64__
   // __ANDROID_API_R__   unused4
   SOINFO_MEMBER_WRAP(soinfoP, plt_got_);
 #endif
 #ifdef USE_RELA
-  SOINFO_MEMBER_REF_WRAP(soinfoP, plt_rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoP, plt_rela_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoP, rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoP, rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoP, plt_rela_);
+  SOINFO_MEMBER_WRAP(soinfoP, plt_rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoP, rela_);
+  SOINFO_MEMBER_WRAP(soinfoP, rela_count_);
 #else
-  SOINFO_MEMBER_REF_WRAP(soinfoP, plt_rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoP, plt_rel_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoP, rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoP, rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoP, plt_rel_);
+  SOINFO_MEMBER_WRAP(soinfoP, plt_rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoP, rel_);
+  SOINFO_MEMBER_WRAP(soinfoP, rel_count_);
 #endif
   SOINFO_MEMBER_VER_WRAP(soinfoP, preinit_array_, P);
   SOINFO_MEMBER_WRAP(soinfoP, preinit_array_count_);
   SOINFO_MEMBER_VER_WRAP(soinfoP, init_array_, P);
   SOINFO_MEMBER_WRAP(soinfoP, init_array_count_);
-  SOINFO_MEMBER_VER_WRAP(soinfoP, fini_array_, P);
+  SOINFO_MEMBER_WRAP(soinfoP, fini_array_);
   SOINFO_MEMBER_WRAP(soinfoP, fini_array_count_);
   SOINFO_MEMBER_VER_WRAP(soinfoP, init_func_, P);
-  SOINFO_MEMBER_VER_WRAP(soinfoP, fini_func_, P);
+  SOINFO_MEMBER_WRAP(soinfoP, fini_func_);
 
 #ifdef __arm__
   SOINFO_MEMBER_WRAP(soinfoP, ARM_exidx);
   SOINFO_MEMBER_WRAP(soinfoP, ARM_exidx_count);
 #endif
   SOINFO_MEMBER_WRAP(soinfoP, ref_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoP, link_map_head);
+  SOINFO_MEMBER_CONST_REF_WRAP(soinfoP, link_map_head);
   SOINFO_MEMBER_WRAP(soinfoP, constructors_called);
   SOINFO_MEMBER_WRAP(soinfoP, load_bias);
 
@@ -1145,8 +1253,8 @@ static void InitApiP() {
   SOINFO_MEMBER_REF_WRAP(soinfoP, parents_);
 
   SOINFO_MEMBER_WRAP(soinfoP, file_offset_);
-  SOINFO_MEMBER_REF_WRAP(soinfoP, rtld_flags_);
-  SOINFO_MEMBER_REF_WRAP(soinfoP, dt_flags_1_);
+  SOINFO_MEMBER_WRAP(soinfoP, rtld_flags_);
+  SOINFO_MEMBER_WRAP(soinfoP, dt_flags_1_);
   SOINFO_MEMBER_WRAP(soinfoP, strtab_size_);
 
   SOINFO_MEMBER_WRAP(soinfoP, gnu_nbucket_);
@@ -1166,8 +1274,8 @@ static void InitApiP() {
   SOINFO_MEMBER_WRAP(soinfoP, verneed_ptr_);
   SOINFO_MEMBER_WRAP(soinfoP, verneed_cnt_);
   SOINFO_MEMBER_CAST_WRAP(soinfoP, target_sdk_version_, int);
-  SOINFO_MEMBER_REF_WRAP(soinfoP, dt_runpath_);
-  SOINFO_MEMBER_REF_WRAP(soinfoP, primary_namespace_);
+  SOINFO_MEMBER_CONST_REF_WRAP(soinfoP, dt_runpath_);
+  SOINFO_MEMBER_WRAP(soinfoP, primary_namespace_);
   SOINFO_MEMBER_REF_WRAP(soinfoP, secondary_namespaces_);
   SOINFO_MEMBER_WRAP(soinfoP, handle_);
 
@@ -1177,7 +1285,7 @@ static void InitApiP() {
 
 static void InitApiO() {
 #ifdef __work_around_b_24465209__
-  SOINFO_MEMBER_WRAP(soinfoO, name_);
+  SOINFO_MEMBER_GET_WRAP(soinfoO, name_);
 #endif
   SOINFO_MEMBER_WRAP(soinfoO, phdr);
   SOINFO_MEMBER_WRAP(soinfoO, phnum);
@@ -1185,28 +1293,28 @@ static void InitApiO() {
   SOINFO_MEMBER_WRAP(soinfoO, size);
   SOINFO_MEMBER_WRAP(soinfoO, dynamic);
   SOINFO_MEMBER_CAST_WRAP(soinfoO, next, soinfo *);
-  SOINFO_MEMBER_REF_WRAP(soinfoO, flags_);
+  SOINFO_MEMBER_WRAP(soinfoO, flags_);
   SOINFO_MEMBER_WRAP(soinfoO, strtab_);
   SOINFO_MEMBER_WRAP(soinfoO, symtab_);
   SOINFO_MEMBER_WRAP(soinfoO, nbucket_);
   SOINFO_MEMBER_WRAP(soinfoO, nchain_);
-  SOINFO_MEMBER_VER_WRAP(soinfoO, bucket_, M);
-  SOINFO_MEMBER_VER_WRAP(soinfoO, chain_, M);
+  SOINFO_MEMBER_WRAP(soinfoO, bucket_);
+  SOINFO_MEMBER_WRAP(soinfoO, chain_);
 
 #ifndef __LP64__
   // __ANDROID_API_R__   unused4
   SOINFO_MEMBER_WRAP(soinfoO, plt_got_);
 #endif
 #ifdef USE_RELA
-  SOINFO_MEMBER_REF_WRAP(soinfoO, plt_rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoO, plt_rela_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoO, rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoO, rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoO, plt_rela_);
+  SOINFO_MEMBER_WRAP(soinfoO, plt_rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoO, rela_);
+  SOINFO_MEMBER_WRAP(soinfoO, rela_count_);
 #else
-  SOINFO_MEMBER_REF_WRAP(soinfoO, plt_rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoO, plt_rel_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoO, rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoO, rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoO, plt_rel_);
+  SOINFO_MEMBER_WRAP(soinfoO, plt_rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoO, rel_);
+  SOINFO_MEMBER_WRAP(soinfoO, rel_count_);
 #endif
   SOINFO_MEMBER_WRAP(soinfoO, preinit_array_);
   SOINFO_MEMBER_WRAP(soinfoO, preinit_array_count_);
@@ -1222,7 +1330,7 @@ static void InitApiO() {
   SOINFO_MEMBER_WRAP(soinfoO, ARM_exidx_count);
 #endif
   SOINFO_MEMBER_WRAP(soinfoO, ref_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoO, link_map_head);
+  SOINFO_MEMBER_CONST_REF_WRAP(soinfoO, link_map_head);
   SOINFO_MEMBER_WRAP(soinfoO, constructors_called);
   SOINFO_MEMBER_WRAP(soinfoO, load_bias);
 
@@ -1238,8 +1346,8 @@ static void InitApiO() {
   SOINFO_MEMBER_REF_WRAP(soinfoO, parents_);
 
   SOINFO_MEMBER_WRAP(soinfoO, file_offset_);
-  SOINFO_MEMBER_REF_WRAP(soinfoO, rtld_flags_);
-  SOINFO_MEMBER_REF_WRAP(soinfoO, dt_flags_1_);
+  SOINFO_MEMBER_WRAP(soinfoO, rtld_flags_);
+  SOINFO_MEMBER_WRAP(soinfoO, dt_flags_1_);
   SOINFO_MEMBER_WRAP(soinfoO, strtab_size_);
 
   SOINFO_MEMBER_WRAP(soinfoO, gnu_nbucket_);
@@ -1260,15 +1368,15 @@ static void InitApiO() {
   SOINFO_MEMBER_WRAP(soinfoO, verneed_cnt_);
   SOINFO_MEMBER_CAST_WRAP(soinfoO, target_sdk_version_, int);
 
-  SOINFO_MEMBER_REF_WRAP(soinfoO, dt_runpath_);
-  SOINFO_MEMBER_REF_WRAP(soinfoO, primary_namespace_);
+  SOINFO_MEMBER_CONST_REF_WRAP(soinfoO, dt_runpath_);
+  SOINFO_MEMBER_WRAP(soinfoO, primary_namespace_);
   SOINFO_MEMBER_REF_WRAP(soinfoO, secondary_namespaces_);
   SOINFO_MEMBER_WRAP(soinfoO, handle_);
 }
 
 static void InitApiN1() {
 #ifdef __work_around_b_24465209__
-  SOINFO_MEMBER_WRAP(soinfoN1, name_);
+  SOINFO_MEMBER_GET_WRAP(soinfoN1, name_);
 #endif
   SOINFO_MEMBER_WRAP(soinfoN1, phdr);
   SOINFO_MEMBER_WRAP(soinfoN1, phnum);
@@ -1276,28 +1384,28 @@ static void InitApiN1() {
   SOINFO_MEMBER_WRAP(soinfoN1, size);
   SOINFO_MEMBER_WRAP(soinfoN1, dynamic);
   SOINFO_MEMBER_CAST_WRAP(soinfoN1, next, soinfo *);
-  SOINFO_MEMBER_REF_WRAP(soinfoN1, flags_);
+  SOINFO_MEMBER_WRAP(soinfoN1, flags_);
   SOINFO_MEMBER_WRAP(soinfoN1, strtab_);
   SOINFO_MEMBER_WRAP(soinfoN1, symtab_);
   SOINFO_MEMBER_WRAP(soinfoN1, nbucket_);
   SOINFO_MEMBER_WRAP(soinfoN1, nchain_);
-  SOINFO_MEMBER_VER_WRAP(soinfoN1, bucket_, M);
-  SOINFO_MEMBER_VER_WRAP(soinfoN1, chain_, M);
+  SOINFO_MEMBER_WRAP(soinfoN1, bucket_);
+  SOINFO_MEMBER_WRAP(soinfoN1, chain_);
 
 #ifndef __LP64__
   // __ANDROID_API_R__   unused4
   SOINFO_MEMBER_WRAP(soinfoN1, plt_got_);
 #endif
 #ifdef USE_RELA
-  SOINFO_MEMBER_REF_WRAP(soinfoN1, plt_rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoN1, plt_rela_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoN1, rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoN1, rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoN1, plt_rela_);
+  SOINFO_MEMBER_WRAP(soinfoN1, plt_rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoN1, rela_);
+  SOINFO_MEMBER_WRAP(soinfoN1, rela_count_);
 #else
-  SOINFO_MEMBER_REF_WRAP(soinfoN1, plt_rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoN1, plt_rel_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoN1, rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoN1, rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoN1, plt_rel_);
+  SOINFO_MEMBER_WRAP(soinfoN1, plt_rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoN1, rel_);
+  SOINFO_MEMBER_WRAP(soinfoN1, rel_count_);
 #endif
   SOINFO_MEMBER_WRAP(soinfoN1, preinit_array_);
   SOINFO_MEMBER_WRAP(soinfoN1, preinit_array_count_);
@@ -1313,7 +1421,7 @@ static void InitApiN1() {
   SOINFO_MEMBER_WRAP(soinfoN1, ARM_exidx_count);
 #endif
   SOINFO_MEMBER_WRAP(soinfoN1, ref_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoN1, link_map_head);
+  SOINFO_MEMBER_CONST_REF_WRAP(soinfoN1, link_map_head);
   SOINFO_MEMBER_WRAP(soinfoN1, constructors_called);
   SOINFO_MEMBER_WRAP(soinfoN1, load_bias);
 
@@ -1329,8 +1437,8 @@ static void InitApiN1() {
   SOINFO_MEMBER_REF_WRAP(soinfoN1, parents_);
 
   SOINFO_MEMBER_WRAP(soinfoN1, file_offset_);
-  SOINFO_MEMBER_REF_WRAP(soinfoN1, rtld_flags_);
-  SOINFO_MEMBER_REF_WRAP(soinfoN1, dt_flags_1_);
+  SOINFO_MEMBER_WRAP(soinfoN1, rtld_flags_);
+  SOINFO_MEMBER_WRAP(soinfoN1, dt_flags_1_);
   SOINFO_MEMBER_WRAP(soinfoN1, strtab_size_);
 
   SOINFO_MEMBER_WRAP(soinfoN1, gnu_nbucket_);
@@ -1351,15 +1459,15 @@ static void InitApiN1() {
   SOINFO_MEMBER_WRAP(soinfoN1, verneed_cnt_);
   SOINFO_MEMBER_CAST_WRAP(soinfoN1, target_sdk_version_, int);
 
-  SOINFO_MEMBER_REF_WRAP(soinfoN1, dt_runpath_);
-  SOINFO_MEMBER_REF_WRAP(soinfoN1, primary_namespace_);
+  SOINFO_MEMBER_CONST_REF_WRAP(soinfoN1, dt_runpath_);
+  SOINFO_MEMBER_WRAP(soinfoN1, primary_namespace_);
   SOINFO_MEMBER_REF_WRAP(soinfoN1, secondary_namespaces_);
   SOINFO_MEMBER_WRAP(soinfoN1, handle_);
 }
 
 static void InitApiN() {
 #ifdef __work_around_b_24465209__
-  SOINFO_MEMBER_WRAP(soinfoN, name_);
+  SOINFO_MEMBER_GET_WRAP(soinfoN, name_);
 #endif
   SOINFO_MEMBER_WRAP(soinfoN, phdr);
   SOINFO_MEMBER_WRAP(soinfoN, phnum);
@@ -1367,28 +1475,28 @@ static void InitApiN() {
   SOINFO_MEMBER_WRAP(soinfoN, size);
   SOINFO_MEMBER_WRAP(soinfoN, dynamic);
   SOINFO_MEMBER_CAST_WRAP(soinfoN, next, soinfo *);
-  SOINFO_MEMBER_REF_WRAP(soinfoN, flags_);
+  SOINFO_MEMBER_WRAP(soinfoN, flags_);
   SOINFO_MEMBER_WRAP(soinfoN, strtab_);
   SOINFO_MEMBER_WRAP(soinfoN, symtab_);
   SOINFO_MEMBER_WRAP(soinfoN, nbucket_);
   SOINFO_MEMBER_WRAP(soinfoN, nchain_);
-  SOINFO_MEMBER_VER_WRAP(soinfoN, bucket_, M);
-  SOINFO_MEMBER_VER_WRAP(soinfoN, chain_, M);
+  SOINFO_MEMBER_WRAP(soinfoN, bucket_);
+  SOINFO_MEMBER_WRAP(soinfoN, chain_);
 
 #ifndef __LP64__
   // __ANDROID_API_R__   unused4
   SOINFO_MEMBER_WRAP(soinfoN, plt_got_);
 #endif
 #ifdef USE_RELA
-  SOINFO_MEMBER_REF_WRAP(soinfoN, plt_rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoN, plt_rela_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoN, rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoN, rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoN, plt_rela_);
+  SOINFO_MEMBER_WRAP(soinfoN, plt_rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoN, rela_);
+  SOINFO_MEMBER_WRAP(soinfoN, rela_count_);
 #else
-  SOINFO_MEMBER_REF_WRAP(soinfoN, plt_rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoN, plt_rel_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoN, rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoN, rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoN, plt_rel_);
+  SOINFO_MEMBER_WRAP(soinfoN, plt_rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoN, rel_);
+  SOINFO_MEMBER_WRAP(soinfoN, rel_count_);
 #endif
   SOINFO_MEMBER_WRAP(soinfoN, preinit_array_);
   SOINFO_MEMBER_WRAP(soinfoN, preinit_array_count_);
@@ -1404,7 +1512,7 @@ static void InitApiN() {
   SOINFO_MEMBER_WRAP(soinfoN, ARM_exidx_count);
 #endif
   SOINFO_MEMBER_WRAP(soinfoN, ref_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoN, link_map_head);
+  SOINFO_MEMBER_CONST_REF_WRAP(soinfoN, link_map_head);
   SOINFO_MEMBER_WRAP(soinfoN, constructors_called);
   SOINFO_MEMBER_WRAP(soinfoN, load_bias);
 
@@ -1419,8 +1527,8 @@ static void InitApiN() {
   SOINFO_MEMBER_REF_WRAP(soinfoN, parents_);
 
   SOINFO_MEMBER_WRAP(soinfoN, file_offset_);
-  SOINFO_MEMBER_REF_WRAP(soinfoN, rtld_flags_);
-  SOINFO_MEMBER_REF_WRAP(soinfoN, dt_flags_1_);
+  SOINFO_MEMBER_WRAP(soinfoN, rtld_flags_);
+  SOINFO_MEMBER_WRAP(soinfoN, dt_flags_1_);
   SOINFO_MEMBER_WRAP(soinfoN, strtab_size_);
 
   SOINFO_MEMBER_WRAP(soinfoN, gnu_nbucket_);
@@ -1441,15 +1549,15 @@ static void InitApiN() {
   SOINFO_MEMBER_WRAP(soinfoN, verneed_cnt_);
   SOINFO_MEMBER_CAST_WRAP(soinfoN, target_sdk_version_, int);
 
-  SOINFO_MEMBER_REF_WRAP(soinfoN, dt_runpath_);
-  SOINFO_MEMBER_REF_WRAP(soinfoN, primary_namespace_);
+  SOINFO_MEMBER_CONST_REF_WRAP(soinfoN, dt_runpath_);
+  SOINFO_MEMBER_WRAP(soinfoN, primary_namespace_);
   SOINFO_MEMBER_REF_WRAP(soinfoN, secondary_namespaces_);
   SOINFO_MEMBER_WRAP(soinfoN, handle_);
 }
 
 static void InitApiM() {
 #ifdef __work_around_b_24465209__
-  SOINFO_MEMBER_WRAP(soinfoM, name_);
+  SOINFO_MEMBER_GET_WRAP(soinfoM, name_);
 #endif
   SOINFO_MEMBER_WRAP(soinfoM, phdr);
   SOINFO_MEMBER_WRAP(soinfoM, phnum);
@@ -1457,28 +1565,29 @@ static void InitApiM() {
   SOINFO_MEMBER_WRAP(soinfoM, size);
   SOINFO_MEMBER_WRAP(soinfoM, dynamic);
   SOINFO_MEMBER_CAST_WRAP(soinfoM, next, soinfo *);
-  SOINFO_MEMBER_REF_WRAP(soinfoM, flags_);
+  SOINFO_MEMBER_WRAP(soinfoM, flags_);
   SOINFO_MEMBER_WRAP(soinfoM, strtab_);
   SOINFO_MEMBER_WRAP(soinfoM, symtab_);
   SOINFO_MEMBER_WRAP(soinfoM, nbucket_);
   SOINFO_MEMBER_WRAP(soinfoM, nchain_);
-  SOINFO_MEMBER_VER_WRAP(soinfoM, bucket_, M);
-  SOINFO_MEMBER_VER_WRAP(soinfoM, chain_, M);
+  SOINFO_MEMBER_WRAP(soinfoM, bucket_);
+  SOINFO_MEMBER_WRAP(soinfoM, chain_);
+
 
 #ifndef __LP64__
   // __ANDROID_API_R__   unused4
   SOINFO_MEMBER_WRAP(soinfoM, plt_got_);
 #endif
 #ifdef USE_RELA
-  SOINFO_MEMBER_REF_WRAP(soinfoM, plt_rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoM, plt_rela_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoM, rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoM, rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoM, plt_rela_);
+  SOINFO_MEMBER_WRAP(soinfoM, plt_rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoM, rela_);
+  SOINFO_MEMBER_WRAP(soinfoM, rela_count_);
 #else
-  SOINFO_MEMBER_REF_WRAP(soinfoM, plt_rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoM, plt_rel_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoM, rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoM, rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoM, plt_rel_);
+  SOINFO_MEMBER_WRAP(soinfoM, plt_rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoM, rel_);
+  SOINFO_MEMBER_WRAP(soinfoM, rel_count_);
 #endif
   SOINFO_MEMBER_WRAP(soinfoM, preinit_array_);
   SOINFO_MEMBER_WRAP(soinfoM, preinit_array_count_);
@@ -1494,7 +1603,7 @@ static void InitApiM() {
   SOINFO_MEMBER_WRAP(soinfoM, ARM_exidx_count);
 #endif
   SOINFO_MEMBER_WRAP(soinfoM, ref_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoM, link_map_head);
+  SOINFO_MEMBER_CONST_REF_WRAP(soinfoM, link_map_head);
   SOINFO_MEMBER_WRAP(soinfoM, constructors_called);
   SOINFO_MEMBER_WRAP(soinfoM, load_bias);
 
@@ -1510,8 +1619,8 @@ static void InitApiM() {
   SOINFO_MEMBER_REF_WRAP(soinfoM, parents_);
 
   SOINFO_MEMBER_WRAP(soinfoM, file_offset_);
-  SOINFO_MEMBER_REF_WRAP(soinfoM, rtld_flags_);
-  SOINFO_MEMBER_REF_WRAP(soinfoM, dt_flags_1_);
+  SOINFO_MEMBER_WRAP(soinfoM, rtld_flags_);
+  SOINFO_MEMBER_WRAP(soinfoM, dt_flags_1_);
   SOINFO_MEMBER_WRAP(soinfoM, strtab_size_);
 
   SOINFO_MEMBER_WRAP(soinfoM, gnu_nbucket_);
@@ -1534,14 +1643,14 @@ static void InitApiM() {
 }
 
 static void InitApiL1() {
-  SOINFO_MEMBER_WRAP(soinfoL1, name_);
+  SOINFO_MEMBER_GET_WRAP(soinfoL1, name_);
   SOINFO_MEMBER_WRAP(soinfoL1, phdr);
   SOINFO_MEMBER_WRAP(soinfoL1, phnum);
   SOINFO_MEMBER_WRAP(soinfoL1, base);
   SOINFO_MEMBER_WRAP(soinfoL1, size);
   SOINFO_MEMBER_WRAP(soinfoL1, dynamic);
   SOINFO_MEMBER_CAST_WRAP(soinfoL1, next, soinfo *);
-  SOINFO_MEMBER_REF_WRAP(soinfoL1, flags_);
+  SOINFO_MEMBER_WRAP(soinfoL1, flags_);
   SOINFO_MEMBER_WRAP(soinfoL1, strtab_);
   SOINFO_MEMBER_WRAP(soinfoL1, symtab_);
   SOINFO_MEMBER_WRAP(soinfoL1, nbucket_);
@@ -1554,15 +1663,15 @@ static void InitApiL1() {
   SOINFO_MEMBER_WRAP(soinfoL1, plt_got_);
 #endif
 #ifdef USE_RELA
-  SOINFO_MEMBER_REF_WRAP(soinfoL1, plt_rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoL1, plt_rela_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoL1, rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoL1, rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoL1, plt_rela_);
+  SOINFO_MEMBER_WRAP(soinfoL1, plt_rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoL1, rela_);
+  SOINFO_MEMBER_WRAP(soinfoL1, rela_count_);
 #else
-  SOINFO_MEMBER_REF_WRAP(soinfoL1, plt_rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoL1, plt_rel_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoL1, rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoL1, rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoL1, plt_rel_);
+  SOINFO_MEMBER_WRAP(soinfoL1, plt_rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoL1, rel_);
+  SOINFO_MEMBER_WRAP(soinfoL1, rel_count_);
 #endif
   SOINFO_MEMBER_WRAP(soinfoL1, preinit_array_);
   SOINFO_MEMBER_WRAP(soinfoL1, preinit_array_count_);
@@ -1578,7 +1687,7 @@ static void InitApiL1() {
   SOINFO_MEMBER_WRAP(soinfoL1, ARM_exidx_count);
 #endif
   SOINFO_MEMBER_WRAP(soinfoL1, ref_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoL1, link_map_head);
+  SOINFO_MEMBER_CONST_REF_WRAP(soinfoL1, link_map_head);
   SOINFO_MEMBER_WRAP(soinfoL1, constructors_called);
   SOINFO_MEMBER_WRAP(soinfoL1, load_bias);
 
@@ -1593,7 +1702,7 @@ static void InitApiL1() {
   SOINFO_MEMBER_REF_WRAP(soinfoL1, parents_);
 
   SOINFO_MEMBER_WRAP(soinfoL1, file_offset_);
-  SOINFO_MEMBER_REF_VER_WRAP(soinfoL1, rtld_flags_, L);
+  SOINFO_MEMBER_VER_WRAP(soinfoL1, rtld_flags_, L);
   SOINFO_MEMBER_NULL(soinfoL1, dt_flags_1_);
   SOINFO_MEMBER_WRAP(soinfoL1, strtab_size_);
 
@@ -1619,14 +1728,14 @@ static void InitApiL1() {
 }
 
 static void InitApiL() {
-  SOINFO_MEMBER_WRAP(soinfoL, name_);
+  SOINFO_MEMBER_GET_WRAP(soinfoL, name_);
   SOINFO_MEMBER_WRAP(soinfoL, phdr);
   SOINFO_MEMBER_WRAP(soinfoL, phnum);
   SOINFO_MEMBER_WRAP(soinfoL, base);
   SOINFO_MEMBER_WRAP(soinfoL, size);
   SOINFO_MEMBER_WRAP(soinfoL, dynamic);
   SOINFO_MEMBER_CAST_WRAP(soinfoL, next, soinfo *);
-  SOINFO_MEMBER_REF_WRAP(soinfoL, flags_);
+  SOINFO_MEMBER_WRAP(soinfoL, flags_);
   SOINFO_MEMBER_WRAP(soinfoL, strtab_);
   SOINFO_MEMBER_WRAP(soinfoL, symtab_);
   SOINFO_MEMBER_WRAP(soinfoL, nbucket_);
@@ -1639,15 +1748,15 @@ static void InitApiL() {
   SOINFO_MEMBER_WRAP(soinfoL, plt_got_);
 #endif
 #ifdef USE_RELA
-  SOINFO_MEMBER_REF_WRAP(soinfoL, plt_rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoL, plt_rela_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoL, rela_);
-  SOINFO_MEMBER_REF_WRAP(soinfoL, rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoL, plt_rela_);
+  SOINFO_MEMBER_WRAP(soinfoL, plt_rela_count_);
+  SOINFO_MEMBER_WRAP(soinfoL, rela_);
+  SOINFO_MEMBER_WRAP(soinfoL, rela_count_);
 #else
-  SOINFO_MEMBER_REF_WRAP(soinfoL, plt_rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoL, plt_rel_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoL, rel_);
-  SOINFO_MEMBER_REF_WRAP(soinfoL, rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoL, plt_rel_);
+  SOINFO_MEMBER_WRAP(soinfoL, plt_rel_count_);
+  SOINFO_MEMBER_WRAP(soinfoL, rel_);
+  SOINFO_MEMBER_WRAP(soinfoL, rel_count_);
 #endif
   SOINFO_MEMBER_WRAP(soinfoL, preinit_array_);
   SOINFO_MEMBER_WRAP(soinfoL, preinit_array_count_);
@@ -1663,7 +1772,7 @@ static void InitApiL() {
   SOINFO_MEMBER_WRAP(soinfoL, ARM_exidx_count);
 #endif
   SOINFO_MEMBER_WRAP(soinfoL, ref_count_);
-  SOINFO_MEMBER_REF_WRAP(soinfoL, link_map_head);
+  SOINFO_MEMBER_CONST_REF_WRAP(soinfoL, link_map_head);
   SOINFO_MEMBER_WRAP(soinfoL, constructors_called);
   SOINFO_MEMBER_WRAP(soinfoL, load_bias);
 
@@ -1709,6 +1818,64 @@ static void InitCommon() {
     }
     return funTable.name_(thiz);
   };
+
+  funTable.set_soname_ = [](soinfo *thiz, const char *name) {
+    if (android_api >= __ANDROID_API_V__) {
+      static_cast<soinfoV *>(thiz)->soname_ = name;
+    } else if (android_api >= __ANDROID_API_U__) {
+      static_cast<soinfoU *>(thiz)->soname_ = name;
+    } else if (android_api >= __ANDROID_API_T__) {
+      static_cast<soinfoT *>(thiz)->soname_ = name;
+    } else if (android_api >= __ANDROID_API_S__) {
+      static_cast<soinfoS *>(thiz)->soname_ = name;
+    } else if (android_api >= __ANDROID_API_Q__) {
+      static_cast<soinfoQ *>(thiz)->soname_ = strdup(name);
+    } else if (android_api >= __ANDROID_API_P__) {
+      static_cast<soinfoP *>(thiz)->soname_ = strdup(name);
+    } else if (android_api >= __ANDROID_API_O__) {
+      static_cast<soinfoO *>(thiz)->soname_ = strdup(name);
+    } else if (android_api >= __ANDROID_API_N_MR1__) {
+      static_cast<soinfoN1 *>(thiz)->soname_ = strdup(name);
+    } else if (android_api >= __ANDROID_API_N__) {
+      static_cast<soinfoN *>(thiz)->soname_ = strdup(name);
+    } else if (android_api >= __ANDROID_API_M__) {
+      static_cast<soinfoM *>(thiz)->soname_ = strdup(name);
+    } else if (android_api >= __ANDROID_API_L_MR1__) {
+      char *ptr = static_cast<soinfoL1 *>(thiz)->name_;
+      memcpy(ptr, name, std::min(strlen(name) + 1, static_cast<size_t>(SOINFO_NAME_LEN)));
+    } else {
+      char *ptr = static_cast<soinfoL *>(thiz)->name_;
+      memcpy(ptr, name, std::min(strlen(name) + 1, static_cast<size_t>(SOINFO_NAME_LEN)));
+    }
+  };
+
+  funTable.soinfo_minimum_size = [](soinfo *thiz) {
+    if (android_api >= __ANDROID_API_V__) {
+      return sizeof(soinfoV);
+    } else if (android_api >= __ANDROID_API_U__) {
+      return sizeof(soinfoU);
+    } else if (android_api >= __ANDROID_API_T__) {
+      return sizeof(soinfoT);
+    } else if (android_api >= __ANDROID_API_S__) {
+      return sizeof(soinfoS);
+    } else if (android_api >= __ANDROID_API_Q__) {
+      return sizeof(soinfoQ);
+    } else if (android_api >= __ANDROID_API_P__) {
+      return sizeof(soinfoP);
+    } else if (android_api >= __ANDROID_API_O__) {
+      return sizeof(soinfoO);
+    } else if (android_api >= __ANDROID_API_N_MR1__) {
+      return sizeof(soinfoN1);
+    } else if (android_api >= __ANDROID_API_N__) {
+      return sizeof(soinfoN);
+    } else if (android_api >= __ANDROID_API_M__) {
+      return sizeof(soinfoM);
+    } else if (android_api >= __ANDROID_API_L_MR1__) {
+      return sizeof(soinfoL);
+    } else {
+      return sizeof(soinfoL);
+    }
+  };
 }
 
 void soinfo::Init() {
@@ -1745,15 +1912,34 @@ void soinfo::Init() {
   InitCommon();
 }
 
-#define DECL_SOINFO_CALL(Name)                                                                                         \
-  return_type_trait<member_type_trait<decltype(&SoinfoFunTable::Name)>::type>::type soinfo::Name() {                   \
+#define DECL_SOINFO_GET_CALL(Name)                                                                                     \
+  return_type_trait_t<member_type_trait_t<decltype(&SoinfoFunTable::Name)>> soinfo::Name() {                           \
     return funTable.Name(this);                                                                                        \
   }
 
-#define DECL_SOINFO_CALL_(Name)                                                                                        \
-  return_type_trait<member_type_trait<decltype(&SoinfoFunTable::Name##_)>::type>::type soinfo::Name() {                \
+#define DECL_SOINFO_SET_CALL(Name)                                                                                     \
+  void soinfo::set_##Name(return_type_trait_t<member_type_trait_t<decltype(&SoinfoFunTable::Name)>> value) {           \
+    return funTable.set_##Name(this, value);                                                                           \
+  }
+
+#define DECL_SOINFO_CALL(Name)                                                                                         \
+  DECL_SOINFO_GET_CALL(Name);                                                                                          \
+  DECL_SOINFO_SET_CALL(Name)
+
+#define DECL_SOINFO_GET_CALL_(Name)                                                                                    \
+  return_type_trait_t<member_type_trait_t<decltype(&SoinfoFunTable::Name##_)>> soinfo::Name() {                        \
     return funTable.Name##_(this);                                                                                     \
   }
+
+#define DECL_SOINFO_SET_CALL_(Name)                                                                                    \
+  void soinfo::set_##Name(return_type_trait_t<member_type_trait_t<decltype(&SoinfoFunTable::Name##_)>> value) {        \
+    return funTable.set_##Name##_(this, value);                                                                        \
+  }
+
+#define DECL_SOINFO_CALL_(Name)                                                                                        \
+  DECL_SOINFO_GET_CALL_(Name);                                                                                         \
+  DECL_SOINFO_SET_CALL_(Name)
+
 
 DECL_SOINFO_CALL(phdr);
 
@@ -1779,11 +1965,8 @@ DECL_SOINFO_CALL_(nchain);
 
 DECL_SOINFO_CALL_(bucket);
 
-DECL_SOINFO_CALL(bucket_M);
-
 DECL_SOINFO_CALL_(chain);
 
-DECL_SOINFO_CALL(chain_M);
 
 #ifndef __LP64__
 
@@ -1821,8 +2004,6 @@ DECL_SOINFO_CALL_(init_array_count);
 
 DECL_SOINFO_CALL_(fini_array);
 
-DECL_SOINFO_CALL(fini_array_P);
-
 DECL_SOINFO_CALL_(fini_array_count);
 
 DECL_SOINFO_CALL_(init_func);
@@ -1831,7 +2012,6 @@ DECL_SOINFO_CALL(init_func_P);
 
 DECL_SOINFO_CALL_(fini_func);
 
-DECL_SOINFO_CALL(fini_func_P);
 
 #ifdef __arm__
 DECL_SOINFO_CALL(ARM_exidx);
@@ -1865,7 +2045,7 @@ DECL_SOINFO_CALL_(rtld_flags);
 
 DECL_SOINFO_CALL(rtld_flags_L);
 
-DECL_SOINFO_CALL_(dt_flags_1);
+DECL_SOINFO_GET_CALL_(dt_flags_1);
 
 DECL_SOINFO_CALL_(strtab_size);
 
@@ -1903,7 +2083,9 @@ DECL_SOINFO_CALL_(verneed_cnt);
 
 DECL_SOINFO_CALL_(target_sdk_version);
 
-DECL_SOINFO_CALL_(dt_runpath);
+DECL_SOINFO_GET_CALL_(dt_runpath);
+
+void soinfo::set_dt_runpath(std::vector<std::string> &value) { return funTable.set_dt_runpath_(this, value); }
 
 DECL_SOINFO_CALL_(primary_namespace);
 
@@ -1913,20 +2095,92 @@ DECL_SOINFO_CALL_(relr);
 
 DECL_SOINFO_CALL_(relr_count);
 
-DECL_SOINFO_CALL_(tls);
+DECL_SOINFO_GET_CALL_(tls);
 
-DECL_SOINFO_CALL_(tlsdesc_args);
+void soinfo::set_tls(std::unique_ptr<soinfo_tls> tls) { funTable.set_tls_(this, std::move(tls)); }
+
+DECL_SOINFO_GET_CALL_(tlsdesc_args);
+
+void soinfo::set_tlsdesc_args(std::vector<TlsDynamicResolverArg> &tlsdesc_args) {
+  funTable.set_tlsdesc_args_(this, tlsdesc_args);
+}
 
 DECL_SOINFO_CALL_(gap_start);
 
 DECL_SOINFO_CALL_(gap_size);
 
-DECL_SOINFO_CALL(get_soname);
+DECL_SOINFO_GET_CALL(get_soname);
 
+DECL_SOINFO_GET_CALL(soinfo_minimum_size);
+
+#undef DECL_SOINFO_GET_CALL
+#undef DECL_SOINFO_SET_CALL
+#undef DECL_SOINFO_GET_CALL_
+#undef DECL_SOINFO_SET_CALL_
 #undef DECL_SOINFO_CALL
 #undef DECL_SOINFO_CALL_
 
 //****************************************/
+
+void **soinfo::get_preinit_array_wrapper() {
+  if (android_api >= __ANDROID_API_P__) {
+    return reinterpret_cast<void **>(preinit_array_P());
+  } else {
+    return reinterpret_cast<void **>(preinit_array());
+  }
+}
+
+void soinfo::set_preinit_array_wrapper(void **preinit_array) {
+  if (android_api >= __ANDROID_API_P__) {
+    set_preinit_array_P(reinterpret_cast<linker_ctor_function_t *>(preinit_array));
+  } else {
+    set_preinit_array(reinterpret_cast<linker_function_t *>(preinit_array));
+  }
+}
+
+void **soinfo::get_init_array_wrapper() {
+  if (android_api >= __ANDROID_API_P__) {
+    return reinterpret_cast<void **>(init_array_P());
+  } else {
+    return reinterpret_cast<void **>(init_array());
+  }
+}
+
+void soinfo::set_init_array_wrapper(void **init_array) {
+  if (android_api >= __ANDROID_API_P__) {
+    set_init_array_P(reinterpret_cast<linker_ctor_function_t *>(init_array));
+  } else {
+    set_init_array(reinterpret_cast<linker_function_t *>(init_array));
+  }
+}
+
+void *soinfo::get_init_func_wrapper() {
+  if (android_api >= __ANDROID_API_P__) {
+    return reinterpret_cast<void *>(init_func_P());
+  } else {
+    return reinterpret_cast<void *>(init_func());
+  }
+}
+
+void soinfo::set_init_func_wrapper(void *init_func) {
+  if (android_api >= __ANDROID_API_P__) {
+    set_init_func_P(reinterpret_cast<linker_ctor_function_t>(init_func));
+  } else {
+    set_init_func(reinterpret_cast<linker_function_t>(init_func));
+  }
+}
+
+memtag_dynamic_entries_t *soinfo::memtag_dynamic_entries() const {
+#ifdef __aarch64__
+#ifdef __work_around_b_24465209__
+  return nullptr;
+#endif
+  if (android_api >= __ANDROID_API_V__) {
+    return const_cast<memtag_dynamic_entries_t *>(&static_cast<const soinfoV *>(this)->memtag_dynamic_entries_);
+  }
+#endif
+  return nullptr;
+}
 
 ElfW(Addr) soinfo::resolve_symbol_address(const ElfW(Sym) * s) {
   if (ELF_ST_TYPE(s->st_info) == STT_GNU_IFUNC) {
@@ -1947,6 +2201,11 @@ bool soinfo::has_min_version(uint32_t min_version) {
 }
 
 ANDROID_GE_M const ElfW(Versym) * soinfo::get_versym_table() { return has_min_version(2) ? versym() : nullptr; }
+
+const ElfW(Versym) * soinfo::get_versym(size_t n) {
+  auto table = get_versym_table();
+  return table ? table + n : nullptr;
+}
 
 const char *soinfo::get_string(ElfW(Word) index) {
   if (has_min_version(1)) {
@@ -1999,27 +2258,21 @@ void soinfo::set_dt_flags_1(uint32_t flag) {
     // 标志,这会导致在全局库中使用dlsym无法查找到符号
     if (android_api >= __ANDROID_API_N__) {
       if ((dt_flags_1() & DF_1_GLOBAL) != 0) {
-        rtld_flags() |= RTLD_GLOBAL;
+        set_rtld_flags(rtld_flags() | RTLD_GLOBAL);
       }
     }
     if ((dt_flags_1() & DF_1_NODELETE) != 0) {
-      rtld_flags() |= RTLD_NODELETE;
+      set_rtld_flags(rtld_flags() | RTLD_NODELETE);
     }
-    dt_flags_1() = flag;
+    funTable.set_dt_flags_1_(this, flag);
   }
 }
 
 bool soinfo::is_linked() { return (flags() & FLAG_LINKED) != 0; }
 
-void soinfo::set_linked() {
-  flags() |= FLAG_LINKED;
-  flags() |= FLAG_IMAGE_LINKED;
-}
+void soinfo::set_linked() { set_flags(flags() | FLAG_LINKED | FLAG_IMAGE_LINKED); }
 
-void soinfo::set_unlinked() {
-  flags() &= ~FLAG_LINKED;
-  flags() &= ~FLAG_IMAGE_LINKED;
-}
+void soinfo::set_unlinked() { set_flags(flags() & !(FLAG_LINKED | FLAG_IMAGE_LINKED)); }
 
 bool soinfo::is_gnu_hash() { return (flags() & FLAG_GNU_HASH) != 0; }
 
@@ -2030,6 +2283,50 @@ void *soinfo::find_export_symbol_address(const char *name) {
     return reinterpret_cast<void *>(resolve_symbol_address(sym));
   }
   return nullptr;
+}
+
+void *soinfo::find_export_symbol_by_prefix(const char *name) {
+  uint32_t start = 0;
+  uint32_t end;
+  if (is_gnu_hash()) {
+    // gnu查找符号数量是chain中最后一个数 & 1 == 1
+    // max(bucket)while ((chain[ix - symoffset] & 1) == 0) ix++;
+    std::tie(start, end) = get_export_symbol_gnu_table_size();
+  } else {
+    // elf hash 表没有对内部符号和外部符号排序
+    end = nchain();
+  }
+
+  auto find_global = [](ElfW(Sym) & s) {
+    if (s.st_shndx == SHN_UNDEF || ELF_ST_BIND(s.st_info) != STB_GLOBAL) {
+      return false;
+    }
+    char visiable = s.st_other & 3;
+    if (visiable == STV_HIDDEN || visiable == STV_INTERNAL) {
+      return false;
+    }
+    return true;
+  };
+  if (end < start) {
+    return nullptr;
+  }
+
+  for (uint32_t i = start; i <= end; ++i) {
+    ElfW(Sym) sym = symtab()[i];
+    if (!find_global(sym)) {
+      continue;
+    }
+    const char *symbol_name = get_string(sym.st_name);
+    if (strstr(symbol_name, name) == symbol_name) {
+      return reinterpret_cast<void *>(resolve_symbol_address(&sym));
+    }
+  }
+  return nullptr;
+}
+
+void *soinfo::find_export_symbol_by_index(size_t index) {
+  // 无法判断有效性
+  return reinterpret_cast<void *>(resolve_symbol_address(symtab() + index));
 }
 
 const ElfW(Sym) * soinfo::find_export_symbol_by_name(SymbolName &symbol_name, const version_info *vi) {
@@ -2107,26 +2404,14 @@ const ElfW(Sym) * soinfo::elf_lookup(SymbolName &symbol_name, const version_info
   const ElfW(Versym) verneed = find_verdef_version_index(this, vi);
   const ElfW(Versym) *versym = get_versym_table();
 
-  if (android_api >= 23) {
-    for (uint32_t n = bucket_M()[hash % nbucket()]; n != 0; n = chain_M()[n]) {
-      ElfW(Sym) *s = symtab() + n;
+  for (uint32_t n = bucket()[hash % nbucket()]; n != 0; n = chain()[n]) {
+    ElfW(Sym) *s = symtab() + n;
 
-      if (check_symbol_version(versym, n, verneed) && strcmp(get_string(s->st_name), symbol_name.get_name()) == 0 &&
-          is_symbol_global_and_defined(this, s)) {
-        return symtab() + n;
-      }
-    }
-  } else {
-    for (uint32_t n = bucket()[hash % nbucket()]; n != 0; n = chain()[n]) {
-      ElfW(Sym) *s = symtab() + n;
-
-      if (check_symbol_version(versym, n, verneed) && strcmp(get_string(s->st_name), symbol_name.get_name()) == 0 &&
-          is_symbol_global_and_defined(this, s)) {
-        return symtab() + n;
-      }
+    if (check_symbol_version(versym, n, verneed) && strcmp(get_string(s->st_name), symbol_name.get_name()) == 0 &&
+        is_symbol_global_and_defined(this, s)) {
+      return symtab() + n;
     }
   }
-
   return nullptr;
 }
 
@@ -2150,7 +2435,7 @@ size_t soinfo::get_symbols_count() {
   return nchain() + 1;
 }
 
-symbol_relocations soinfo::get_global_soinfo_export_symbols() {
+symbol_relocations soinfo::get_global_soinfo_export_symbols(bool only_func) {
   uint32_t start = 0;
   uint32_t end;
   ElfW(Sym) sym;
@@ -2166,8 +2451,18 @@ symbol_relocations soinfo::get_global_soinfo_export_symbols() {
     end = nchain();
   }
 
-  auto find_global = [](ElfW(Sym) & s) {
-    return s.st_shndx != SHN_UNDEF && ELF_ST_BIND(s.st_info) == STB_GLOBAL && ELF_ST_TYPE(s.st_info) == STT_FUNC;
+  auto find_global = [only_func](ElfW(Sym) & s) {
+    if (s.st_shndx == SHN_UNDEF || ELF_ST_BIND(s.st_info) != STB_GLOBAL) {
+      return false;
+    }
+    char visiable = s.st_other & 3;
+    if (visiable == STV_HIDDEN || visiable == STV_INTERNAL) {
+      return false;
+    }
+    if (only_func) {
+      return ELF_ST_TYPE(s.st_info) == STT_FUNC;
+    }
+    return true;
   };
   if (end < start) {
     return result;
@@ -2183,8 +2478,8 @@ symbol_relocations soinfo::get_global_soinfo_export_symbols() {
   return result;
 }
 
-symbol_relocations soinfo::get_global_soinfo_export_symbols(const std::vector<std::string> &filters) {
-  symbol_relocations symbols = get_global_soinfo_export_symbols();
+symbol_relocations soinfo::get_global_soinfo_export_symbols(bool only_func, const std::vector<std::string> &filters) {
+  symbol_relocations symbols = get_global_soinfo_export_symbols(only_func);
   if (symbols.empty() || filters.empty()) {
     return symbols;
   }
@@ -2226,13 +2521,31 @@ bool soinfo::again_process_relocation(symbol_relocations &rels) {
 }
 
 ElfW(Addr) soinfo::get_verdef_ptr() {
-  CHECK(android_api >= __ANDROID_API_M__);
-  return verdef_ptr();
+  if (has_min_version(2)) {
+    return verdef_ptr();
+  }
+  return 0;
 }
 
 size_t soinfo::get_verdef_cnt() {
-  CHECK(android_api >= __ANDROID_API_M__);
-  return verdef_cnt();
+  if (has_min_version(2)) {
+    return verdef_cnt();
+  }
+  return 0;
+}
+
+ElfW(Addr) soinfo::get_verneed_ptr() {
+  if (has_min_version(2)) {
+    return verneed_ptr();
+  }
+  return 0;
+}
+
+size_t soinfo::get_verneed_cnt() {
+  if (has_min_version(2)) {
+    return verneed_cnt();
+  }
+  return 0;
 }
 
 ANDROID_GE_R SymbolLookupLib soinfo::get_lookup_lib() {
@@ -2257,7 +2570,7 @@ ANDROID_GE_R SymbolLookupLib soinfo::get_lookup_lib() {
   return result;
 }
 
-ANDROID_GE_N android_namespace_t *&soinfo::get_primary_namespace() { return primary_namespace(); }
+ANDROID_GE_N android_namespace_t *soinfo::get_primary_namespace() { return primary_namespace(); }
 
 ANDROID_GE_N void soinfo::add_secondary_namespace(android_namespace_t *secondary_ns) {
   LinkerBlockLock lock;
@@ -2285,7 +2598,167 @@ ANDROID_GE_N android_namespace_list_t_wrapper soinfo::get_secondary_namespaces()
 
 ANDROID_GE_N uintptr_t soinfo::get_handle() { return handle(); }
 
+void soinfo::set_should_use_16kib_app_compat(bool should_use_16kib_app_compat) {
+  if (android_api >= __ANDROID_API_V__) {
+    static_cast<soinfoV *>(this)->should_use_16kib_app_compat_ = should_use_16kib_app_compat;
+  }
+}
+
+bool soinfo::should_use_16kib_app_compat() {
+  if (android_api >= __ANDROID_API_V__) {
+    return static_cast<soinfoV *>(this)->should_use_16kib_app_compat_;
+  }
+  return false;
+}
+
+bool soinfo::should_pad_segments() {
+  if (android_api >= __ANDROID_API_V__) {
+    return static_cast<soinfoV *>(this)->should_pad_segments_;
+  }
+  return false;
+}
+
+void soinfo::set_should_pad_segments(bool should_pad_segments) {
+  if (android_api >= __ANDROID_API_V__) {
+    static_cast<soinfoV *>(this)->should_pad_segments_ = should_pad_segments;
+  }
+}
+
+inline bool mte_supported() {
+#if defined(__aarch64__)
+  static bool supported = getauxval(AT_HWCAP2) & HWCAP2_MTE;
+#else
+  static bool supported = false;
+#endif
+  return supported;
+}
+
+inline void *get_tagged_address(const void *ptr) {
+#if defined(__aarch64__)
+  if (mte_supported()) {
+    __asm__ __volatile__(".arch_extension mte; ldg %0, [%0]" : "+r"(ptr));
+  }
+#endif // aarch64
+  return const_cast<void *>(ptr);
+}
+
+ElfW(Addr) soinfo::apply_memtag_if_mte_globals(ElfW(Addr) sym_addr) const {
+  if (!should_tag_memtag_globals()) {
+    return sym_addr;
+  }
+  if (sym_addr == 0) {
+    return sym_addr; // Handle undefined weak symbols.
+  }
+  return reinterpret_cast<ElfW(Addr)>(get_tagged_address(reinterpret_cast<void *>(sym_addr)));
+}
+
 ElfW(Addr) soinfo::call_ifunc_resolver(ElfW(Addr) resolver_addr) { return __bionic_call_ifunc_resolver(resolver_addr); }
 
-#undef SOINFO_FUN
-#undef SOINFO_CONST_FUN
+// TODO (dimitry): Methods below need to be moved out of soinfo
+// and in more isolated file in order minimize dependencies on
+// unnecessary object in the linker binary. Consider making them
+// independent from soinfo (?).
+bool soinfo::lookup_version_info(const VersionTracker &version_tracker, ElfW(Word) sym, const char *sym_name,
+                                 const version_info **vi) {
+  const ElfW(Versym) *sym_ver_ptr = get_versym(sym);
+  ElfW(Versym) sym_ver = sym_ver_ptr == nullptr ? 0 : *sym_ver_ptr;
+
+  if (sym_ver != VER_NDX_LOCAL && sym_ver != VER_NDX_GLOBAL) {
+    *vi = version_tracker.get_version_info(sym_ver);
+
+    if (*vi == nullptr) {
+      LOGE("cannot find verneed/verdef for version index=%d "
+           "referenced by symbol \"%s\" at \"%s\"",
+           sym_ver, sym_name, this->realpath());
+      return false;
+    }
+  } else {
+    // there is no version info
+    *vi = nullptr;
+  }
+
+  return true;
+}
+
+template <bool IsGeneral>
+  __attribute__((noinline)) static const ElfW(Sym) *
+  soinfo_do_lookup_impl(const char *name, const version_info *vi, soinfo **si_found_in,
+                        const SymbolLookupList &lookup_list) {
+  const auto hash = calculate_gnu_hash(name);
+  uint32_t name_len = strlen(name);
+  constexpr uint32_t kBloomMaskBits = sizeof(ElfW(Addr)) * 8;
+  SymbolName elf_symbol_name(name);
+
+  const SymbolLookupLib *end = lookup_list.end();
+  const SymbolLookupLib *it = lookup_list.begin();
+
+  while (true) {
+    const SymbolLookupLib *lib;
+    uint32_t sym_idx;
+
+    // Iterate over libraries until we find one whose Bloom filter matches the symbol we're
+    // searching for.
+    while (true) {
+      if (it == end)
+        return nullptr;
+      lib = it++;
+
+      if (IsGeneral && lib->needs_sysv_lookup()) {
+        if (const ElfW(Sym) *sym = lib->si_->find_symbol_by_name(elf_symbol_name, vi)) {
+          *si_found_in = lib->si_;
+          return sym;
+        }
+        continue;
+      }
+
+      if (IsGeneral) {
+        LOGD("SEARCH %s in %s@%p (gnu)", name, lib->si_->realpath(), reinterpret_cast<void *>(lib->si_->base()));
+      }
+
+      const uint32_t word_num = (hash / kBloomMaskBits) & lib->gnu_maskwords_;
+      const ElfW(Addr) bloom_word = lib->gnu_bloom_filter_[word_num];
+      const uint32_t h1 = hash % kBloomMaskBits;
+      const uint32_t h2 = (hash >> lib->gnu_shift2_) % kBloomMaskBits;
+
+      if ((1 & (bloom_word >> h1) & (bloom_word >> h2)) == 1) {
+        sym_idx = lib->gnu_bucket_[hash % lib->gnu_nbucket_];
+        if (sym_idx != 0) {
+          break;
+        }
+      }
+    }
+
+    // Search the library's hash table chain.
+    ElfW(Versym) verneed = kVersymNotNeeded;
+    bool calculated_verneed = false;
+
+    uint32_t chain_value = 0;
+    const ElfW(Sym) *sym = nullptr;
+
+    do {
+      sym = lib->symtab_ + sym_idx;
+      chain_value = lib->gnu_chain_[sym_idx];
+      if ((chain_value >> 1) == (hash >> 1)) {
+        if (vi != nullptr && !calculated_verneed) {
+          calculated_verneed = true;
+          verneed = find_verdef_version_index(lib->si_, vi);
+        }
+        if (check_symbol_version(lib->versym_, sym_idx, verneed) &&
+            static_cast<size_t>(sym->st_name) + name_len + 1 <= lib->strtab_size_ &&
+            memcmp(lib->strtab_ + sym->st_name, name, name_len + 1) == 0 &&
+            is_symbol_global_and_defined(lib->si_, sym)) {
+          *si_found_in = lib->si_;
+          return sym;
+        }
+      }
+      ++sym_idx;
+    } while ((chain_value & 1) == 0);
+  }
+}
+
+const ElfW(Sym) *
+  soinfo_do_lookup(const char *name, const version_info *vi, soinfo **si_found_in,
+                   const SymbolLookupList &lookup_list) {
+  return lookup_list.needs_slow_path() ? soinfo_do_lookup_impl<true>(name, vi, si_found_in, lookup_list)
+                                       : soinfo_do_lookup_impl<false>(name, vi, si_found_in, lookup_list);
+}

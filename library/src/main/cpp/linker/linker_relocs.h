@@ -29,6 +29,7 @@
 #pragma once
 
 #include <elf.h>
+#include <link.h>
 
 #define R_GENERIC_NONE 0 // R_*_NONE is always 0
 
@@ -89,7 +90,7 @@
 
 #endif
 
-bool is_tls_reloc(ElfW(Word) type) {
+inline bool is_tls_reloc(ElfW(Word) type) {
   switch (type) {
   case R_GENERIC_TLS_DTPMOD:
   case R_GENERIC_TLS_DTPREL:

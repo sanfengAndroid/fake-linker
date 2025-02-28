@@ -134,13 +134,8 @@ std::string soinfo_to_string(soinfo *so) {
   out.append("symtab:").append(hex_pointer(so->symtab())).append(COMMA);
   out.append("nbucket:").append(std::to_string(so->nbucket())).append(COMMA);
   out.append("nchain:").append(std::to_string(so->nchain())).append(COMMA);
-  if (android_api >= __ANDROID_API_M__) {
-    out.append("bucket:").append(hex_pointer(so->bucket_M())).append(COMMA);
-    out.append("chain:").append(hex_pointer(so->chain_M())).append(COMMA);
-  } else {
-    out.append("bucket:").append(hex_pointer(so->bucket())).append(COMMA);
-    out.append("chain:").append(hex_pointer(so->chain())).append(COMMA);
-  }
+  out.append("bucket:").append(hex_pointer(so->bucket())).append(COMMA);
+  out.append("chain:").append(hex_pointer(so->chain())).append(COMMA);
 #ifndef __LP64__
   out.append("plt_got:").append(hex_pointer(so->plt_got())).append(COMMA);
 #endif
@@ -150,7 +145,7 @@ std::string soinfo_to_string(soinfo *so) {
     out.append("preinit_array_count:").append(std::to_string(so->preinit_array_count())).append(COMMA);
     out.append("init_array:").append(hex_pointer(so->init_array_P())).append(COMMA);
     out.append("init_array_count:").append(std::to_string(so->init_array_count())).append(COMMA);
-    out.append("fini_array:").append(hex_pointer(so->fini_array_P())).append(COMMA);
+    out.append("fini_array:").append(hex_pointer(so->fini_array())).append(COMMA);
     out.append("fini_array_count:").append(std::to_string(so->fini_array_count())).append(COMMA);
   } else {
     out.append("preinit_array:").append(hex_pointer(so->preinit_array())).append(COMMA);

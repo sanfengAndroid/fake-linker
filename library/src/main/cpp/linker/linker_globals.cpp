@@ -168,7 +168,7 @@ void ProxyLinker::ChangeSoinfoOfNamespace(soinfo *so, android_namespace_t *np) {
   }
   LinkerBlockLock lock;
   so->get_primary_namespace()->remove_soinfo(so);
-  so->get_primary_namespace() = np;
+  so->set_primary_namespace(np);
   np->add_soinfo(so);
 }
 
@@ -183,7 +183,7 @@ void ProxyLinker::AddSoinfoToDefaultNamespace(soinfo *si) {
   for (auto &np : ProxyLinker::GetAllNamespace(true)) {
     if (strcmp(np->get_name(), DEFAULT_NAMESPACE_NAME) == 0) {
       si->get_primary_namespace()->remove_soinfo(si);
-      si->get_primary_namespace() = np;
+      si->set_primary_namespace(np);
       np->add_soinfo(si);
       break;
     }
@@ -546,7 +546,13 @@ bool ProxyLinker::SetLdDebugVerbosity(int level) {
     *p = level;
     return true;
   } else if (auto *config = linker_symbol.g_linker_debug_config.Get()) {
-    config->any = true;
+    config->calls = level & 1;
+    config->cfi = level & (1 << 1);
+    config->dynamic = level & (1 << 2);
+    config->lookup = level & (1 << 3);
+    config->reloc = level & (1 << 4);
+    config->props = level & (1 << 5);
+    config->any = level & (0b111111);
     return true;
   }
   return false;
@@ -659,7 +665,7 @@ bool ProxyLinker::ManualRelinkLibraries(soinfo *global, const std::vector<std::s
   if (__predict_false(global == nullptr) || __predict_false(sonames.empty())) {
     return false;
   }
-  symbol_relocations rels = global->get_global_soinfo_export_symbols(filters);
+  symbol_relocations rels = global->get_global_soinfo_export_symbols(false, filters);
   if (rels.empty()) {
     LOGW("Function symbols not exported by the global library : %s",
          global->get_soname() == nullptr ? "(null)" : global->get_soname());
@@ -682,7 +688,7 @@ bool ProxyLinker::ManualRelinkLibraries(soinfo *global, int len, const std::vect
   if (__predict_false(global == nullptr) || __predict_false(targets.empty())) {
     return false;
   }
-  symbol_relocations rels = global->get_global_soinfo_export_symbols(filters);
+  symbol_relocations rels = global->get_global_soinfo_export_symbols(false, filters);
   if (rels.empty()) {
     LOGW("Function symbols not exported by the global library : %s",
          global->get_soname() == nullptr ? "(null)" : global->get_soname());
@@ -704,7 +710,7 @@ bool ProxyLinker::ManualRelinkLibrary(soinfo *global, soinfo *child, std::vector
   if (__predict_false(global == nullptr)) {
     return false;
   }
-  symbol_relocations rels = global->get_global_soinfo_export_symbols(filters);
+  symbol_relocations rels = global->get_global_soinfo_export_symbols(false, filters);
   if (rels.empty()) {
     LOGW("Function symbols not exported by the global library : %s",
          global->get_soname() == nullptr ? "(null)" : global->get_soname());

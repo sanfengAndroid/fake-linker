@@ -216,6 +216,17 @@ static SymbolAddress soinfo_get_export_symbol_address_impl(SoinfoPtr soinfo_ptr,
   CHECK_PARAM_PTR(soinfo_ptr, kErrorSoinfoNull);
   CHECK_PARAM_PTR(name, kErrorParameterNull);
   auto *info = static_cast<soinfo *>(soinfo_ptr);
+  void *result = info->find_export_symbol_by_prefix(name);
+  CHECK_ERROR(result, kErrorSymbolNotFoundInSoinfo);
+  return result;
+}
+
+static SymbolAddress soinfo_get_export_symbol_address_prefix_impl(SoinfoPtr soinfo_ptr, const char *name,
+                                                                  int *out_error) {
+  RET_SUCCESS();
+  CHECK_PARAM_PTR(soinfo_ptr, kErrorSoinfoNull);
+  CHECK_PARAM_PTR(name, kErrorParameterNull);
+  auto *info = static_cast<soinfo *>(soinfo_ptr);
   void *result = info->find_export_symbol_address(name);
   CHECK_ERROR(result, kErrorSymbolNotFoundInSoinfo);
   return result;
@@ -681,6 +692,7 @@ static uint64_t find_library_symbol_impl(const char *library_name, const char *s
   return 0;
 }
 
+
 static MEMORY_FREE uint64_t *find_library_symbols_impl(const char *library_name, const FindSymbolUnit *symbols,
                                                        int size) {
   if (!library_name || !symbols || size < 1) {
@@ -780,7 +792,7 @@ C_API API_PUBLIC FakeLinker g_fakelinker_export = {
   call_manual_relocation_by_soinfos_impl,
   call_manual_relocation_by_name_impl,
   call_manual_relocation_by_names_impl,
-  nullptr, /* unused0 */
+  soinfo_get_export_symbol_address_prefix_impl,
   nullptr, /* unused1 */
   nullptr, /* unused2 */
   nullptr, /* unused3 */
@@ -841,6 +853,7 @@ C_API API_PUBLIC FakeLinker g_fakelinker_export = {
   find_library_symbol_impl,
   find_library_symbols_impl,
   set_ld_debug_verbosity_impl,
+  nullptr,
 };
 
 C_API const FakeLinker *get_fakelinker() { return &g_fakelinker_export; }

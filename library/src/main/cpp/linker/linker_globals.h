@@ -127,10 +127,10 @@ public:
 
   bool SystemRelinkLibraries(const std::vector<std::string> &sonames);
 
+  soinfo_list_t GetSoinfoGlobalGroup(soinfo *root);
+
 private:
   ANDROID_LE_M soinfo_list_t GetGlobalGroupM();
-
-  soinfo_list_t GetSoinfoGlobalGroup(soinfo *root);
 
   ANDROID_GE_M bool RelinkSoinfoImplM(soinfo *si);
 

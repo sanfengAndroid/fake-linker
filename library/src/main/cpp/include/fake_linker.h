@@ -267,7 +267,7 @@ typedef struct {
   FunPtr(SymbolAddress *, soinfo_get_import_symbol_address, SoinfoPtr soinfo_ptr, const char *name, int *out_error);
 
   /**
-   * @briefSpecify the soinfo pointer to get the export symbol address of the
+   * @brief Specify the soinfo pointer to get the export symbol address of the
    * specified name
    *
    * @param       soinfo_ptr  Specify the soinfo pointer
@@ -415,10 +415,21 @@ typedef struct {
   FunPtr(bool, call_manual_relocation_by_names, SoinfoPtr global_lib, int len, const char *target_names[]);
 
   /**
+   * @brief Specify the soinfo pointer to get the first export symbol address of the
+   * specified name prefix
+   *
+   * @param       soinfo_ptr  Specify the soinfo pointer
+   * @param       name        Export symbol name
+   * @param[out]  out_error   Write error code on error exists
+   * @return Symbolic address or nullptr
+   */
+  FunPtr(SymbolAddress, soinfo_get_export_symbol_address_by_prefix, SoinfoPtr soinfo_ptr, const char *name,
+         int *out_error);
+
+  /**
    * @brief New version expansion reserved slot
    *
    */
-  FunPtr(void, unused0);
   FunPtr(void, unused1);
   FunPtr(void, unused2);
   FunPtr(void, unused3);
@@ -816,9 +827,20 @@ typedef struct {
    * LINKER_VERBOSITY_TRACE 1
    * LINKER_VERBOSITY_DEBUG 2
    *
+   * Android 15+ new debug config
+   * calls   : 1 << 0
+   * cfi     : 1 << 1
+   * dynamic : 1 << 2
+   * lookup  : 1 << 3
+   * reloc   : 1 << 4
+   * props   : 1 << 5
+   *
    * @param  level   log level, the larger the value, the more logs
    */
   FunPtr(bool, set_ld_debug_verbosity, int level);
+
+  FunPtr(uint64_t, find_library_symbol_by_prefix, const char *library_name, const char *symbol_name,
+         const FindSymbolType symbol_type);
 
 } FakeLinker;
 
@@ -836,23 +858,50 @@ extern void fakelinker_module_init(JNIEnv *env, SoinfoPtr fake_soinfo, const Fak
 
 enum FakeLinkerMode {
   /**
-   * Initialize soinfo, namespace feature
+   * Initialize soinfo, initialize all linker functions by default,
+   * if only some functions are needed, please add kInitLinkerXXXX flag
    */
   kFMSoinfo = 1,
   /**
    * Initialize android native hook feature
    */
-  kFMNativeHook = 2,
+  kFMNativeHook = 1 << 1,
 
   /**
    * Register the Java functions, by default, the FakeLinker class will return success even if the registration fails,
    * whereas non-default classes will only return success if the registration is successful.
    */
-  kFMJavaRegister = 4,
+  kFMJavaRegister = 1 << 2,
   /**
    * The default FakeLinker class or non-default classes must return success only if the registration is successful.
    */
-  kFMForceJavaRegister = 8,
+  kFMForceJavaRegister = 1 << 3,
+  /**
+   * Initialize only linker debug symbols
+   *
+   */
+  kInitLinkerDebug = 1 << 4,
+  /**
+   * Initialize only linker dlopen/dlsym to use symbols
+   *
+   */
+  kInitLinkerDlopenDlSym = 1 << 5,
+  /**
+   * Initialize only linker namespace symbols
+   *
+   */
+  kInitLinkerNamespace = 1 << 6,
+  /**
+   * Initialize only linker handler symbols
+   *
+   */
+  kInitLinkerHandler = 1 << 7,
+  /**
+   * Initialize only linker memory symbols
+   *
+   */
+  kInitLinkerMemory = 1 << 8,
+
 };
 
 /**
