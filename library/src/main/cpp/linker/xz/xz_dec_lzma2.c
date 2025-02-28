@@ -5,8 +5,9 @@
  * Authors: Lasse Collin <lasse.collin@tukaani.org>
  *          Igor Pavlov <https://7-zip.org/>
  */
-#include "xz_lzma2.h"
 #include "xz_private.h"
+
+#include "xz_lzma2.h"
 /*
  * Range decoder initialization eats the first five bytes of each LZMA chunk.
  */
