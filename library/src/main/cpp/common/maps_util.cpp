@@ -289,18 +289,22 @@ bool MapsHelper::RecoveryPageProtect() {
 bool MapsHelper::GetMapsLine() { return fgets(line_, sizeof(line_), maps_fd_) != nullptr; }
 
 bool MapsHelper::FormatLine() {
-  int num = sscanf(line_, "%" SCNx64 "-%" SCNx64 " %s %" SCNx64 "%*s %" SCNi32 " %s", &start_address_, &end_address_,
-                   protect_, &file_offset_, &inode_, path_);
+  int num = sscanf(line_, "%" SCNx64 "-%" SCNx64 " %4s %" SCNx64 "%*s %" SCNi32 " %1023s", &start_address_,
+                   &end_address_, protect_, &file_offset_, &inode_, path_);
   if (num == 5) {
     path_[0] = '\0';
-    return true;
   }
-  return num == 6;
+  // 验证权限字符串是否有效
+  if (FormatProtect() == kMPInvalid) {
+    // 由于maps文件常常改变,有可能读取到无效类型
+    return false;
+  }
+  return num == 6 || num == 5;
 }
 
 int MapsHelper::FormatProtect() {
   int port = kMPNone;
-  for (int i = 0; i < 7 && protect_[i] != '\0'; ++i) {
+  for (int i = 0; i < sizeof(protect_) && protect_[i] != '\0'; ++i) {
     switch (protect_[i]) {
     case 'r':
       port |= kMPRead;
@@ -317,6 +321,10 @@ int MapsHelper::FormatProtect() {
     case 'p':
       port |= kMPPrivate;
       break;
+    case '-':
+      break;
+    default:
+      return kMPInvalid;
     }
   }
   return port;
@@ -359,8 +367,6 @@ bool MapsHelper::MakeLibraryName(const char *library_name) {
 /**
  * @brief 验证一个库的有效映射是包含 可执行段
  *
- * @return true
- * @return false
  */
 bool MapsHelper::VerifyLibraryMap() {
   for (auto &page : page_) {

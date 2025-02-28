@@ -30,6 +30,7 @@ enum MapsProt {
   kMPShared = 8,
   kMPPrivate = 16,
   kMPRWX = kMPRead | kMPWrite | kMPExecute,
+  kMPInvalid = -1,
 };
 
 class MapsHelper {
@@ -84,10 +85,9 @@ private:
   bool VerifyLibraryMap();
 
 private:
-#define MAPS_LINE_LEG 1024
-  char line_[MAPS_LINE_LEG]{};
-  char path_[MAPS_LINE_LEG]{};
-  char protect_[7]{};
+  char line_[PAGE_SIZE + 256 + 1]{};
+  char path_[1024]{};
+  char protect_[5]{'\0'};
   FILE *maps_fd_ = nullptr;
   std::string library_name_;
   Address start_address_ = 0;
@@ -96,6 +96,5 @@ private:
   int32_t inode_ = 0;
   std::vector<PageProtect> page_;
   DISALLOW_COPY_AND_ASSIGN(MapsHelper);
-#undef MAPS_LINE_LEG
 };
 } // namespace fakelinker
