@@ -1,7 +1,9 @@
 #pragma once
 
 #include <list>
+#include <map>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "unique_fd.h"
@@ -34,9 +36,15 @@ struct ElfDiskInfo {
   uintptr_t sym_addralign;
   uintptr_t sym_num;
 
+  Address section_debugdata_addr = 0;
+  uintptr_t section_debugdata_size;
+  std::string debugdata;
+
   unique_memory mmap_memory;
   unique_fd library_fd;
   Address base;
+
+  std::map<std::string_view, const ElfW(Sym) *> internal_symbols;
 };
 
 #define MAYBE_MAP_FLAG(x, from, to) (((x) & (from)) ? (to) : 0)
@@ -52,6 +60,9 @@ public:
   bool Load(address_space_params *address_space);
   bool LoadFromMemory(const char *name);
   bool LoadFromDisk(const char *library_name);
+  // 缓存内部符号,加速查找
+  bool CacheInternalSymbols();
+  bool DecompressDebugData();
 
   const char *name() const { return name_.c_str(); }
 
@@ -87,7 +98,9 @@ public:
   uint64_t FindExportSymbol(const char *name);
   std::vector<Address> FindExportSymbols(const std::vector<std::string> &symbols);
 
-  uint64_t FindInternalSymbol(const char *name, bool useRegex = false);
+  bool IterateInternalSymbols(const std::function<bool(std::string_view, const ElfW(Sym) *)> &callback);
+  uint64_t FindInternalSymbol(std::string_view name, bool useRegex = false);
+  uint64_t FindInternalSymbolByPrefix(std::string_view prefix);
 
   /**
    * 查找内部符号地址,可支持正则表达式,正则表达式使用默认 std::regex 因此需要调用者保证正则表达式合法,
@@ -217,11 +230,16 @@ size_t phdr_table_get_maximum_alignment(const ElfW(Phdr) * phdr_table, size_t ph
 
 int phdr_table_protect_segments(const ElfW(Phdr) * phdr_table, size_t phdr_count, ElfW(Addr) load_bias,
                                 bool should_pad_segments, bool should_use_16kib_app_compat,
-                                const GnuPropertySection *prop __unused);
+                                const GnuPropertySection *prop __unused = nullptr);
 
-int phdr_table_unprotect_segments(const ElfW(Phdr) * phdr_table, size_t phdr_count, ElfW(Addr) load_bias);
+int phdr_table_unprotect_segments(const ElfW(Phdr) * phdr_table, size_t phdr_count, ElfW(Addr) load_bias,
+                                  bool should_pad_segments, bool should_use_16kib_app_compat);
 
-int phdr_table_protect_gnu_relro(const ElfW(Phdr) * phdr_table, size_t phdr_count, ElfW(Addr) load_bias);
+int phdr_table_protect_gnu_relro(const ElfW(Phdr) * phdr_table, size_t phdr_count, ElfW(Addr) load_bias,
+                                 bool should_pad_segments, bool should_use_16kib_app_compat);
+
+int phdr_table_unprotect_gnu_relro(const ElfW(Phdr) * phdr_table, size_t phdr_count, ElfW(Addr) load_bias,
+                                   bool should_pad_segments, bool should_use_16kib_app_compat);
 
 int phdr_table_serialize_gnu_relro(const ElfW(Phdr) * phdr_table, size_t phdr_count, ElfW(Addr) load_bias, int fd,
                                    size_t *file_offset);

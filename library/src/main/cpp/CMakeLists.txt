@@ -15,6 +15,7 @@ set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
 option(FAKELINKER_INSTALL_PRIVATE_HEADERS "Install private header files for static linking" OFF)
 option(FAKELINKER_BUILD_SHARED_LIBRARY "Enable shared library build" ON)
+option(FAKELINKER_INSTALL_TARGET "Enable target installation" ON)
 
 if(NOT ${CMAKE_BUILD_TYPE} STREQUAL "Debug")
   set(CMAKE_BUILD_TYPE "Release")
@@ -58,6 +59,7 @@ set(FAKE_LINKER_SRC
   linker/linker_main.cpp
   linker/linker_globals.cpp
   linker/linker_namespaces.cpp
+  linker/linker_relocate.cpp
   linker/linker_soinfo.cpp
   linker/linker_util.cpp
   linker/linker_common_types.cpp
@@ -69,6 +71,7 @@ set(FAKE_LINKER_SRC
   linker/linker_mapped_file_fragment.cpp
   linker/linker_note_gnu_property.cpp
   linker/linker_symbol.cpp
+  linker/linker_tls.cpp
   ${NEON_SRC}
 
   # JNI Hook
@@ -79,6 +82,13 @@ set(FAKE_LINKER_SRC
   common/maps_util.cpp
   common/unique_fd.cpp
   common/unique_memory.cpp
+
+  # xz source
+  linker/xz/xz_crc32.c
+  linker/xz/xz_crc64.c
+  linker/xz/xz_dec_bcj.c
+  linker/xz/xz_dec_lzma2.c
+  linker/xz/xz_dec_stream.c
 )
 
 find_library(log-lib log)
@@ -125,41 +135,46 @@ if(FAKELINKER_BUILD_SHARED_LIBRARY)
     LINK_FLAGS_RELEASE
     "${LINK_FLAGS} -Wl,--gc-sections,-s,--version-script=\"${CMAKE_CURRENT_SOURCE_DIR}/symbol.map.txt\""
   )
-  install(TARGETS fakelinker
+
+  if(FAKELINKER_INSTALL_TARGET)
+    install(TARGETS fakelinker
+      EXPORT fakelinker
+    )
+  endif()
+endif()
+
+if(FAKELINKER_INSTALL_TARGET)
+  install(TARGETS fakelinker_static
     EXPORT fakelinker
   )
-endif()
 
-install(TARGETS fakelinker_static
-  EXPORT fakelinker
-)
-
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/fakelinker/fakelinker
-)
-
-if(FAKELINKER_INSTALL_PRIVATE_HEADERS)
-  install(DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/linker"
+  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/fakelinker/fakelinker
-    FILES_MATCHING PATTERN "*.h"
+  )
+
+  if(FAKELINKER_INSTALL_PRIVATE_HEADERS)
+    install(DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/linker"
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/fakelinker/fakelinker
+      FILES_MATCHING PATTERN "*.h"
+    )
+  endif()
+
+  install(EXPORT fakelinker
+    FILE fakelinker-config.cmake
+    NAMESPACE fakelinker::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/fakelinker
+  )
+
+  include(CMakePackageConfigHelpers)
+  write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/fakelinker-config-version.cmake
+    VERSION ${FAKELINKER_MODULE_VERSION_NAME}
+    COMPATIBILITY SameMajorVersion
+  )
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/fakelinker-config-version.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/fakelinker
   )
 endif()
-
-install(EXPORT fakelinker
-  FILE fakelinker-config.cmake
-  NAMESPACE fakelinker::
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/fakelinker
-)
-
-include(CMakePackageConfigHelpers)
-write_basic_package_version_file(
-  ${CMAKE_CURRENT_BINARY_DIR}/fakelinker-config-version.cmake
-  VERSION ${FAKELINKER_MODULE_VERSION_NAME}
-  COMPATIBILITY SameMajorVersion
-)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/fakelinker-config-version.cmake
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/fakelinker
-)
 
 if(FAKELINKER_BUILD_INSTALLER)
   add_executable(${FAKELINKER_INSTALLER_MODULE_NAME}

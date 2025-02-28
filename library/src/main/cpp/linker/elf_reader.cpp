@@ -18,6 +18,7 @@
 #include <maps_util.h>
 
 #include "linker_util.h"
+#include "xz/xz.h"
 
 #define DL_ERR(...)                 LOGE(__VA_ARGS__)
 #define DL_WARN(...)                LOGW(__VA_ARGS__)
@@ -331,6 +332,7 @@ bool ElfReader::LoadFromDisk(const char *library_name) {
   MapsHelper maps(library_name);
   Address base = maps.GetLibraryBaseAddress();
   if (base == 0) {
+    DL_ERR("read library base address failed: %s", library_name);
     return false;
   }
   load_bias_ = static_cast<ElfW(Addr)>(base);
@@ -358,59 +360,157 @@ bool ElfReader::LoadFromDisk(const char *library_name) {
   // 读取文件节区数据
   ElfW(Ehdr) *head = disk_info_->mmap_memory.get<ElfW(Ehdr)>();
   if (head == nullptr) {
+    DL_ERR("read elf header failed: %s", library_name);
     return false;
   }
 
-  char *section_header = reinterpret_cast<char *>(head) + head->e_shoff;
-  auto shstr_section = reinterpret_cast<ElfW(Shdr) *>(section_header + sizeof(ElfW(Shdr)) * head->e_shstrndx);
-  char *shstr_table = reinterpret_cast<char *>(head) + shstr_section->sh_offset;
-  auto section = reinterpret_cast<ElfW(Shdr) *>(section_header);
+  auto ParseSection = [this](ElfW(Ehdr) * head, size_t file_size) {
+    char *section_header = reinterpret_cast<char *>(head) + head->e_shoff;
+    auto shstr_section = reinterpret_cast<ElfW(Shdr) *>(section_header + sizeof(ElfW(Shdr)) * head->e_shstrndx);
+    char *shstr_table = reinterpret_cast<char *>(head) + shstr_section->sh_offset;
+    auto section = reinterpret_cast<ElfW(Shdr) *>(section_header);
 
-  for (int i = 0; i < head->e_shnum; ++i, ++section) {
-    switch (section->sh_type) {
-    case SHT_STRTAB:
-      if (strcmp(".strtab", shstr_table + section->sh_name) == 0) {
-        disk_info_->section_strtab_addr =
+    for (int i = 0; i < head->e_shnum; ++i, ++section) {
+      switch (section->sh_type) {
+      case SHT_STRTAB:
+        if (strcmp(".strtab", shstr_table + section->sh_name) == 0) {
+          disk_info_->section_strtab_addr =
+            reinterpret_cast<Address>(reinterpret_cast<char *>(head) + section->sh_offset);
+          disk_info_->section_strtab_offset = section->sh_offset;
+          disk_info_->section_strtab_size = section->sh_size;
+          if (section->sh_offset + section->sh_size > file_size) {
+            DL_ERR("%s strtab section 0x%" PRIx64 " ~ 0x%" PRIx64 " out of file range 0x%zx", name(),
+                   disk_info_->section_strtab_offset,
+                   disk_info_->section_strtab_offset + disk_info_->section_strtab_size, file_size);
+            return false;
+          }
+        }
+        break;
+      case SHT_SYMTAB:
+        disk_info_->section_symtab_addr =
           reinterpret_cast<Address>(reinterpret_cast<char *>(head) + section->sh_offset);
-        disk_info_->section_strtab_offset = section->sh_offset;
-        disk_info_->section_strtab_size = section->sh_size;
+        disk_info_->sym_num = section->sh_size / sizeof(ElfW(Sym));
+        if (section->sh_entsize != sizeof(ElfW(Sym))) {
+          LOGW("%s elf symtab section e_shentsize error, file set: 0x%" PRIx32 ", expect size: 0x%" PRIx32, name(),
+               static_cast<uint32_t>(section->sh_entsize), static_cast<uint32_t>(sizeof(ElfW(Sym))));
+        }
+        disk_info_->sym_entsize = sizeof(ElfW(Sym));
+        disk_info_->section_symtab_offset = section->sh_offset;
+
         if (section->sh_offset + section->sh_size > file_size) {
-          DL_ERR("%s strtab section 0x%" PRIx64 " ~ 0x%" PRIx64 " out of file range 0x%zx", name(),
-                 disk_info_->section_strtab_offset, disk_info_->section_strtab_offset + disk_info_->section_strtab_size,
+          DL_ERR("%s symtab section 0x%" PRIx64 " ~ 0x%" PRIx64 " out of file range 0x%zx", name(),
+                 disk_info_->section_symtab_offset, disk_info_->section_symtab_offset + disk_info_->section_symtab_size,
                  file_size);
           return false;
         }
+        break;
+      case SHT_PROGBITS: {
+        if (strcmp(".gnu_debugdata", shstr_table + section->sh_name) == 0) {
+          disk_info_->section_debugdata_addr =
+            reinterpret_cast<Address>(reinterpret_cast<char *>(head) + section->sh_offset);
+          disk_info_->section_debugdata_size = section->sh_size;
+        }
       }
-      break;
-    case SHT_SYMTAB:
-      disk_info_->section_symtab_addr = reinterpret_cast<Address>(reinterpret_cast<char *>(head) + section->sh_offset);
-      disk_info_->sym_num = section->sh_size / sizeof(ElfW(Sym));
-      if (section->sh_entsize != sizeof(ElfW(Sym))) {
-        LOGW("%s elf symtab section e_shentsize error, file set: 0x%" PRIx32 ", expect size: 0x%" PRIx32, name(),
-             static_cast<uint32_t>(section->sh_entsize), static_cast<uint32_t>(sizeof(ElfW(Sym))));
+      default:
+        break;
       }
-      disk_info_->sym_entsize = sizeof(ElfW(Sym));
-      disk_info_->section_symtab_offset = section->sh_offset;
+    }
+    return true;
+  };
 
-      if (section->sh_offset + section->sh_size > file_size) {
-        DL_ERR("%s symtab section 0x%" PRIx64 " ~ 0x%" PRIx64 " out of file range 0x%zx", name(),
-               disk_info_->section_symtab_offset, disk_info_->section_symtab_offset + disk_info_->section_symtab_size,
-               file_size);
-        return false;
-      }
-      break;
-    default:
-      break;
+  if (!ParseSection(head, file_size)) {
+    return false;
+  }
+  if ((disk_info_->section_strtab_addr == 0 || disk_info_->section_symtab_addr == 0) &&
+      disk_info_->section_debugdata_addr != 0) {
+    LOGD("parse debugdata section %s", name());
+    if (DecompressDebugData() &&
+        ParseSection(reinterpret_cast<ElfW(Ehdr) *>(disk_info_->debugdata.data()), disk_info_->debugdata.size())) {
+      disk_info_->mmap_memory.reset();
     }
   }
 
-  if (disk_info_->section_strtab_addr == 0 || disk_info_->section_strtab_addr == 0) {
-    DL_ERR("%s elf not found strtab section: 0x%" PRIx64 " or symtab section: 0x%" PRIx64, name(),
-           disk_info_->section_strtab_addr, disk_info_->section_symtab_addr);
+  if (disk_info_->section_strtab_addr == 0 || disk_info_->section_symtab_addr == 0) {
+    DL_ERR(
+      "%s elf not found strtab section: 0x%" PRIx64 " or symtab section: 0x%" PRIx64 ", debugdata section: 0x%" PRIx64,
+      name(), disk_info_->section_strtab_addr, disk_info_->section_symtab_addr, disk_info_->section_debugdata_addr);
     return false;
   }
+  LOGD("parse elf %s strtab section:0x%" PRIx64 ", symtab section: 0x%" PRIx64, name(), disk_info_->section_strtab_addr,
+       disk_info_->section_symtab_addr);
   did_disk_load_ = true;
   return true;
+}
+
+bool ElfReader::CacheInternalSymbols() {
+  if (!did_disk_load_) {
+    return false;
+  }
+  if (!disk_info_->internal_symbols.empty()) {
+    return true;
+  }
+  IterateInternalSymbols([&](std::string_view symbol_name, const ElfW(Sym) * sym) {
+    auto st_type = ELF_ST_TYPE(sym->st_info);
+    if ((st_type == STT_FUNC || st_type == STT_OBJECT) && sym->st_size) {
+      disk_info_->internal_symbols.emplace(symbol_name, sym);
+    }
+    return false;
+  });
+  return true;
+}
+
+bool ElfReader::DecompressDebugData() {
+  if (disk_info_->section_debugdata_addr == 0) {
+    return false;
+  }
+  xz_crc32_init();
+#ifdef XZ_USE_CRC64
+  xz_crc64_init();
+#endif
+  xz_dec *dec = xz_dec_init(XZ_DYNALLOC, 1 << 26);
+  if (!dec) {
+    LOGE("xz_dec_init failed");
+    return false;
+  }
+  xz_buf stream;
+  stream.in = reinterpret_cast<uint8_t *>(static_cast<uintptr_t>(disk_info_->section_debugdata_addr));
+  stream.in_pos = 0;
+  stream.in_size = disk_info_->section_debugdata_size;
+
+  std::string buffer;
+  const int chunk_size = 1024 * 1024;
+  buffer.resize(chunk_size);
+  stream.out = reinterpret_cast<uint8_t *>(buffer.data());
+  stream.out_pos = 0;
+  stream.out_size = 1024 * 1024;
+  xz_ret ret = XZ_OK;
+  bool success = true;
+  do {
+    ret = xz_dec_run(dec, &stream);
+    if (ret == XZ_OK || ret == XZ_STREAM_END) {
+      if (stream.out_pos == buffer.size()) {
+        buffer.resize(buffer.size() + chunk_size);
+        stream.out = reinterpret_cast<uint8_t *>(buffer.data());
+        stream.out_size = buffer.size();
+      }
+    } else if (ret == XZ_DATA_ERROR) {
+      LOGE("Data integrity error during decompression!");
+      success = false;
+      break;
+    } else {
+      LOGE("Decompression failed with error code: %d", ret);
+      success = false;
+      break;
+    }
+  } while (ret == XZ_OK);
+  if (success && ret == XZ_STREAM_END) {
+    buffer.resize(stream.out_pos);
+    disk_info_->debugdata = std::move(buffer);
+  } else {
+    success = false;
+  }
+  xz_dec_end(dec);
+  return success;
 }
 
 const ElfW(Sym) * ElfReader::GnuHashLookupSymbol(const char *name) {
@@ -586,25 +686,61 @@ std::vector<Address> ElfReader::FindExportSymbols(const std::vector<std::string>
   return ret;
 }
 
-uint64_t ElfReader::FindInternalSymbol(const char *name, bool useRegex) {
-  if (!name || !did_disk_load_) {
-    return 0;
+bool ElfReader::IterateInternalSymbols(const std::function<bool(std::string_view, const ElfW(Sym) *)> &callback) {
+  if (!did_disk_load_) {
+    return false;
   }
-  std::string find_name = name;
-  if (find_name.empty()) {
-    return 0;
-  }
-
-  std::regex reg(useRegex ? name : "");
   auto sym_start = reinterpret_cast<ElfW(Sym) *>(disk_info_->section_symtab_addr);
   auto sym_end = reinterpret_cast<ElfW(Sym) *>(disk_info_->section_symtab_addr) + disk_info_->sym_num;
   for (ElfW(Sym) *sym = sym_start; sym != sym_end; ++sym) {
     auto sym_name = reinterpret_cast<const char *>(disk_info_->section_strtab_addr + sym->st_name);
-    if (find_name == sym_name || (useRegex && std::regex_search(sym_name, reg))) {
-      return load_bias_ + sym->st_value;
+    if (callback(sym_name, sym)) {
+      return true;
     }
   }
-  return 0;
+  return true;
+}
+
+uint64_t ElfReader::FindInternalSymbol(std::string_view name, bool useRegex) {
+  if (!did_disk_load_) {
+    return 0;
+  }
+  std::regex reg(useRegex ? name.data() : "");
+  uint64_t result = 0;
+  if (disk_info_->internal_symbols.empty()) {
+    IterateInternalSymbols([&](std::string_view symbol_name, const ElfW(Sym) * sym) -> bool {
+      if (name == symbol_name || (useRegex && std::regex_search(symbol_name.data(), reg))) {
+        result = load_bias_ + sym->st_value;
+        return true;
+      }
+      return false;
+    });
+  } else if (auto it = disk_info_->internal_symbols.find(name); it != disk_info_->internal_symbols.end()) {
+    return load_bias_ + it->second->st_value;
+  }
+  return result;
+}
+
+uint64_t ElfReader::FindInternalSymbolByPrefix(std::string_view prefix) {
+  if (!did_disk_load_ || prefix.empty()) {
+    return 0;
+  }
+  uint64_t result = 0;
+  if (disk_info_->internal_symbols.empty()) {
+    IterateInternalSymbols([&](std::string_view symbol_name, const ElfW(Sym) * sym) -> bool {
+      if (strstr(symbol_name.data(), prefix.data()) == symbol_name.data()) {
+        result = load_bias_ + sym->st_value;
+        return true;
+      }
+      return false;
+    });
+  } else {
+    if (auto it = disk_info_->internal_symbols.lower_bound(prefix);
+        it != disk_info_->internal_symbols.end() && strstr(it->first.data(), prefix.data()) == it->first.data()) {
+      return load_bias_ + it->second->st_value;
+    }
+  }
+  return result;
 }
 
 std::vector<Address> ElfReader::FindInternalSymbols(const std::vector<std::string> &symbols, bool useRegex) {
@@ -2152,6 +2288,12 @@ static int _phdr_table_set_gnu_relro_prot(const ElfW(Phdr) * phdr_table, size_t 
 int phdr_table_protect_gnu_relro(const ElfW(Phdr) * phdr_table, size_t phdr_count, ElfW(Addr) load_bias,
                                  bool should_pad_segments, bool should_use_16kib_app_compat) {
   return _phdr_table_set_gnu_relro_prot(phdr_table, phdr_count, load_bias, PROT_READ, should_pad_segments,
+                                        should_use_16kib_app_compat);
+}
+
+int phdr_table_unprotect_gnu_relro(const ElfW(Phdr) * phdr_table, size_t phdr_count, ElfW(Addr) load_bias,
+                                   bool should_pad_segments, bool should_use_16kib_app_compat) {
+  return _phdr_table_set_gnu_relro_prot(phdr_table, phdr_count, load_bias, PROT_READ | PROT_WRITE, should_pad_segments,
                                         should_use_16kib_app_compat);
 }
 
