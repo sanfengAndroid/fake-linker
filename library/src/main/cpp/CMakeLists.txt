@@ -47,7 +47,7 @@ if(NOT DEFINED FAKELINKER_MODULE_VERSION_NAME)
   set(FAKELINKER_MODULE_VERSION_NAME "3.1.0")
 endif()
 
-configure_file("${CMAKE_CURRENT_LIST_DIR}/module_config.h.in" "${CMAKE_CURRENT_LIST_DIR}/include/linker_version.h")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/module_config.h.in" "${CMAKE_CURRENT_SOURCE_DIR}/include/linker_version.h")
 
 message(STATUS "cmake version:${CMAKE_VERSION}
 api:${ANDROID_PLATFORM}
@@ -153,7 +153,7 @@ if(FAKELINKER_INSTALL_TARGET)
   )
 
   if(FAKELINKER_INSTALL_PRIVATE_HEADERS)
-    install(DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/linker"
+    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/linker"
       DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/fakelinker/fakelinker
       FILES_MATCHING PATTERN "*.h"
     )

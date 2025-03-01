@@ -85,7 +85,7 @@ private:
   bool VerifyLibraryMap();
 
 private:
-  char line_[PAGE_SIZE + 256 + 1]{};
+  char line_[4096 + 256 + 1]{};
   char path_[1024]{};
   char protect_[5]{'\0'};
   FILE *maps_fd_ = nullptr;
