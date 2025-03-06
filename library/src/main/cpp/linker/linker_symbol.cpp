@@ -25,6 +25,11 @@ bool ProcessSymbol(LinkerSymbolCategory category,
          symbol.category, category);
     return true;
   }
+  if (names.size() == 0) {
+    LOGD("skip target symbol no name");
+    return true;
+  }
+  symbol.name = *names.begin();
 
   if (!symbol.CheckApi()) {
     LOGD("skip target symbol %s api level [%d, %d), current api level %d", names.size() > 0 ? *names.begin() : "",
@@ -32,10 +37,7 @@ bool ProcessSymbol(LinkerSymbolCategory category,
 
     return true;
   }
-  if (names.size() == 0) {
-    LOGD("skip target symbol no name");
-    return true;
-  }
+
   for (const char *name : names) {
     uint64_t address = symbol_finder(name, Type, false);
     if (address == 0 && find_prefix) {
@@ -95,6 +97,8 @@ bool LinkerSymbol::LoadSymbol(LinkerSymbolCategory category) {
   }
 
   PROCESS_SYMBOL(solist, "__dl__ZL6solist");
+  PROCESS_SYMBOL(linker_soinfo, android_api >= __ANDROID_API_O__ ? "ld-android.so" : "libdl.so");
+
   PROCESS_SYMBOL(g_ld_debug_verbosity, "__dl_g_ld_debug_verbosity");
   PROCESS_SYMBOL(g_linker_debug_config, "__dl_g_linker_debug_config");
   PROCESS_SYMBOL(g_linker_logger, "__dl_g_linker_logger");
@@ -146,8 +150,6 @@ bool LinkerSymbol::LoadSymbol(LinkerSymbolCategory category) {
   PROCESS_SYMBOL(g_soinfo_links_allocator, "__dl__ZL24g_soinfo_links_allocator");
   PROCESS_SYMBOL(g_namespace_allocator, "__dl__ZL21g_namespace_allocator");
   PROCESS_SYMBOL(g_namespace_list_allocator, "__dl__ZL26g_namespace_list_allocator");
-
-  PROCESS_SYMBOL(linker_soinfo, android_api >= __ANDROID_API_O__ ? "ld-android.so" : "libdl.so");
   return true;
 }
 
