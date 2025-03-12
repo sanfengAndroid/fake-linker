@@ -1,0 +1,8 @@
+{
+    global:
+        JNI_OnLoad*;
+        access*;
+        fakelinker_module_init*;
+    local:
+        *;
+};
