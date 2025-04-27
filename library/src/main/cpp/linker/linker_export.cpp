@@ -216,7 +216,7 @@ static SymbolAddress soinfo_get_export_symbol_address_impl(SoinfoPtr soinfo_ptr,
   CHECK_PARAM_PTR(soinfo_ptr, kErrorSoinfoNull);
   CHECK_PARAM_PTR(name, kErrorParameterNull);
   auto *info = static_cast<soinfo *>(soinfo_ptr);
-  void *result = info->find_export_symbol_by_prefix(name);
+  void *result = info->find_export_symbol_address(name);
   CHECK_ERROR(result, kErrorSymbolNotFoundInSoinfo);
   return result;
 }
@@ -227,7 +227,7 @@ static SymbolAddress soinfo_get_export_symbol_address_prefix_impl(SoinfoPtr soin
   CHECK_PARAM_PTR(soinfo_ptr, kErrorSoinfoNull);
   CHECK_PARAM_PTR(name, kErrorParameterNull);
   auto *info = static_cast<soinfo *>(soinfo_ptr);
-  void *result = info->find_export_symbol_address(name);
+  void *result = info->find_export_symbol_by_prefix(name);
   CHECK_ERROR(result, kErrorSymbolNotFoundInSoinfo);
   return result;
 }
