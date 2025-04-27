@@ -8,19 +8,23 @@
 #include <linker_version.h>
 #include <macros.h>
 #include <maps_util.h>
+#include <proxy_jni.h>
 #include <scoped_utf_chars.h>
 
 
 #include "art/hook_jni_native_interface_impl.h"
 #include "linker_symbol.h"
 
+
 int g_log_level = FAKELINKER_LOG_LEVEL;
 int g_version_code = FAKELINKER_MODULE_VERSION;
 const char *g_version_name = FAKELINKER_MODULE_VERSION_NAME;
 int android_api;
 C_API FakeLinker g_fakelinker_export;
-JNINativeInterface *original_functions;
+JNINativeInterface *original_functions = nullptr;
 bool init_success = false;
+JNINativeInterface *fakelinker::ProxyJNIEnv::backup_functions = nullptr;
+
 
 using FakeLinkerModulePtr = void (*)(JNIEnv *, SoinfoPtr, const FakeLinker *);
 
@@ -166,6 +170,7 @@ C_API int init_fakelinker(JNIEnv *env, FakeLinkerMode mode, const char *java_cla
       LOGE("JNIEnv is a null pointer and cannot register native hook");
       return 2;
     }
+    original_functions = const_cast<JNINativeInterface *>(env->functions);
     native_hook_initialized = fakelinker::DefaultInitJniFunctionOffset(env);
     if (!native_hook_initialized) {
       return 3;

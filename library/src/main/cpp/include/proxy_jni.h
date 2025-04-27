@@ -604,15 +604,20 @@ public:
   jobjectRefType GetObjectRefType(jobject obj) { return PROXY_CALL(GetObjectRefType, obj); }
 
 public:
-  explicit ProxyJNIEnv(JNIEnv *env) : env_(env) { functions = original_functions; }
+  explicit ProxyJNIEnv(JNIEnv *env) : env_(env) {
+    functions = backup_functions ? backup_functions : original_functions;
+  }
 
   explicit ProxyJNIEnv(JNIEnv *env, JNINativeInterface *interface) : env_(env), functions(interface) {}
 
   void Env(JNIEnv *env) { env_ = env; }
 
+  static void SetBackupFunctions(JNINativeInterface *functions) { backup_functions = functions; }
+
 private:
   JNIEnv *env_;
   JNINativeInterface *functions;
+  static JNINativeInterface *backup_functions;
 };
 
 } // namespace fakelinker
