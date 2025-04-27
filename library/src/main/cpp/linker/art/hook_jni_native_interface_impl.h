@@ -26,4 +26,16 @@ bool InitJniFunctionOffset(JNIEnv *env, jclass clazz, jmethodID methodId, void *
                            uint32_t unmask);
 
 bool DefaultInitJniFunctionOffset(JNIEnv *env);
+
+/**
+ * @brief Read the native function pointer directly from the ArtMethod structure
+ *
+ * @param  env        JNIEnv pointer, find ArtMethod use
+ * @param  clazz      The class where the method being searched is located
+ * @param  methodId   The method id being searched
+ * @return void*      Return -1 if the native pointer offset initialization fails,
+ *                    -2 if the art method is not found,
+ *                    other values ​​are function pointers
+ */
+void *ReadNativeFunction(JNIEnv *env, jclass clazz, jmethodID methodId);
 } // namespace fakelinker

@@ -37,7 +37,7 @@ FakeLinkerError HookJniNativeInterface(int function_offset, void *hook_method, v
     return kHJErrorRepeatOperation;
   }
   MapsHelper util;
-  if (!util.GetMemoryProtect(target)) {
+  if (!util.GetMemoryProtect(target, 8)) {
     LOGE("The specified memory protection permission is not obtained: %p", target);
     return kHJErrorExec;
   }
@@ -65,7 +65,7 @@ int HookJniNativeInterfaces(HookJniUnit *items, int len) {
   HookJniUnit *item = &items[0];
 
   MapsHelper util;
-  if (!util.GetMemoryProtect(original_functions)) {
+  if (!util.GetMemoryProtect(original_functions, sizeof(JNINativeInterface))) {
     LOGE("The specified memory protection permission is not obtained: %p", original_functions);
     return -1;
   }
@@ -114,9 +114,15 @@ static void InitArt(JNIEnv *env) {
 }
 
 static void *GetArtMethod(JNIEnv *env, jclass clazz, jmethodID methodId) {
+  if (__predict_false(methodId == nullptr) || __predict_false(env == nullptr)) {
+    return nullptr;
+  }
   if (android_api >= __ANDROID_API_R__) {
     if (IsIndexId(methodId)) {
       jobject method = env->ToReflectedMethod(clazz, methodId, true);
+      if (!method) {
+        return nullptr;
+      }
       return reinterpret_cast<void *>(env->GetLongField(method, field_art_method));
     }
   }
@@ -130,6 +136,9 @@ bool InitJniFunctionOffset(JNIEnv *env, jclass clazz, jmethodID methodId, void *
   }
   InitArt(env);
   uintptr_t *artMethod = static_cast<uintptr_t *>(GetArtMethod(env, clazz, methodId));
+  if (!artMethod) {
+    return false;
+  }
   bool success = false;
   for (int i = 0; i < 30; ++i) {
     if (reinterpret_cast<void *>(artMethod[i]) == native) {
@@ -187,6 +196,9 @@ bool DefaultInitJniFunctionOffset(JNIEnv *env) {
     return false;
   }
   uintptr_t *artMethod = static_cast<uintptr_t *>(GetArtMethod(env, clazz.get(), methodId));
+  if (!artMethod) {
+    return false;
+  }
   uintptr_t backup[30];
   for (int i = 0; i < 30; ++i) {
     backup[i] = artMethod[i];
@@ -205,6 +217,18 @@ bool DefaultInitJniFunctionOffset(JNIEnv *env) {
   }
   return false;
 }
+
+void *ReadNativeFunction(JNIEnv *env, jclass clazz, jmethodID methodId) {
+  if (jni_offset == -1) {
+    return reinterpret_cast<void *>(-1);
+  }
+  uintptr_t *artMethod = static_cast<uintptr_t *>(GetArtMethod(env, clazz, methodId));
+  if (__predict_false(artMethod == nullptr)) {
+    return reinterpret_cast<void *>(-2);
+  }
+  return reinterpret_cast<void *>(artMethod[jni_offset]);
+}
+
 
 static void *GetOriginalNativeFunction(const uintptr_t *art_method) {
   if (__predict_false(art_method == nullptr)) {
@@ -268,6 +292,9 @@ int HookJavaNativeFunctions(JNIEnv *env, jclass clazz, HookRegisterNativeUnit *i
       continue;
     }
     void *artMethod = GetArtMethod(env, clazz, methodId);
+    if (!artMethod) {
+      return false;
+    }
     void *backup = GetOriginalNativeFunction(static_cast<uintptr_t *>(artMethod));
     if (backup == hook.fnPtr) {
       LOGE("The same native method has been registered, name: %s, signature: "
