@@ -21,7 +21,7 @@ int g_version_code = FAKELINKER_MODULE_VERSION;
 const char *g_version_name = FAKELINKER_MODULE_VERSION_NAME;
 int android_api;
 C_API FakeLinker g_fakelinker_export;
-JNINativeInterface *original_functions = nullptr;
+C_API JNINativeInterface *original_functions = nullptr;
 bool init_success = false;
 JNINativeInterface *fakelinker::ProxyJNIEnv::backup_functions = nullptr;
 

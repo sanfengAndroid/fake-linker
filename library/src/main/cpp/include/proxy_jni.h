@@ -138,6 +138,11 @@ public:
 
   PROXY_CALL_TYPE(jdouble, Double)
 
+#undef PROXY_CALL_TYPE
+#undef PROXY_CALL_TYPE_METHOD
+#undef PROXY_CALL_TYPE_METHODV
+#undef PROXY_CALL_TYPE_METHODA
+
   void CallVoidMethod(jobject obj, jmethodID methodID, ...) {
     va_list args;
     va_start(args, methodID);
@@ -194,6 +199,11 @@ public:
   PROXY_CALL_NONVIRT_TYPE(jfloat, Float)
 
   PROXY_CALL_NONVIRT_TYPE(jdouble, Double)
+
+#undef PROXY_CALL_NONVIRT_TYPE
+#undef PROXY_CALL_NONVIRT_TYPE_METHOD
+#undef PROXY_CALL_NONVIRT_TYPE_METHODV
+#undef PROXY_CALL_NONVIRT_TYPE_METHODA
 
   void CallNonvirtualVoidMethod(jobject obj, jclass clazz, jmethodID methodID, ...) {
     va_list args;
@@ -296,6 +306,11 @@ public:
   PROXY_CALL_STATIC_TYPE(jfloat, Float)
 
   PROXY_CALL_STATIC_TYPE(jdouble, Double)
+
+#undef PROXY_CALL_STATIC_TYPE
+#undef PROXY_CALL_STATIC_TYPE_METHOD
+#undef PROXY_CALL_STATIC_TYPE_METHODV
+#undef PROXY_CALL_STATIC_TYPE_METHODA
 
   void CallStaticVoidMethod(jclass clazz, jmethodID methodID, ...) {
     va_list args;
