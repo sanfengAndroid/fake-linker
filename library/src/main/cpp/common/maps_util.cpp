@@ -22,26 +22,30 @@ MapsHelper::MapsHelper(const char *library_name) { GetLibraryProtect(library_nam
 
 MapsHelper::~MapsHelper() { CloseMaps(); }
 
-bool MapsHelper::GetMemoryProtect(void *address) {
+bool MapsHelper::GetMemoryProtect(void *address, uint64_t size) {
   if (!OpenMaps()) {
     return false;
   }
   auto target = reinterpret_cast<Address>(address);
+  auto end = target + size;
   while (GetMapsLine()) {
     if (!FormatLine()) {
       continue;
     }
-    if (target >= start_address_ && target <= end_address_) {
-      PageProtect page;
-      page.start = start_address_;
-      page.end = end_address_;
-      page.file_offset = file_offset_;
-      page.old_protect = FormatProtect();
-      page.inode = inode_;
-      page.path = path_;
-      page_.push_back(page);
-      return true;
+    if (end_address_ <= target) {
+      continue;
     }
+    if (start_address_ >= end) {
+      return !page_.empty();
+    }
+    PageProtect page;
+    page.start = start_address_;
+    page.end = end_address_;
+    page.file_offset = file_offset_;
+    page.old_protect = FormatProtect();
+    page.inode = inode_;
+    page.path = path_;
+    page_.push_back(page);
   }
   return false;
 }
@@ -105,8 +109,8 @@ bool MapsHelper::GetLibraryProtect(const char *library_name) {
   return !page_.empty();
 }
 
-bool MapsHelper::UnlockAddressProtect(void *address) {
-  if (!GetMemoryProtect(address)) {
+bool MapsHelper::UnlockAddressProtect(void *address, uint64_t size) {
+  if (!GetMemoryProtect(address, size)) {
     return false;
   }
   PageProtect &page = page_[0];
@@ -254,13 +258,13 @@ std::string MapsHelper::ToString() const {
   return result;
 }
 
-bool MapsHelper::UnlockPageProtect() {
-  if (page_.empty()) {
+bool MapsHelper::UnlockPageProtect(MapsProt prot) {
+  if (page_.empty() || prot == MapsProt::kMPInvalid) {
     return false;
   }
   for (PageProtect &pp : page_) {
-    if ((pp.old_protect & kMPWrite) != kMPWrite) {
-      pp.new_protect = pp.old_protect | kMPWrite | kMPRead;
+    if ((pp.old_protect & prot) != prot) {
+      pp.new_protect = pp.old_protect | prot;
       if (mprotect(reinterpret_cast<void *>(pp.start), pp.end - pp.start, pp.new_protect & kMPRWX) < 0) {
         return false;
       }

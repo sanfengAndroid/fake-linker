@@ -29,23 +29,26 @@ enum MapsProt {
   // 与 mman.h 中不同
   kMPShared = 8,
   kMPPrivate = 16,
+  kMPReadWrite = kMPRead | kMPWrite,
   kMPRWX = kMPRead | kMPWrite | kMPExecute,
   kMPInvalid = -1,
 };
 
 class MapsHelper {
 public:
+  using iterator = std::vector<PageProtect>::iterator;
+  using const_iterator = std::vector<PageProtect>::const_iterator;
   MapsHelper() = default;
 
   ~MapsHelper();
 
   MapsHelper(const char *library_name);
 
-  bool GetMemoryProtect(void *address);
+  bool GetMemoryProtect(void *address, uint64_t size = 0);
 
   bool GetLibraryProtect(const char *library_name);
 
-  bool UnlockAddressProtect(void *address);
+  bool UnlockAddressProtect(void *address, uint64_t size = 0);
 
   Address FindLibraryBase(const char *library_name);
 
@@ -59,11 +62,21 @@ public:
 
   std::string ToString() const;
 
-  bool UnlockPageProtect();
+  bool UnlockPageProtect(MapsProt prot = MapsProt::kMPReadWrite);
 
   bool RecoveryPageProtect();
 
   operator bool() const { return !page_.empty(); }
+
+  bool empty() const { return page_.empty(); }
+
+  const_iterator begin() const { return page_.begin(); }
+
+  const_iterator end() const { return page_.end(); }
+
+  iterator begin() { return page_.begin(); }
+
+  iterator end() { return page_.end(); }
 
 private:
   bool GetMapsLine();
