@@ -124,6 +124,9 @@ std::string soinfo_to_string(soinfo *so) {
   out.reserve(1024);
   out.append("soinfo{");
   out.append("name:").append(so->get_soname()).append(COMMA);
+  if (android_api >= __ANDROID_API_N__) {
+    out.append("handle:").append(hex_int(so->get_handle())).append(COMMA);
+  }
   out.append("phdr:").append(hex_pointer(so->phdr())).append(COMMA);
   out.append("phnum:").append(std::to_string(so->phnum())).append(COMMA);
   out.append("base:").append(hex_int(so->base())).append(COMMA);
