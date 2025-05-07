@@ -5,9 +5,9 @@
 #include <dlfcn.h>
 #include <sys/auxv.h>
 
-#include <android_level_compat.h>
-#include <maps_util.h>
-#include <type.h>
+#include <fakelinker/android_level_compat.h>
+#include <fakelinker/maps_util.h>
+#include <fakelinker/type.h>
 
 #include "linker_globals.h"
 #include "linker_relocs.h"

@@ -2,7 +2,7 @@
 
 #include <link.h>
 
-#include <alog.h>
+#include <fakelinker/alog.h>
 
 #include "linker_sleb128.h"
 #include "linker_soinfo.h"

@@ -5,7 +5,7 @@
 #pragma once
 #include <jni.h>
 
-#include <fake_linker.h>
+#include <fakelinker/fake_linker.h>
 
 namespace fakelinker {
 /**

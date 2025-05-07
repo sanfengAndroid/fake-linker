@@ -6,7 +6,7 @@
 #include <list>
 #include <map>
 
-#include <linker_macros.h>
+#include <fakelinker/linker_macros.h>
 
 #include "linker_namespaces.h"
 #include "linker_tls.h"

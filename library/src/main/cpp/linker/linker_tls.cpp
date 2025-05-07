@@ -1,6 +1,6 @@
 #include "linker_tls.h"
 
-#include <macros.h>
+#include <fakelinker/macros.h>
 
 const TlsModule &get_tls_module(size_t module_id) { async_safe_fatal("unsupport get_tls_module"); }
 

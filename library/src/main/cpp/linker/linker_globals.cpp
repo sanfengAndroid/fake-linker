@@ -14,13 +14,13 @@
 #include <elf.h>
 #include <sys/mman.h>
 
-#include <alog.h>
-#include <fake_linker.h>
-#include <macros.h>
-#include <maps_util.h>
+#include <fakelinker/alog.h>
+#include <fakelinker/elf_reader.h>
+#include <fakelinker/fake_linker.h>
+#include <fakelinker/macros.h>
+#include <fakelinker/maps_util.h>
 
 #include "bionic/get_tls.h"
-#include "elf_reader.h"
 #include "linker_namespaces.h"
 #include "linker_soinfo.h"
 #include "linker_symbol.h"

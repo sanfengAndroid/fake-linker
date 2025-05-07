@@ -6,7 +6,7 @@
 
 #include <pthread.h>
 
-#include <macros.h>
+#include <fakelinker/macros.h>
 
 class ScopedPthreadMutexLocker {
 public:

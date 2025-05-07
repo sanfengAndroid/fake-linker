@@ -1,4 +1,4 @@
-#include <art_symbol.h>
+#include <fakelinker/art_symbol.h>
 
 #include "../linker_globals.h"
 

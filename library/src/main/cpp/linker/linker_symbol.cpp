@@ -1,7 +1,7 @@
 #include "linker_symbol.h"
 
-#include <android_level_compat.h>
-#include <elf_reader.h>
+#include <fakelinker/android_level_compat.h>
+#include <fakelinker/elf_reader.h>
 
 #include "linker_globals.h"
 

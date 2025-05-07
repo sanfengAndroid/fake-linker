@@ -2,13 +2,13 @@
 // Created by beichen on 2025/4/25.
 //
 
-#include <trace_jni.h>
+#include <fakelinker/trace_jni.h>
 
 #include <cinttypes>
 
-#include <jni_helper.h>
-#include <proxy_jni.h>
-#include <type.h>
+#include <fakelinker/jni_helper.h>
+#include <fakelinker/proxy_jni.h>
+#include <fakelinker/type.h>
 
 #include "../linker/linker_globals.h"
 #include "hook_jni_native_interface_impl.h"

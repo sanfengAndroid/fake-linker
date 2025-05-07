@@ -3,13 +3,13 @@
 
 #include <cstring>
 
-#include <alog.h>
-#include <fake_linker.h>
-#include <linker_version.h>
-#include <macros.h>
-#include <maps_util.h>
-#include <proxy_jni.h>
-#include <scoped_utf_chars.h>
+#include <fakelinker/alog.h>
+#include <fakelinker/fake_linker.h>
+#include <fakelinker/linker_version.h>
+#include <fakelinker/macros.h>
+#include <fakelinker/maps_util.h>
+#include <fakelinker/proxy_jni.h>
+#include <fakelinker/scoped_utf_chars.h>
 
 
 #include "art/hook_jni_native_interface_impl.h"

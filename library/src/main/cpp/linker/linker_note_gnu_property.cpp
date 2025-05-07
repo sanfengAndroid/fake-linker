@@ -2,11 +2,12 @@
 // Created by beich on 2022/5/26.
 //
 
-#include "linker_note_gnu_property.h"
+#include "fakelinker/linker_note_gnu_property.h"
 
 #include <sys/auxv.h>
 
-#include "linker.h"
+#include <fakelinker/linker.h>
+
 #include "linker_soinfo.h"
 
 GnuPropertySection::GnuPropertySection(soinfo *si) :

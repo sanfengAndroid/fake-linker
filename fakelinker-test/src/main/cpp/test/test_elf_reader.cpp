@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "elf_reader.h"
+#include <fakelinker/elf_reader.h>
 
 using namespace fakelinker;
 

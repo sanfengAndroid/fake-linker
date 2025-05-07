@@ -4,8 +4,8 @@
 
 #include <string>
 
-#include <linker_macros.h>
-#include <macros.h>
+#include "linker_macros.h"
+#include "macros.h"
 
 namespace art {
 

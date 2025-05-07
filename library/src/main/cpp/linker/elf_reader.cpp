@@ -1,6 +1,6 @@
 // https://cs.android.com/android/platform/superproject/+/master:bionic/linker/linker_phdr.cpp;bpv=0;bpt=1
 
-#include "elf_reader.h"
+#include "fakelinker/elf_reader.h"
 
 #include <android/api-level.h>
 #include <fcntl.h>
@@ -14,8 +14,8 @@
 #include <cinttypes>
 #include <regex>
 
-#include <linker.h>
-#include <maps_util.h>
+#include <fakelinker/linker.h>
+#include <fakelinker/maps_util.h>
 
 #include "linker_util.h"
 #include "xz/xz.h"

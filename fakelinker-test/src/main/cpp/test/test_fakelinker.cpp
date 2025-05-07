@@ -3,10 +3,10 @@
 #include <gtest/gtest.h>
 #include <jni.h>
 
-#include <fake_linker.h>
+#include <fakelinker/elf_reader.h>
+#include <fakelinker/fake_linker.h>
 #include "../linker/linker_globals.h"
 #include "../linker/linker_symbol.h"
-#include "elf_reader.h"
 
 using namespace fakelinker;
 

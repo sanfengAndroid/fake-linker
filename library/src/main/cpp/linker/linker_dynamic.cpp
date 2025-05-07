@@ -3,9 +3,9 @@
 //
 #include <jni.h>
 
-#include <fake_linker.h>
-#include <linker_macros.h>
-#include <macros.h>
+#include <fakelinker/fake_linker.h>
+#include <fakelinker/linker_macros.h>
+#include <fakelinker/macros.h>
 
 C_API JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
   JNIEnv *env;

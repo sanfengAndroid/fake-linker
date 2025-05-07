@@ -10,7 +10,7 @@
 #include <cstdlib>
 #include <cstring>
 
-#include <android_level_compat.h>
+#include <fakelinker/android_level_compat.h>
 
 static constexpr size_t kAllocateSize100 = 4096 * 100;
 static constexpr size_t kAllocateSize = 4096;

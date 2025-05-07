@@ -5,12 +5,12 @@
 #include "hook_jni_native_interface_impl.h"
 
 #include <jni.h>
-#include <jni_helper.h>
-#include <linker_macros.h>
-#include <macros.h>
-#include <maps_util.h>
 
-#include "scoped_local_ref.h"
+#include <fakelinker/jni_helper.h>
+#include <fakelinker/linker_macros.h>
+#include <fakelinker/macros.h>
+#include <fakelinker/maps_util.h>
+#include <fakelinker/scoped_local_ref.h>
 
 C_API JNINativeInterface *original_functions;
 

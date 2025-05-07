@@ -1,8 +1,8 @@
-#include "elf_reader.h"
+#include "fakelinker/elf_reader.h"
 
 #include <sys/prctl.h>
 
-#include <macros.h>
+#include <fakelinker/macros.h>
 
 #include "linker_util.h"
 

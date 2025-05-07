@@ -30,7 +30,7 @@
 
 #include <stdint.h>
 
-#include <macros.h>
+#include <fakelinker/macros.h>
 
 // Helper classes for decoding LEB128, used in packed relocation data.
 // http://en.wikipedia.org/wiki/LEB128

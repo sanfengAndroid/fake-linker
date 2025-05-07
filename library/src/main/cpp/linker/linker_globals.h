@@ -3,8 +3,8 @@
 //
 #pragma once
 
-#include <fake_linker.h>
-#include <macros.h>
+#include <fakelinker/fake_linker.h>
+#include <fakelinker/macros.h>
 
 #include "linker_namespaces.h"
 #include "linker_soinfo.h"

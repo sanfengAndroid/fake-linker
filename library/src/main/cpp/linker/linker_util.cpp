@@ -8,10 +8,10 @@
 
 #include <cinttypes>
 
-#include <alog.h>
-#include <macros.h>
-#include <maps_util.h>
-#include <unique_fd.h>
+#include <fakelinker/alog.h>
+#include <fakelinker/macros.h>
+#include <fakelinker/maps_util.h>
+#include <fakelinker/unique_fd.h>
 
 #define MAYBE_MAP_FLAG(x, from, to) (((x) & (from)) ? (to) : 0)
 #define PFLAGS_TO_PROT(x)                                                                                              \

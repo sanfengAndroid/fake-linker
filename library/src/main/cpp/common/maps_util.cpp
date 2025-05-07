@@ -2,6 +2,8 @@
 // Created by beich on 2020/11/12.
 //
 
+#include "fakelinker/maps_util.h"
+
 #include <fcntl.h>
 #include <sys/stat.h>
 
@@ -10,9 +12,9 @@
 #include <cstring>
 #include <ctime>
 
-#include "alog.h"
-#include "macros.h"
-#include "maps_util.h"
+#include <fakelinker/alog.h>
+#include <fakelinker/macros.h>
+
 
 #define MAPS_PATH "/proc/self/maps"
 

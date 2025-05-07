@@ -1,7 +1,7 @@
 
 #include "linker_relocate.h"
 
-#include <elf_reader.h>
+#include <fakelinker/elf_reader.h>
 
 #include "linker_globals.h"
 #include "linker_relocs.h"

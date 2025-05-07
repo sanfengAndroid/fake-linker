@@ -1,8 +1,8 @@
-#include <default_trace_jni.h>
+#include <fakelinker/default_trace_jni.h>
 
 #include <android/log.h>
 
-#include <alog.h>
+#include <fakelinker/alog.h>
 
 namespace fakelinker {
 

@@ -2,11 +2,11 @@
 // Created by beich on 2020/12/18.
 //
 
-#include "jni_helper.h"
+#include "fakelinker/jni_helper.h"
 
-#include <art_symbol.h>
-#include <proxy_jni.h>
-#include <scoped_utf_chars.h>
+#include <fakelinker/art_symbol.h>
+#include <fakelinker/proxy_jni.h>
+#include <fakelinker/scoped_utf_chars.h>
 
 #include "../linker_symbol.h"
 

@@ -2,7 +2,7 @@
 
 #include <sys/mman.h>
 
-#include <linker_macros.h>
+#include <fakelinker/linker_macros.h>
 
 #include "linked_list.h"
 #include "linker_block_allocator.h"

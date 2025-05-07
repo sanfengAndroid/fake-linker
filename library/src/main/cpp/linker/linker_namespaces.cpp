@@ -7,7 +7,7 @@
 #include <dlfcn.h>
 #include <libgen.h>
 
-#include <type.h>
+#include <fakelinker/type.h>
 
 #include "linker_common_types.h"
 #include "linker_globals.h"

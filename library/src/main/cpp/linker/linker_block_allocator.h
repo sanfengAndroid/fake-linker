@@ -3,8 +3,8 @@
 //
 #pragma once
 
-#include <linker_macros.h>
-#include <macros.h>
+#include <fakelinker/linker_macros.h>
+#include <fakelinker/macros.h>
 
 
 struct LinkerBlockAllocatorPage;

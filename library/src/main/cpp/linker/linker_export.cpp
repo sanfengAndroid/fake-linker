@@ -4,13 +4,14 @@
 
 #include <android/log.h>
 
-#include <fake_linker.h>
-#include <linker_version.h>
-#include <macros.h>
-#include <unique_memory.h>
+#include <fakelinker/elf_reader.h>
+#include <fakelinker/fake_linker.h>
+#include <fakelinker/linker_version.h>
+#include <fakelinker/macros.h>
+#include <fakelinker/unique_memory.h>
 
 #include "art/hook_jni_native_interface_impl.h"
-#include "elf_reader.h"
+
 #include "linker_globals.h"
 #include "linker_soinfo.h"
 #include "linker_util.h"

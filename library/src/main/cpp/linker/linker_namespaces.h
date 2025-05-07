@@ -4,7 +4,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include <linker_macros.h>
+#include <fakelinker/linker_macros.h>
 
 #include "linker_common_types.h"
 

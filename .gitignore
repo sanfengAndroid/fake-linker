@@ -15,4 +15,4 @@ build/
 .externalNativeBuild
 .cxx
 local.properties
-library/src/main/cpp/include/linker_version.h
+library/src/main/cpp/include/fakelinker/linker_version.h

@@ -6,9 +6,9 @@
 #include <inttypes.h>
 #include <string>
 
-#include "fake_linker.h"
-#include "maps_util.h"
-#include "scoped_utf_chars.h"
+#include <fakelinker/fake_linker.h>
+#include <fakelinker/maps_util.h>
+#include <fakelinker/scoped_utf_chars.h>
 
 #define TAG "FakeLinker_Test"
 

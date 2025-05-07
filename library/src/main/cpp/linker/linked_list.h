@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <linker_macros.h>
-#include <macros.h>
+#include <fakelinker/linker_macros.h>
+#include <fakelinker/macros.h>
 
 // https://cs.android.com/android/platform/superproject/+/master:bionic/linker/linked_list.h
 
