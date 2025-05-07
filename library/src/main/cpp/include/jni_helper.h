@@ -7,28 +7,39 @@
 
 #include <string>
 
+namespace fakelinker {
+
+
 class JNIHelper {
 public:
-  static std::string GetClassName(JNIEnv *env, jclass clazz);
+  static std::string GetClassName(JNIEnv *env, jclass clazz, bool strict = true);
 
-  static std::string GetObjectClassName(JNIEnv *env, jobject obj);
+  static std::string GetObjectClassName(JNIEnv *env, jobject obj, bool strict = true);
 
-  static std::string GetMethodName(JNIEnv *env, jmethodID mid);
+  static std::string GetMethodName(JNIEnv *env, jmethodID mid, bool strict = true);
 
-  static std::string GetFieldName(JNIEnv *env, jfieldID fieldId);
+  static std::string PrettyMethod(JNIEnv *env, jmethodID mid, bool strict = true);
 
-  static bool IsClassObject(JNIEnv *env, jobject obj);
+  static std::string GetMethodShorty(JNIEnv *env, jmethodID mid, bool strict = true);
+
+  static std::string GetFieldName(JNIEnv *env, jfieldID fieldId, bool strict = true);
+
+  static std::string PrettyField(JNIEnv *env, jfieldID fieldId, bool strict = true);
+
+  static bool IsClassObject(JNIEnv *env, jobject obj, bool strict = true);
 
   template <typename T>
-  static std::string ToString(JNIEnv *env, T value) {
+  static std::string ToString(T value) {
     return std::to_string(value);
   }
 
-  static std::string ToString(JNIEnv *env, jobject object);
+  static std::string ToString(JNIEnv *env, jstring string, bool strict = true);
 
-  static std::string ToString(JNIEnv *env, jmethodID methodID);
+  static std::string ToString(JNIEnv *env, jobject object, bool strict = true);
 
-  static std::string ToString(JNIEnv *env, jfieldID fieldID);
+  static std::string ToString(JNIEnv *env, jmethodID methodID, bool strict = true);
+
+  static std::string ToString(JNIEnv *env, jfieldID fieldID, bool strict = true);
 
   static void PrintAndClearException(JNIEnv *env);
 
@@ -40,20 +51,8 @@ public:
   static void Init(JNIEnv *env);
 
   static void Clear(JNIEnv *env);
-  static JNIHelper &Get();
 
-public:
-  bool init_;
-  jclass java_lang_Object;
-  jclass java_lang_Class;
-  jclass java_lang_String;
-
-  jclass java_lang_reflect_Method;
-  jclass java_lang_reflect_Field;
-
-  jmethodID java_lang_Object_toString;
-  jmethodID java_lang_Object_getClass;
-  jmethodID java_lang_reflect_Field_getName;
-  jmethodID java_lang_Class_getName;
-  jmethodID java_lang_reflect_Method_getName;
+private:
+  JNIHelper() = delete;
 };
+} // namespace fakelinker

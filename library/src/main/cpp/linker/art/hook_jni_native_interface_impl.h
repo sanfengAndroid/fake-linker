@@ -38,4 +38,6 @@ bool DefaultInitJniFunctionOffset(JNIEnv *env);
  *                    other values ​​are function pointers
  */
 void *ReadNativeFunction(JNIEnv *env, jclass clazz, jmethodID methodId);
+
+/* ArtMethod* */ void *ToArtMethod(JNIEnv *env, jmethodID methodId, jclass clazz);
 } // namespace fakelinker

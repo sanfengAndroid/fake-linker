@@ -24,7 +24,7 @@ extern bool init_success;
 
 #define CHECK(predicate)                                                                                               \
   do {                                                                                                                 \
-    if (!(predicate)) {                                                                                                \
+    if (!__predict_true(predicate)) {                                                                                  \
       async_safe_fatal("%s:%d: %s CHECK '%s' failed", __FILE__, __LINE__, __FUNCTION__, #predicate);                   \
     }                                                                                                                  \
   } while (0)

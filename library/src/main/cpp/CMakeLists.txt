@@ -47,7 +47,7 @@ if(NOT DEFINED FAKELINKER_MODULE_VERSION_NAME)
   set(FAKELINKER_MODULE_VERSION_NAME "3.1.0")
 endif()
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/module_config.h.in" "${CMAKE_CURRENT_SOURCE_DIR}/include/linker_version.h")
+configure_file("${CMAKE_CURRENT_LIST_DIR}/module_config.h.in" "${CMAKE_CURRENT_LIST_DIR}/include/linker_version.h")
 
 message(STATUS "cmake version:${CMAKE_VERSION}
 api:${ANDROID_PLATFORM}
@@ -75,10 +75,13 @@ set(FAKE_LINKER_SRC
   ${NEON_SRC}
 
   # JNI Hook
+  linker/art/art_symbol.cpp
+  linker/art/default_trace_jni.cpp
   linker/art/hook_jni_native_interface_impl.cpp
+  linker/art/jni_helper.cpp
+  linker/art/trace_jni.cpp
 
   # JNI Common
-  common/jni_helper.cpp
   common/maps_util.cpp
   common/unique_fd.cpp
   common/unique_memory.cpp

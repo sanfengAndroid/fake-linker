@@ -229,6 +229,9 @@ void *ReadNativeFunction(JNIEnv *env, jclass clazz, jmethodID methodId) {
   return reinterpret_cast<void *>(artMethod[jni_offset]);
 }
 
+/* ArtMethod* */ void *ToArtMethod(JNIEnv *env, jmethodID methodId, jclass clazz) {
+  return GetArtMethod(env, clazz, methodId);
+}
 
 static void *GetOriginalNativeFunction(const uintptr_t *art_method) {
   if (__predict_false(art_method == nullptr)) {
