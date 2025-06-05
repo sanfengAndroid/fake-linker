@@ -25,8 +25,8 @@ class MapsHelper;
 
 struct ElfDiskInfo {
   Address section_strtab_offset;
-  Address section_strtab_addr = 0; // 实际内存中的地址
-  uintptr_t section_strtab_size;   // 节区大小
+  Address section_strtab_addr = 0; // Actual address in memory
+  uintptr_t section_strtab_size;   // Section size
   uintptr_t str_addralign;
 
   Address section_symtab_offset;
@@ -60,7 +60,7 @@ public:
   bool Load(address_space_params *address_space);
   bool LoadFromMemory(const char *name);
   bool LoadFromDisk(const char *library_name);
-  // 缓存内部符号,加速查找
+  // Cache internal symbols to accelerate lookup
   bool CacheInternalSymbols();
   bool DecompressDebugData();
 
@@ -103,12 +103,15 @@ public:
   uint64_t FindInternalSymbolByPrefix(std::string_view prefix);
 
   /**
-   * 查找内部符号地址,可支持正则表达式,正则表达式使用默认 std::regex 因此需要调用者保证正则表达式合法,
-   * 注意: 虽然支持正则表达式但也优先匹配符号名称,这是方便完全符号匹配与正则匹配一起查找,避免多次遍历符号表
+   * Find internal symbol addresses, supports regular expressions. Regular expressions use default std::regex
+   * so callers must ensure regex expressions are valid.
+   * Note: Although regex is supported, symbol names are matched first for convenience of exact symbol
+   * matching and regex matching together, avoiding multiple traversals of the symbol table.
    *
-   * @param symbols  查找的内部符号名称或正则表达式集合,保证非空避免查找整个符号表
-   * @param useRegex 开启正则匹配支持
-   * @return         返回地址集合,找到则对应地址非0
+   * @param symbols  Collection of internal symbol names or regex expressions to find, ensure non-empty to avoid
+   * searching entire symbol table
+   * @param useRegex Enable regex matching support
+   * @return         Return address collection, found addresses are non-zero
    */
   std::vector<Address> FindInternalSymbols(const std::vector<std::string> &symbols, bool useRegex = false);
 
@@ -175,7 +178,7 @@ public:
   // Size in bytes of the gap mapping.
   size_t gap_size_;
   // Load bias.
-  // 库加载基址,通常就是 load_start_ 因为第一个页通常虚拟地址为0
+  // Library load base address, usually same as load_start_ because first page typically has virtual address 0
   ElfW(Addr) load_bias_;
 
   // Loaded phdr.

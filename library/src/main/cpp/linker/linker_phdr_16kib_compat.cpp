@@ -16,7 +16,7 @@ static inline bool segment_contains_prefix(const ElfW(Phdr) * segment, const Elf
 namespace fakelinker {
 
 bool get_16kb_appcompat_mode() {
-  // todo 应该从linker中读取
+  // TODO: Should be read from linker
   return g_enable_16kb_app_compat;
 }
 

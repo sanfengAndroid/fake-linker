@@ -35,7 +35,7 @@ ANDROID_GE_N void NamespaceListAllocator::free(LinkedListEntry<android_namespace
 }
 
 static void LinkerBlockProtectAll(int port) {
-  // 由于我们修改的同时linker可能也在同时修改，因此只保护读写，不保护读
+  // Since we modify while linker may also be modifying simultaneously, only protect read-write, not read-only
   if ((port & PROT_WRITE) == 0) {
     return;
   }

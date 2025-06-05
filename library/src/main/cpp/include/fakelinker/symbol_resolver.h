@@ -8,13 +8,13 @@ namespace fakelinker {
 class SymbolResolver {
 public:
   struct SymbolResult {
-    // 解析的库/地方范围的起始地址
+    // Start address of the resolved library/location range
     uintptr_t start;
-    // 解析的库/地方范围的结束地址
+    // End address of the resolved library/location range
     uintptr_t end;
-    // 当前地址相对于 start 的偏移
+    // Offset of the current address relative to start
     uintptr_t offset = UINTPTR_MAX;
-    // 库名称
+    // Library name
     const char *name;
   };
 
@@ -23,26 +23,26 @@ public:
   bool AddAddressRange(const std::string &name, uintptr_t start, uintptr_t end);
 
   /**
-   * @brief 格式化地址如下:
-   *         head 地址 [库名!偏移]
+   * @brief Format address as follows:
+   *         head address [library_name!offset]
    *
-   * @param  address        待格式化地址
-   * @param  default_format 如果不再监控范围内是否格式化为 head 地址
-   * @param  head           添加指定头
+   * @param  address        Address to be formatted
+   * @param  default_format Whether to format as head address if not in monitoring range
+   * @param  head           Add specified header
    * @return std::string
    */
   std::string FormatAddress(uintptr_t address, bool default_format, const std::string &head = "");
 
   /**
-   * @brief 指定buffer处格式化地址,避免内存拷贝
+   * @brief Format address at specified buffer location to avoid memory copying
    *
-   * @param  buffer         指定缓冲区
-   * @param  max_length     最大缓冲区大小
-   * @param  address        待格式化的地址
-   * @param  default_format 如果不再监控范围内是否格式化为 head 地址
-   * @param  head           添加指定头
-   * @return true           在地址范围内
-   * @return false          不在地址范围内
+   * @param  buffer         Specify the buffer to be written, which will be updated after writing
+   * @param  max_length     Maximum buffer size
+   * @param  address        Address to be formatted
+   * @param  default_format Whether to format as head address if not in monitoring range
+   * @param  head           Add specified header
+   * @return true           Within address range
+   * @return false          Not within address range
    */
   bool FormatAddressFromBuffer(char *&buffer, size_t max_length, uintptr_t address, bool default_format,
                                const std::string &head = "");

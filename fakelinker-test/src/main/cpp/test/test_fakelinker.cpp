@@ -224,7 +224,7 @@ TEST(FakeLinker, namespaceTest) {
   EXPECT_EQ(g_fakelinker_export.android_namespace_add_ld_library_path(thiz_np, "/data/local/add_ld_library"),
             FakeLinkerError::kErrorNo)
     << "android_namespace_add_ld_library_path";
-  // 目前还不能修改 default_library 和 permitted_library
+  // Currently unable to modify default_library and permitted_library
   EXPECT_EQ(g_fakelinker_export.android_namespace_add_default_library_path(thiz_np, "data/local/add_default_library"),
             FakeLinkerError::kErrorUnavailable)
     << "android_namespace_add_default_library_path";

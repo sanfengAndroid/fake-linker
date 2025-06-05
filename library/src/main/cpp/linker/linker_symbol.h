@@ -15,23 +15,23 @@
 namespace fakelinker {
 
 /**
- * @brief 为符号分类,有时只使用到个别符号时不用加载所有符号
+ * @brief Categorize symbols - sometimes only individual symbols are used, so we don't need to load all symbols
  *
  */
 enum LinkerSymbolCategory {
-  // linker最基础的符号,必须找到
+  // Most basic linker symbols, must be found
   kLinkerBase = 0,
-  // linker调试日志相关
+  // Linker debug logging related
   kLinkerDebug = 1,
-  // dlopen/dlsym相关
+  // dlopen/dlsym related
   kDlopenDlSym = 1 << 1,
-  // 与soinfo命名空间相关
+  // soinfo namespace related
   kNamespace = 1 << 2,
-  // 与7.0以上soinfo handler相关
+  // soinfo handler related for Android 7.0+
   kSoinfoHandler = 1 << 3,
-  // 加载修改soinfo相关的内存保护符号
+  // Load and modify soinfo related memory protection symbols
   kSoinfoMemory = 1 << 4,
-  // 所有符号都加载
+  // Load all symbols
   kLinkerAll = 0xFFFFFFFF,
 };
 
@@ -132,10 +132,10 @@ struct LinkerSymbol {
 
   ANDROID_LE_M ExportSymbol<void *(void *, const char *), kDlopenDlSym> dlsym{.max_api = __ANDROID_API_N__};
   /*
-   * 在Android7中Linker导出 dlopen,
-   * dlsym符号不包含caller地址,且不同设备可能内联了dlopen_ext和dlsym_impl符号,因此查找更底层内部符号do_dlopen,do_dlsym
-   * 且还要修复dlerror
-   * */
+   * In Android 7, Linker exports dlopen,
+   * dlsym symbol does not include caller address, and different devices may have inlined dlopen_ext and dlsym_impl
+   * symbols, therefore we need to find lower-level internal symbols do_dlopen, do_dlsym and also need to fix dlerror
+   */
   ANDROID_LE_N1 ANDROID_GE_N InternalSymbol<bool(void *, const char *, const char *, void *, void **), kDlopenDlSym>
     dlsymN{.min_api = __ANDROID_API_N__, .max_api = __ANDROID_API_O__};
   ANDROID_GE_O ExportSymbol<void *(void *, const char *, const void *), kDlopenDlSym> dlsymO{.min_api =

@@ -315,7 +315,7 @@ bool ElfReader::LoadFromMemory(const char *name) {
   load_start_ = reinterpret_cast<void *>(base);
   const ElfW(Ehdr) *ehdr = reinterpret_cast<const ElfW(Ehdr) *>(base);
   header_ = *ehdr;
-  // 计算 load_bias_, 从内存中加载就只读取动态节区
+  // Calculate load_bias_, when loading from memory, only read dynamic sections
   if (ReadProgramHeadersFromMemory(reinterpret_cast<const char *>(ehdr), maps) && ReadDynamicSectionFromMemory()) {
     did_load_ = true;
   }
@@ -357,7 +357,7 @@ bool ElfReader::LoadFromDisk(const char *library_name) {
 
   disk_info_->mmap_memory.reset(addr, file_size, true);
 
-  // 读取文件节区数据
+  // Read file section data
   ElfW(Ehdr) *head = disk_info_->mmap_memory.get<ElfW(Ehdr)>();
   if (head == nullptr) {
     DL_ERR("read elf header failed: %s", library_name);
@@ -573,7 +573,7 @@ uint64_t ElfReader::FindImportSymbol(const char *name) {
   if (symbol_name.empty()) {
     return 0;
   }
-  // 优先使用 elf hash 计算符号索引
+  // Prefer using ELF hash to calculate symbol index
   const ElfW(Sym) *sym = nullptr;
   if (nbucket_ != 0) {
     sym = ElfHashLookupSymbol(name);
@@ -754,11 +754,11 @@ std::vector<Address> ElfReader::FindInternalSymbols(const std::vector<std::strin
 
   size_t count = 0;
   size_t num = symbols.size();
-  // 不再判断空字符串,调用者保证
+  // No longer checking for empty strings, caller guarantees validity
   std::vector<std::regex> regs;
   if (useRegex) {
     for (auto &name : symbols) {
-      // 正则表达式也需要调用者保证合法
+      // Regular expressions also need to be guaranteed valid by the caller
       regs.emplace_back(name);
     }
   }
@@ -951,16 +951,16 @@ bool ElfReader::ReadProgramHeadersFromMemory(const char *base, MapsHelper &maps)
     DL_ERR("\"%s\" has invalid e_phnum: %zd", name_.c_str(), phdr_num_);
     return false;
   }
-  // 程序头表是依赖文件头就是第一个加载段计算得到
+  // Program header table is calculated based on the file header as the first load segment
   phdr_table_ = reinterpret_cast<const ElfW(Phdr) *>(base + header_.e_phoff);
   size_t size = phdr_num_ * sizeof(ElfW(Phdr));
 
-  // 1. 验证内存访问性
+  // 1. Verify memory accessibility
   if (!maps.CheckAddressPageProtect(reinterpret_cast<const Address>(phdr_table_), size, kMPRead)) {
     DL_ERR("The library's program header table is not accessible");
     return false;
   }
-  // 2. 验证段加载偏移
+  // 2. Verify segment load offset
   const ElfW(Phdr) *phdr_limit = phdr_table_ + phdr_num_;
   for (const ElfW(Phdr) *phdr = phdr_table_; phdr < phdr_limit; ++phdr) {
     if (phdr->p_type == PT_PHDR) {
@@ -1006,8 +1006,8 @@ bool ElfReader::ReadSectionHeaders(bool map_memory) {
 }
 
 /**
- * @brief Android 从 7.0 开始要读取节区然后验证
- *  SHT_DYNAMIC 节区与 PT_DYNAMIC 段匹配,没有动态节区则加载失败
+ * @brief Android requires reading sections and validation starting from 7.0
+ *  SHT_DYNAMIC section must match PT_DYNAMIC segment, loading fails without dynamic section
  *
  * @return true
  * @return false
@@ -1020,11 +1020,11 @@ bool ElfReader::ReadSectionHeadersFromMemory() {
   }
   off64_t offset = FileOffsetToVirtualOffset(header_.e_shoff);
   if (offset == -1) {
-    // 节区没有加载到内存中
+    // Section was not loaded into memory
     return false;
   }
   shdr_table_ = reinterpret_cast<ElfW(Shdr) *>(load_bias_ + offset);
-  // 节区不验证内存
+  // Section does not verify memory
   return true;
 }
 

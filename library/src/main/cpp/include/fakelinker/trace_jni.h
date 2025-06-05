@@ -30,17 +30,37 @@ struct _is_valid_container<
     : std::is_same<typename T::value_type, size_t> {};
 
 
+/**
+ * @struct TraceInvokeContext
+ * @brief Context structure for tracing JNI method invocations.
+ *
+ * This structure holds information relevant to a JNI method invocation trace,
+ * including the JNI environment, caller address, result type, method ID (for
+ * varargs), and a message buffer for logging or debugging purposes.
+ *
+ * Members:
+ * - env: Pointer to the JNI environment associated with the current thread.
+ * - caller: Address of the entity invoking the JNI method.
+ * - result: The result type of the JNI call, if applicable.
+ * - method: The JNI method ID, used when the method has variable arguments.
+ * - message: Buffer to store trace or debug messages (up to 4096 characters).
+ * - message_length: The current length of the message stored in the buffer.
+ *
+ * Constructor:
+ * - Initializes the context with the given result type, JNI environment, and caller address.
+ *   The method ID is initialized to nullptr.
+ */
 template <typename jtype, bool AllowAccessArgs = true>
 struct TraceInvokeContext {
-  // JNIEnv 对象
+  // JNIEnv object pointer, note: it contains function pointers after our Hook
   JNIEnv *env;
-  // 调用者的地址
+  // Caller's address
   void *caller;
-  // 如果有返回值,则是
+  // JNI call return value
   jtype result;
-  // 当有可变参数 va_list 时则为具体的方法
+  // Specific method when there are variable arguments va_list
   jmethodID method;
-  // 保存消息
+  // Store messages
   char message[4096];
   uint32_t message_length = 0;
 
@@ -50,9 +70,9 @@ struct TraceInvokeContext {
 
 template <>
 struct TraceInvokeContext<void, true> {
-  // JNIEnv 对象
+  // JNIEnv object pointer, note: it contains function pointers after our Hook
   JNIEnv *env;
-  // 调用者的地址
+  // Caller's address
   void *caller;
   jmethodID method;
   char message[4096];
@@ -81,7 +101,7 @@ template <typename Derived>
 class BaseTraceJNICallback;
 
 namespace jni_trace {
-// 直接申明全局变量避免增加寻址操作
+// Directly declare global variables to avoid adding addressing operations
 extern JNINativeInterface backup_jni;
 extern JNINativeInterface *org_jni;
 extern JNINativeInterface hook_jni;
@@ -1160,7 +1180,63 @@ private:
   DISALLOW_COPY_AND_ASSIGN(JNIMonitor);
 };
 
-
+/**
+ * @class BaseTraceJNICallback
+ * @brief A base class for tracing and logging JNI calls in a custom JNIEnv wrapper.
+ *
+ * This template class provides a comprehensive framework for intercepting, tracing, and logging
+ * JNI function calls. It is designed to be inherited by user-defined callback classes, such as
+ * DefaultTraceJNICallback, to customize tracing behavior for JNI environments.
+ *
+ * @tparam Derived The derived callback class implementing custom trace logic.
+ *
+ * ## Features
+ * - Intercepts all major JNI function calls, including method/field access, object creation, array operations, etc.
+ * - Formats and logs method/field IDs, arguments, return values, and JNI object types.
+ * - Supports strict mode for enhanced safety and validation.
+ * - Maintains caches for method and field descriptions to improve performance.
+ * - Provides utilities for formatting JNI types, classes, strings, and objects.
+ * - Integrates with Android logging via __android_log_print.
+ * - Supports registration of trace hooks for a wide range of JNI functions.
+ * - Allows derived classes to override trace formatting and logging behavior.
+ *
+ * ## Usage
+ * 1. Inherit from BaseTraceJNICallback in your callback class:
+ *    @code
+ *    class DefaultTraceJNICallback : public BaseTraceJNICallback<DefaultTraceJNICallback> {
+ *    public:
+ *      explicit DefaultTraceJNICallback(bool strict) : BaseTraceJNICallback(strict) {}
+ *    };
+ *    @endcode
+ *
+ * 2. Instantiate your callback and initialize tracing:
+ *    @code
+ *    DefaultTraceJNICallback tracer(true);
+ *    tracer.InitTrace(env); // env is a pointer to JNIEnv
+ *    tracer->AddMonitorAddress(0x1000, 0x2000); // Add address to monitor
+ *    tracer->AddLibraryMonitor("libexample.so", false); // Add library to monitor
+ *    tracer.DefaultRegister(); // Registers default JNI functions and start tracing
+ *    @endcode
+ *
+ * 3. Optionally, use SetStrictMode, SetOriginalEnv, or ClearCache as needed.
+ *
+ * ## Important Methods
+ * - InitTrace(JNIEnv* env): Initializes tracing and hooks JNI functions.
+ * - DefaultRegister(): Registers a default set of JNI functions and start tracing.
+ * - FormatMethodID/FormatFieldID: Returns human-readable descriptions for method/field IDs.
+ * - FormatJNIArguments/FormatReturnValue: Formats and logs JNI call arguments and return values.
+ * - TraceLog/TraceLine: Logging utilities for trace output.
+ *
+ * ## Thread Safety
+ * JNI callbacks use independent Context instances to achieve thread safety, but
+ * JNIMonitor element addition is not thread-safe. It is recommended to complete
+ * adding monitoring addresses before starting the trace.
+ *
+ * ## Example
+ * See DefaultTraceJNICallback in default_trace_jni.h for a minimal implementation.
+ *
+ * @see DefaultTraceJNICallback
+ */
 template <typename Derived>
 class BaseTraceJNICallback : public HookJNIEnv<Derived> {
   friend class HookJNIEnv<Derived>;

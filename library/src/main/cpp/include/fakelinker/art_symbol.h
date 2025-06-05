@@ -45,7 +45,7 @@ private:
   ANDROID_GE_R std::unique_ptr<void *> jni_id_manager_;
   std::unique_ptr<JavaVMExt> java_vm_;
 
-  // 在 Runtime 类中的偏移,使用前应设置
+  // Offset in Runtime class, should be set before use
   static size_t jvm_offset_;
 };
 

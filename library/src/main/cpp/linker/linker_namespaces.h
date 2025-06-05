@@ -21,7 +21,7 @@ public:
 
   ANDROID_GE_O const std::unordered_set<std::string> &shared_lib_sonames() const { return shared_lib_sonames_; }
 
-  // 去掉常量限定,便于拷贝赋值
+  // Remove const qualifier for easier copy assignment
   android_namespace_t * /*const*/ linked_namespace_;
   /*const*/ std::unordered_set<std::string> shared_lib_sonames_;
 };

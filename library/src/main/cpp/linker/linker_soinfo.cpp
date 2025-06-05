@@ -170,7 +170,7 @@ struct SoinfoFunTable {
   SOINFO_SET_GET_FUN(ino_t, st_ino_);
 
   ANDROID_LE_S SOINFO_FUN(soinfo_list_t &, children_);
-  // 实际类型被内联
+  // Actual type is inlined
   ANDROID_GE_T SOINFO_FUN(soinfo_list_t_T &, children_T);
 
   ANDROID_LE_S SOINFO_FUN(soinfo_list_t &, parents_);
@@ -553,7 +553,7 @@ enum class RelocMode {
 
 template <RelocMode Mode>
 static bool process_relocation(soinfo *so, const rel_t &reloc, symbol_relocations &rels) {
-  // rel 通用
+  // Common for rel
   void *const rel_target = reinterpret_cast<void *>(reloc.r_offset + so->load_bias());
   const uint32_t r_type = R_TYPE(reloc.r_info);
   const uint32_t r_sym = R_SYM(reloc.r_info);
@@ -580,8 +580,8 @@ static bool process_relocation(soinfo *so, const rel_t &reloc, symbol_relocation
     return reloc.r_addend;
   };
 #else
-  // 这种情况下已经重定位了就无法再获得该
-  // addend,但是通常我们要重定位的符号用不上
+  // In this case, relocation has already been done and we can no longer obtain the
+  // addend, but usually the symbols we want to relocate don't need it
   auto get_addend_rel = [&]() -> ElfW(Addr) {
     LOGE("Error: Symbols that may be wrong are being relocated");
     return *static_cast<ElfW(Addr) *>(rel_target);
@@ -2254,8 +2254,8 @@ uint32_t soinfo::get_rtld_flags() {
 
 void soinfo::set_dt_flags_1(uint32_t flag) {
   if (has_min_version(1)) {
-    // Android 7.0以下添加进全局组后拥有 RTLD_GLOBAL
-    // 标志,这会导致在全局库中使用dlsym无法查找到符号
+    // On Android 7.0 and below, adding to global group grants RTLD_GLOBAL
+    // flag, which causes dlsym to be unable to find symbols in global libraries
     if (android_api >= __ANDROID_API_N__) {
       if ((dt_flags_1() & DF_1_GLOBAL) != 0) {
         set_rtld_flags(rtld_flags() | RTLD_GLOBAL);
@@ -2289,11 +2289,11 @@ void *soinfo::find_export_symbol_by_prefix(const char *name) {
   uint32_t start = 0;
   uint32_t end;
   if (is_gnu_hash()) {
-    // gnu查找符号数量是chain中最后一个数 & 1 == 1
+    // GNU symbol count is the last number in chain where & 1 == 1
     // max(bucket)while ((chain[ix - symoffset] & 1) == 0) ix++;
     std::tie(start, end) = get_export_symbol_gnu_table_size();
   } else {
-    // elf hash 表没有对内部符号和外部符号排序
+    // ELF hash table does not sort internal and external symbols
     end = nchain();
   }
 
@@ -2325,7 +2325,7 @@ void *soinfo::find_export_symbol_by_prefix(const char *name) {
 }
 
 void *soinfo::find_export_symbol_by_index(size_t index) {
-  // 无法判断有效性
+  // Cannot determine validity
   return reinterpret_cast<void *>(resolve_symbol_address(symtab() + index));
 }
 
@@ -2388,7 +2388,7 @@ const ElfW(Sym) * soinfo::gnu_lookup(SymbolName &symbol_name, const version_info
       ElfW(Sym) *s = symtab() + n;
       if (((gnu_chain()[n] ^ hash) >> 1) == 0 && check_symbol_version(versym, n, verneed) &&
           strcmp(get_string(s->st_name), symbol_name.get_name()) == 0
-          /*&& is_symbol_global_and_defined(this, s)*/ // 查找符号不区分全局还是局部
+          /*&& is_symbol_global_and_defined(this, s)*/ // Symbol lookup does not distinguish between global and local
       ) {
         return symtab() + n;
       }
@@ -2443,11 +2443,11 @@ symbol_relocations soinfo::get_global_soinfo_export_symbols(bool only_func) {
   symbol_relocations result;
 
   if (is_gnu_hash()) {
-    // gnu查找符号数量是chain中最后一个数 & 1 == 1
+    // GNU symbol count is the last number in chain where & 1 == 1
     // max(bucket)while ((chain[ix - symoffset] & 1) == 0) ix++;
     std::tie(start, end) = get_export_symbol_gnu_table_size();
   } else {
-    // elf hash 表没有对内部符号和外部符号排序
+    // ELF hash table does not sort internal and external symbols
     end = nchain();
   }
 

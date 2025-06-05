@@ -26,7 +26,7 @@ enum MapsProt {
   kMPRead = PROT_READ,
   kMPWrite = PROT_WRITE,
   kMPExecute = PROT_EXEC,
-  // 与 mman.h 中不同
+  // Different from mman.h
   kMPShared = 8,
   kMPPrivate = 16,
   kMPReadWrite = kMPRead | kMPWrite,

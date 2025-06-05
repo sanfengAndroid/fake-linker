@@ -14,8 +14,8 @@ const char *hex_pointer(const void *ptr);
 const char *hex_int(uint64_t val);
 
 /*
- * linker的数据在写入后都被保护起来,关闭了写权限
- * */
+ * The linker's data is protected after being written, with write permissions disabled
+ */
 std::string soinfo_to_string_debug(soinfo *si);
 std::string soinfo_to_string(soinfo *si);
 std::string android_namespace_to_string(android_namespace_t *an);

@@ -5,9 +5,10 @@
 
 /*
  * Android 5.0 x86
- * soinfo_link_image函数被优化不遵循cdecl调用约定，因此无法使用系统重定位
- * Android 5.1 x86_64 LinkImage 被内联了
- * */
+ * soinfo_link_image function is optimized and doesn't follow cdecl calling convention,
+ * so system relocation cannot be used
+ * Android 5.1 x86_64 LinkImage has been inlined
+ */
 #include "linker_globals.h"
 
 #include <dlfcn.h>
@@ -37,17 +38,18 @@
 namespace fakelinker {
 
 /*
- * 关于dlopen dlsym
- * Android 8.0 以上 linker导出符号 __loader_dlopen, 0__loader_dlsym
- * 可以直接修改caller地址 Android 7.0 ~ Android 7.1.2 linker 中导出符号 dlopen,
- * dlsym ,其可能内联了dlopen_ext,dlsym_impl函数因此直接调用无法修改
- *  而内联了则要查找do_dlopen,do_dlsym函数,而当失败时还要修复dlerror,且__bionic_format_dlerror也被内联了
- * Android 7.0以下直接使用原生dlopen和dlsym即可
- * */
+ * About dlopen dlsym
+ * Android 8.0+ linker exports symbols __loader_dlopen, __loader_dlsym
+ * Can directly modify caller address. Android 7.0 ~ Android 7.1.2 linker exports symbols dlopen,
+ * dlsym, which may have inlined dlopen_ext, dlsym_impl functions, so direct calls cannot be modified.
+ * When inlined, need to find do_dlopen, do_dlsym functions, and when failed, need to fix dlerror,
+ * and __bionic_format_dlerror is also inlined.
+ * Android 7.0 and below can directly use native dlopen and dlsym.
+ */
 
 /*
  * Android 11
- * lookup_list包含所有可以访问的全局组和本地组, local_group_root this
+ * lookup_list contains all accessible global groups and local groups, local_group_root this
  * bool soinfo::link_image(const SymbolLookupList& lookup_list, soinfo*
  local_group_root, const android_dlextinfo* extinfo, size_t* relro_fd_offset)
  * Android 10
@@ -209,7 +211,7 @@ ANDROID_GE_N bool ProxyLinker::CallDoDlsymN(void *handle, const char *symbol, co
     *sym = linker_symbol.dlsymO.Get()(handle, symbol, caller_addr);
     return *sym != nullptr;
   }
-  // 符号没找到要设置错误输出,避免后续调用dlerror出错
+  // Set error output when symbol is not found to prevent subsequent dlerror calls from failing
   ScopedPthreadMutexLocker locker(linker_symbol.g_dl_mutex.Get());
   bool found = linker_symbol.dlsymN.Get()(handle, symbol, version, caller_addr, sym);
   if (!found) {
@@ -311,7 +313,7 @@ soinfo *ProxyLinker::FindSoinfoByName(const char *name) {
   int len_a = strlen(name);
   do {
     if (const char *so_name = si->get_soname()) {
-      // 低版本保存了完整路径,因此这里只判断结尾
+      // Lower versions save the full path, so we only check the suffix here
       int delta = strlen(so_name) - len_a;
       if (delta == 0 && strncmp(so_name, name, len_a) == 0) {
         return si;
@@ -413,8 +415,8 @@ static bool walk_dependencies_tree(soinfo *root_soinfo, F action) {
 }
 
 /*
- * Android 7.0以下获取全局库
- * */
+ * Get global libraries for Android versions below 7.0
+ */
 soinfo_list_t ProxyLinker::GetGlobalGroupM() {
   soinfo_list_t global_group;
   for (soinfo *si = linker_symbol.solist.Get(); si != nullptr; si = si->next()) {
@@ -455,13 +457,13 @@ static soinfo_list_t GetSoinfoLocalGroup(soinfo *root) {
 }
 
 /*
- * 5.0 ~ 6.0 把soinfo添加进 g_ld_preloads
- * 6.0+ 添加DF_1_GLOBAL标志
- * 7.0+ 需要将 soinfo 添加到所有命名空间
+ * 5.0 ~ 6.0: Add soinfo to g_ld_preloaders
+ * 6.0+: Add DF_1_GLOBAL flag
+ * 7.0+: Need to add soinfo to all namespaces
  *
- * Android 7.0以下添加进全局组后拥有
- * RTLD_GLOBAL标志,这会导致在全局库中使用dlsym无法查找到符号
- * */
+ * After adding to global group below Android 7.0, it has
+ * RTLD_GLOBAL flag, which causes dlsym in global libraries to fail to find symbols
+ */
 void ProxyLinker::AddSoinfoToGlobal(soinfo *si) {
   if (si == nullptr) {
     return;
@@ -559,8 +561,8 @@ bool ProxyLinker::SetLdDebugVerbosity(int level) {
 }
 
 /*
- * 6.0以下重写链接
- * */
+ * Relink for Android versions below 6.0
+ */
 ANDROID_LE_L1 bool ProxyLinker::RelinkSoinfoImplL(soinfo *si) {
   //	bool soinfo::LinkImage(const android_dlextinfo* extinfo);
   //	static bool soinfo_link_image(soinfo* si, const android_dlextinfo*
@@ -569,8 +571,8 @@ ANDROID_LE_L1 bool ProxyLinker::RelinkSoinfoImplL(soinfo *si) {
 }
 
 /* RelinkSoinfoImplM
- * 6.0及以上重新链接
- * */
+ * Relink for Android 6.0 and above
+ */
 ANDROID_GE_M bool ProxyLinker::RelinkSoinfoImplM(soinfo *si) {
   if (android_api < __ANDROID_API_M__) {
     return false;
@@ -728,9 +730,8 @@ bool ProxyLinker::ManualRelinkLibrary(symbol_relocations &rels, soinfo *child) {
 }
 
 /*
- * 调用系统重定位会出现各种问题,废弃使用
- *
- * */
+ * Calling system relocation will cause various problems, deprecated usage
+ */
 bool ProxyLinker::SystemRelinkLibrary(soinfo *so) {
   bool success;
   if (so == nullptr) {
@@ -744,8 +745,8 @@ bool ProxyLinker::SystemRelinkLibrary(soinfo *so) {
   ScopedPthreadMutexLocker locker(linker_symbol.g_dl_mutex.Get());
   LinkerBlockLock lock;
   so->set_unlinked();
-  // 重新dlopen出错,因为目前进程已经存在该so就不会在走ElfRead
-  // 5.0查找会修改linker的数据段,因此还要解保护linker
+  // Re-dlopen fails because the SO already exists in the current process and won't go through ElfRead
+  // For version 5.0, lookup will modify linker's data segment, so we need to unprotect linker
   MapsHelper util(so->realpath());
   if (!util) {
     return false;

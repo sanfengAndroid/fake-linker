@@ -199,13 +199,13 @@ struct soinfo {
   size_t soinfo_minimum_size();
 
   /**
-   * @brief 按照系统重定位的方式修复重定位
+   * @brief Fix relocations according to the system relocation method
    *
    */
   bool relocate();
 
   /**
-   * @brief 仅重定位已知的符号项, 保存地址的 delta 值
+   * @brief Only relocate known symbol entries, save the delta value of addresses
    *
    */
   bool relocate_special(const symbol_relocations &relocs);
@@ -488,9 +488,9 @@ struct soinfo {
   bool is_gnu_hash();
 
   /*
-   * gnu hash只能查找导出符号, elf hash可以查找导入符号,
-   * 虽然能查找到导入符号但是ElfW(Sym)中的值是0,因此屏蔽导入符号查找
-   * */
+   * GNU hash can only find exported symbols, ELF hash can find imported symbols,
+   * Although imported symbols can be found, the value in ElfW(Sym) is 0, so imported symbol lookup is blocked
+   */
   void *find_export_symbol_address(const char *name);
 
   void *find_export_symbol_by_prefix(const char *prefix);
@@ -512,13 +512,13 @@ struct soinfo {
 #endif
 
   /*
-   * gnu hash只能查找导出符号,导入符号没有Hash
-   * */
+   * GNU hash can only find exported symbols, imported symbols have no Hash
+   */
   const ElfW(Sym) * gnu_lookup(SymbolName &symbol_name, const version_info *vi);
 
   /*
-   * elf hash可以查找导入符号,但实际导入符号的数据都是空
-   * */
+   * ELF hash can find imported symbols, but the actual data of imported symbols is empty
+   */
   const ElfW(Sym) * elf_lookup(SymbolName &symbol_name, const version_info *vi);
 
   const ElfW(Sym) * find_symbol_by_name(SymbolName &symbol_name, const version_info *vi) {
@@ -530,8 +530,9 @@ struct soinfo {
   size_t get_symbols_count();
 
   /*
-   * 只获取全局符号,不获取弱符号,使用c++时可能存在很多弱符号,这些符号对重定向无意义
-   * */
+   * Only get global symbols, not weak symbols. When using C++, there may be many weak symbols,
+   * these symbols are meaningless for redirection
+   */
   symbol_relocations get_global_soinfo_export_symbols(bool only_func);
 
   symbol_relocations get_global_soinfo_export_symbols(bool only_func, const std::vector<std::string> &filters);
@@ -657,7 +658,7 @@ struct soinfo {
   static ElfW(Addr) call_ifunc_resolver(ElfW(Addr) resolver_addr);
 };
 
-// soinfo 所有成员访问都该经过方法调用,内部自动处理偏移问题
+// soinfo all member access should go through method calls, internally handles offset issues automatically
 struct soinfoT : soinfo {
 #ifdef __work_around_b_24465209__
   // old_name
@@ -792,11 +793,11 @@ struct soinfoT : soinfo {
 
 struct soinfoU : soinfoT {
   // version >= 7
-  /// 从 android-14.0.0_r29 开始，新增了该字段
+  /// This field was added starting from android-14.0.0_r29
   /// https://cs.android.com/android/platform/superproject/+/android-14.0.0_r29:bionic/linker/linker_soinfo.h;l=451
   ANDROID_GE_U memtag_dynamic_entries_t memtag_dynamic_entries_;
 
-  /// 从 android-14.0.0_r50 开始，新增了该字段
+  /// This field was added starting from android-14.0.0_r50
   /// https://cs.android.com/android/platform/superproject/+/android-14.0.0_r50:bionic/linker/linker_soinfo.h;l=459
   // Pad gaps between segments when memory mapping?
   ANDROID_GE_U bool should_pad_segments_ = false;
@@ -810,7 +811,7 @@ struct soinfoV : soinfoT {
   // Pad gaps between segments when memory mapping?
   ANDROID_GE_U bool should_pad_segments_ = false;
 
-  // 最新主分支添加了以下支持 16k 页大小字段
+  // The latest main branch has added the following fields to support 16k page size
   // Use app compat mode when loading 4KiB max-page-size ELFs on 16KiB page-size devices?
   ANDROID_GE_V bool should_use_16kib_app_compat_ = false;
 

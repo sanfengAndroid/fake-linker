@@ -136,7 +136,7 @@ typedef void *(*DlsymFun)(void *handle, const char *symbol_name, void *caller_ad
 
 ANDROID_GE_N enum NamespaceFindType {
   kNPOriginal,      /**< It is already a namespace, do not query */
-  kNPSoinfo,        /**< Specifiy the namespace in which soinfo looks for it */
+  kNPSoinfo,        /**< Specify the namespace in which soinfo looks for it */
   kNPNamespaceName, /**< Find the namespace with the specified name */
 };
 

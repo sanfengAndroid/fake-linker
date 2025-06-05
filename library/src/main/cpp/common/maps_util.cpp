@@ -66,9 +66,9 @@ bool MapsHelper::ReadLibraryMap() {
     } else if (!FormatLine()) {
       break;
     }
-    // 库映射可能是不连续的, 但不会出现交叉
+    // Library mapping may be discontinuous, but there will be no crossing
     if (found_inode != inode_ && inode_ != 0) {
-      // 严格判断库是否正确, 一个库至少有读执行内存段
+      // Strictly check if library is correct, a library must have at least read-execute memory segment
       if ((protect & (kMPRead | kMPExecute)) == (kMPRead | kMPExecute)) {
         break;
       } else {
@@ -91,7 +91,7 @@ bool MapsHelper::ReadLibraryMap() {
     page_.push_back(page);
   }
   if (page_.empty()) {
-    // 文件已读取完
+    // File has been read completely
     return true;
   }
   return VerifyLibraryMap();
@@ -300,9 +300,9 @@ bool MapsHelper::FormatLine() {
   if (num == 5) {
     path_[0] = '\0';
   }
-  // 验证权限字符串是否有效
+  // Verify if permission string is valid
   if (FormatProtect() == kMPInvalid) {
-    // 由于maps文件常常改变,有可能读取到无效类型
+    // Since maps file changes frequently, invalid types may be read
     return false;
   }
   return num == 6 || num == 5;
@@ -371,12 +371,12 @@ bool MapsHelper::MakeLibraryName(const char *library_name) {
 }
 
 /**
- * @brief 验证一个库的有效映射是包含 可执行段
+ * @brief Verify that a library's valid mapping contains executable segments
  *
  */
 bool MapsHelper::VerifyLibraryMap() {
   for (auto &page : page_) {
-    // 模拟器下查找arm库没有可执行权限
+    // ARM libraries found under emulator have no executable permissions
     if ((page.old_protect & (kMPExecute | kMPWrite)) != 0) {
       return true;
     }

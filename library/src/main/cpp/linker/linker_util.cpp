@@ -118,7 +118,7 @@ const char *hex_int(uint64_t val) {
 
 #define COMMA ","
 
-// 简单格式化关键成员
+// Simple formatting of key members
 std::string soinfo_to_string(soinfo *so) {
   std::string out;
   out.reserve(1024);

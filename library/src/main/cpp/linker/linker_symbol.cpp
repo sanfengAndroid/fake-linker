@@ -19,7 +19,7 @@ bool ProcessSymbol(LinkerSymbolCategory category,
                    std::function<uint64_t(const char *name, int symbol_type, bool find_prefix)> symbol_finder,
                    SymbolItem<T, Category, Type, IsPointer, Required> &symbol, bool find_prefix,
                    std::initializer_list<const char *> names) {
-  // 按需加载不同类别符号
+  // Load different category symbols on demand
   if ((category & symbol.category) != symbol.category) {
     LOGD("skip target symbol %s category %d, required category %d", names.size() > 0 ? *names.begin() : "",
          symbol.category, category);
@@ -123,7 +123,7 @@ bool LinkerSymbol::LoadSymbol(LinkerSymbolCategory category) {
                    "__dl__ZN6soinfo10link_imageERK10LinkedListIS_"
                    "19SoinfoListAllocatorES4_PK17android_dlextinfo");
   } else if (android_api == __ANDROID_API_L_MR1__) {
-    // todo Android 5.1 x86_64 该方法被内联了,需要单独适配
+    // TODO: Android 5.1 x86_64 this method has been inlined, requires separate adaptation
     PROCESS_SYMBOL(link_image, "__dl__ZN6soinfo9LinkImageEPK17android_dlextinfo");
   } else {
     PROCESS_SYMBOL(link_image, "__dl__ZL17soinfo_link_imageP6soinfoPK17android_dlextinfo");

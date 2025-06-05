@@ -79,7 +79,7 @@ int HookJniNativeInterfaces(HookJniUnit *items, int len) {
     if (item->offset < min || item->offset > max || item->hook_method == nullptr) {
       continue;
     }
-    // 这里再判断下是否已经Hook,避免存在多次相同调用陷入死循环
+    // Check if the method is already hooked to prevent infinite loops from multiple identical calls
     target = reinterpret_cast<void **>((char *)original_functions + item->offset);
     if (*target == item->hook_method) {
       continue;
@@ -241,8 +241,9 @@ static void *GetOriginalNativeFunction(const uintptr_t *art_method) {
 }
 
 /*
- * 由于手动修改 jni入口点没有加锁,因此尽量做到每次读写
- * */
+ * Since manual modification of JNI entry points is not locked,
+ * try to achieve atomic read/write operations for each access.
+ */
 inline static uint32_t GetAccessFlags(const char *art_method) {
   return *reinterpret_cast<const uint32_t *>(art_method + access_flags_art_method_offset);
 }
@@ -270,7 +271,7 @@ inline static bool HasAccessFlag(char *art_method, uint32_t flag) {
 }
 
 inline static bool ClearFastNativeFlag(char *art_method) {
-  // Android 9.0以上没有判断 FastNative 标志
+  // Android 9.0+ does not check FastNative flag
   return api < __ANDROID_API_P__ && ClearAccessFlag(art_method, kAccFastNative);
 }
 
@@ -322,9 +323,10 @@ int HookJavaNativeFunctions(JNIEnv *env, jclass clazz, HookRegisterNativeUnit *i
     if (env->RegisterNatives(clazz, methods, 1) == JNI_OK) {
       success++;
       /*
-       * Android 8.0 ,8.1 必须清除 FastNative 标志才能注册成功,所以如果原来包含
-       * FastNative 标志还得恢复, 否者调用原方法可能会出现问题
-       * */
+       * Android 8.0, 8.1 must clear the FastNative flag to register successfully,
+       * so if it originally contained the FastNative flag, it must be restored,
+       * otherwise calling the original method may cause problems
+       */
       if (restore && (api == __ANDROID_API_O__ || api == __ANDROID_API_O_MR1__)) {
         AddAccessFlag(reinterpret_cast<char *>(artMethod), kAccFastNative);
       }
