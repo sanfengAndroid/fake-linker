@@ -76,9 +76,9 @@ set(FAKE_LINKER_SRC
 
   # JNI Hook
   linker/art/art_symbol.cpp
-  linker/art/default_trace_jni.cpp
   linker/art/hook_jni_native_interface_impl.cpp
   linker/art/jni_helper.cpp
+  linker/art/symbol_resolver.cpp
   linker/art/trace_jni.cpp
 
   # JNI Common

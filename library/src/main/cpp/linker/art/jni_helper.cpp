@@ -34,8 +34,8 @@ static struct CacheJNI {
 #define MAKE_STRING(x) STR(x)
 #define CHECK_EXCEPTION_BEFORE(env)                                                                                    \
   if (strict && __predict_false(env.ExceptionCheck())) {                                                               \
-    return __FILE__ ":" MAKE_STRING(__LINE__) ",There is an unhandled exception, "                                     \
-                                              "this operation will be ignored";                                        \
+    return "jni_helper.cpp:" MAKE_STRING(__LINE__) ",There is an unhandled exception, "                                \
+                                                   "this operation will be ignored";                                   \
   }
 
 #define CLEAR_EXCEPTION_RETURN(env, tips)                                                                              \
@@ -101,7 +101,7 @@ std::string JNIHelper::PrettyMethod(JNIEnv *env, jmethodID mid, bool strict) {
 std::string JNIHelper::GetMethodShorty(JNIEnv *env, jmethodID mid, bool strict) {
   fakelinker::ProxyJNIEnv proxy(env);
   CHECK_JNI_NULL_OBJECT_RETURN(mid, "call PrettyMethod jmethodID is nullptr");
-  CHECK_EXCEPTION_BEFORE(proxy);
+  // CHECK_EXCEPTION_BEFORE(proxy);
   return ArtSymbol::Get()->GetMethodShorty(mid);
 }
 
