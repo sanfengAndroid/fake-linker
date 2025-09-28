@@ -113,7 +113,9 @@ if(FAKELINKER_INSTALL_PRIVATE_HEADERS)
   )
 endif()
 
-target_link_libraries(fakelinker_static ${log-lib})
+target_link_libraries(fakelinker_static PRIVATE
+  $<BUILD_INTERFACE:${log-lib}>
+)
 
 if(${CMAKE_ANDROID_ARCH_ABI} STREQUAL "arm64-v8a" OR ${CMAKE_ANDROID_ARCH_ABI} STREQUAL "x86_64")
   target_compile_definitions(fakelinker_static PUBLIC USE_RELA)
