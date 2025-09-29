@@ -857,4 +857,4 @@ C_API API_PUBLIC FakeLinker g_fakelinker_export = {
   nullptr,
 };
 
-C_API const FakeLinker *get_fakelinker() { return &g_fakelinker_export; }
+C_API API_PUBLIC const FakeLinker *get_fakelinker() { return &g_fakelinker_export; }

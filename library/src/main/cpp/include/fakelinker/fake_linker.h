@@ -27,7 +27,7 @@ __BEGIN_DECLS
 
 #define FAKELINKER_LIB_INIT_NAME "fakelinker_module_init"
 
-enum FakeLinkerError {
+typedef enum {
   kErrorNo = 0,                          /**< No error */
   kHJErrorNO = kErrorNo,                 /**< No error */
   kErrorNpNull = 1,                      /**< android namespace empty errors */
@@ -41,25 +41,26 @@ enum FakeLinkerError {
   kErrorParameter = 1 << 9,              /**< Parameter type error */
   kErrorParameterNull = 1 << 10,         /**< Parameter is empty error */
   kErrorMemoryError = 1 << 11,           /**< Internal memory request error */
-  kErrorUnavailable = 1 << 12,           /**< The feature is not available, and it may be fixed in the future */
+  kErrorUnavailable = 1 << 12,           /**< The feature is not available, and it may be
+                                            fixed in the future */
   kErrorExec = 1 << 13,                  /**< Internal execution error */
   kHJErrorOffset = 1 << 14,              /**< Method index error, out of range or illegal */
   kHJErrorMethodNull = 1 << 15,          /**< Method pointer is null error */
   kHJErrorRepeatOperation = 1 << 16,     /**< Repeated operation error */
   kHJErrorExec = 1 << 17,                /**< Inside execute error */
-};
+} FakeLinkerError;
 
-struct HookJniUnit {
+typedef struct {
   int offset;
   void *hook_method;
   void **backup_method;
-};
+} HookJniUnit;
 
-struct HookRegisterNativeUnit {
+typedef struct {
   JNINativeMethod hook_method;
   bool is_static;
   void **backup_method;
-};
+} HookRegisterNativeUnit;
 
 #define FunPtr(Ret, Name, ...) Ret (*Name)(__VA_ARGS__)
 
@@ -70,7 +71,7 @@ typedef void *AndroidDlextinfoPtr; // android_dlextinfo *
 typedef void *AndroidNamespacePtr;
 typedef void *AndroidLinkNamespacePtr;
 
-struct SoinfoAttributes {
+typedef struct {
   SoinfoPtr soinfo_ptr;
   const char *so_name;
   const char *real_path;
@@ -86,27 +87,27 @@ struct SoinfoAttributes {
   size_t size;
   uint32_t flags;
   ANDROID_GE_N SoinfoHandle handle;
-};
+} SoinfoAttributes;
 
-enum SoinfoFindType {
+typedef enum {
   kSTAddress, /**< Find the soinfo data by the address, if it is null, take the
                  address of the caller */
   kSTHandle,  /**< Android 7.0+, find soinfo by handle */
   kSTName,    /**< Find soinfo by library name */
   kSTOrig,    /**< It is already soinfo, no query operation */
-};
+} SoinfoFindType;
 
-enum FindSymbolType {
+typedef enum {
   kImported, /**< find import symbol address*/
   kExported, /**< find export symbol address*/
   kInternal  /**< find internal symbol addresses, need to load library file from
                 disk*/
-};
+} FindSymbolType;
 
-struct FindSymbolUnit {
+typedef struct {
   const char *symbol_name;
   FindSymbolType symbol_type;
-};
+} FindSymbolUnit;
 
 /**
  * @brief dlopen function signature inside FakeLinker
@@ -134,11 +135,11 @@ typedef void *(*DlopenFun)(const char *filename, int flags, void *caller_addr, c
  */
 typedef void *(*DlsymFun)(void *handle, const char *symbol_name, void *caller_addr);
 
-ANDROID_GE_N enum NamespaceFindType {
+ANDROID_GE_N typedef enum {
   kNPOriginal,      /**< It is already a namespace, do not query */
   kNPSoinfo,        /**< Specify the namespace in which soinfo looks for it */
   kNPNamespaceName, /**< Find the namespace with the specified name */
-};
+} NamespaceFindType;
 
 /**
  * @brief FakeLinker exports multiple function pointers, which are passed as
@@ -172,8 +173,8 @@ typedef struct {
   FunPtr(SoinfoPtr, soinfo_find, SoinfoFindType find_type, const void *param, int *out_error);
 
   /**
-   * @brief Android 7.0+ finds soinfo, restricts the namespace, and returns the first matching item when the namespace
-   * is empty
+   * @brief Android 7.0+ finds soinfo, restricts the namespace, and returns the
+   * first matching item when the namespace is empty
    *
    * @note Required Android 7.0+
    *
@@ -415,8 +416,8 @@ typedef struct {
   FunPtr(bool, call_manual_relocation_by_names, SoinfoPtr global_lib, int len, const char *target_names[]);
 
   /**
-   * @brief Specify the soinfo pointer to get the first export symbol address of the
-   * specified name prefix
+   * @brief Specify the soinfo pointer to get the first export symbol address of
+   * the specified name prefix
    *
    * @param       soinfo_ptr  Specify the soinfo pointer
    * @param       name        Export symbol name
@@ -503,7 +504,8 @@ typedef struct {
                       MEMORY_FREE SoinfoPtr **out_soinfo_ptr_array, int *out_error);
 
   /**
-   * @brief Get the address contained in the namespace, often used in the dlopen function to pass the caller address.
+   * @brief Get the address contained in the namespace, often used in the dlopen
+   * function to pass the caller address.
    * @note that the namespace must contain at least one soinfo
    *
    * @param  android_namespace_ptrDoc
@@ -856,7 +858,7 @@ typedef struct {
  */
 extern void fakelinker_module_init(JNIEnv *env, SoinfoPtr fake_soinfo, const FakeLinker *fake_linker);
 
-enum FakeLinkerMode {
+typedef enum {
   /**
    * Initialize soinfo, initialize all linker functions by default,
    * if only some functions are needed, please add kInitLinkerXXXX flag
@@ -868,12 +870,14 @@ enum FakeLinkerMode {
   kFMNativeHook = 1 << 1,
 
   /**
-   * Register the Java functions, by default, the FakeLinker class will return success even if the registration fails,
-   * whereas non-default classes will only return success if the registration is successful.
+   * Register the Java functions, by default, the FakeLinker class will return
+   * success even if the registration fails, whereas non-default classes will
+   * only return success if the registration is successful.
    */
   kFMJavaRegister = 1 << 2,
   /**
-   * The default FakeLinker class or non-default classes must return success only if the registration is successful.
+   * The default FakeLinker class or non-default classes must return success
+   * only if the registration is successful.
    */
   kFMForceJavaRegister = 1 << 3,
   /**
@@ -902,19 +906,20 @@ enum FakeLinkerMode {
    */
   kInitLinkerMemory = 1 << 8,
 
-};
+} FakeLinkerMode;
 
 /**
- * @brief Fakelinker has been changed to static library mode to facilitate integration and reuse of APIs,
- * so the initialization function needs to be called manually.
- * It can be initialized multiple times, for example, it can be used before there is no jni environment
- * and it can be used after there is a jni environment.
+ * @brief Fakelinker has been changed to static library mode to facilitate
+ * integration and reuse of APIs, so the initialization function needs to be
+ * called manually. It can be initialized multiple times, for example, it can be
+ * used before there is no jni environment and it can be used after there is a
+ * jni environment.
  *
  *
  * @param env   jni environment or nullptr
  * @param mode  initialization mode
- * @param java_class_name Register the class name of the Java interface. If empty, use the default
- * com/sanfengandroid/fakelinker/FakeLinker
+ * @param java_class_name Register the class name of the Java interface. If
+ * empty, use the default com/sanfengandroid/fakelinker/FakeLinker
  * @return      return 0 on success
  */
 int init_fakelinker(JNIEnv *env, FakeLinkerMode mode, const char *java_class_name);
