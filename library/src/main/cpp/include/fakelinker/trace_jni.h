@@ -1082,6 +1082,7 @@ public:
   // caller ensures that no duplicate additions are made
   bool AddTraceFunction(size_t offset) {
     if (offset < offsetof(JNINativeInterface, GetVersion) || offset > offsetof(JNINativeInterface, GetObjectRefType)) {
+      LOGE("invalid jni function offset: 0x%zx", offset);
       return false;
     }
     trace_offsets_.push_back(offset);
@@ -1090,6 +1091,7 @@ public:
 
   bool StartTrace(Derived *trace_callback) {
     if (trace_offsets_.empty()) {
+      LOGE("Trace jni items is empty");
       return false;
     }
     jni_trace::monitor = this;
@@ -1107,35 +1109,35 @@ public:
     return num == hooks.size();
   }
 
-  bool AddLibraryMonitor(std::string_view name, bool exclude) {
+  bool AddMonitorLibrary(std::string_view name, bool exclude) {
     SoinfoPtr target = get_fakelinker()->soinfo_find(SoinfoFindType::kSTName, name.data(), nullptr);
     if (!target) {
       LOGE("find soinfo failed: %s", name.data());
       return false;
     }
     SoinfoAttributes attr;
-    if (!get_fakelinker()->soinfo_get_attribute(target, &attr)) {
-      LOGE("get soinfo attribute failed: %s", name.data());
+    if (auto code = get_fakelinker()->soinfo_get_attribute(target, &attr)) {
+      LOGE("get soinfo attribute failed: %s, error: %d", name.data(), code);
       return false;
     }
-    return AddAddressMonitor(static_cast<uintptr_t>(attr.base), static_cast<uintptr_t>(attr.base + attr.size), exclude);
+    return AddMonitorAddress(static_cast<uintptr_t>(attr.base), static_cast<uintptr_t>(attr.base + attr.size), exclude);
   }
 
-  bool RemoveLibraryMonitor(std::string_view name) {
+  bool RemoveMonitorLibrary(std::string_view name) {
     SoinfoPtr target = get_fakelinker()->soinfo_find(SoinfoFindType::kSTName, name.data(), nullptr);
     if (!target) {
       LOGE("find soinfo failed: %s", name.data());
       return false;
     }
     SoinfoAttributes attr;
-    if (!get_fakelinker()->soinfo_get_attribute(target, &attr)) {
-      LOGE("get soinfo attribute failed: %s", name.data());
+    if (auto code = get_fakelinker()->soinfo_get_attribute(target, &attr)) {
+      LOGE("get soinfo attribute failed: %s, error: %d", name.data(), code);
       return false;
     }
-    return RemoveAddressMonitor(static_cast<uintptr_t>(attr.base), static_cast<uintptr_t>(attr.base + attr.size));
+    return RemoveMonitorAddress(static_cast<uintptr_t>(attr.base), static_cast<uintptr_t>(attr.base + attr.size));
   }
 
-  bool AddAddressMonitor(uintptr_t start, uintptr_t end, bool exclude) {
+  bool AddMonitorAddress(uintptr_t start, uintptr_t end, bool exclude) {
     if (end < start) {
       return false;
     }
@@ -1148,7 +1150,7 @@ public:
     return true;
   }
 
-  bool RemoveAddressMonitor(uintptr_t start, uintptr_t end) {
+  bool RemoveMonitorAddress(uintptr_t start, uintptr_t end) {
     auto itr = monitors_.find(start);
     if (itr != monitors_.end() && itr->second == end) {
       monitors_.erase(itr);
@@ -1213,8 +1215,8 @@ private:
  *    @code
  *    DefaultTraceJNICallback tracer(true);
  *    tracer.InitTrace(env); // env is a pointer to JNIEnv
- *    tracer->AddMonitorAddress(0x1000, 0x2000); // Add address to monitor
- *    tracer->AddLibraryMonitor("libexample.so", false); // Add library to monitor
+ *    tracer->AddMonitorAddress(0x1000, 0x2000, false); // Add address to monitor
+ *    tracer->AddMonitorLibrary("libexample.so", false); // Add library to monitor
  *    tracer.DefaultRegister(); // Registers default JNI functions and start tracing
  *    @endcode
  *
@@ -1246,8 +1248,6 @@ public:
   BaseTraceJNICallback(bool strict = true) : strict_mode_(strict) {}
 
   bool InitTrace(JNIEnv *env) {
-    sizeof(Derived);
-    static_cast<Derived *>(this);
     this->BindMethod();
     return JNIMonitor<Derived>::InitHookJNI(env);
   }
@@ -1346,6 +1346,8 @@ public:
   void SetOriginalEnv(JNIEnv *original_env_) { original_env = original_env_; }
 
   JNIMonitor<Derived> *operator->() { return &jni_monitor_; }
+
+  JNIMonitor<Derived> *GetMonitor() { return &jni_monitor_; }
 
   SymbolResolver &GetSymbolResolver() { return symbol_resolver_; }
 
@@ -1532,9 +1534,10 @@ public:
     static_cast<Derived *>(this)->TraceLine(context, "----------------- End -----------------");
     constexpr size_t max_message_length = sizeof(TraceInvokeContext<ReturnType, AllowAccessArgs>::message);
     if (context.message_length < max_message_length) {
-      context.message[context.message_length++] = '\0';
+      context.message[context.message_length] = '\0';
     } else {
       context.message[max_message_length - 1] = '\0';
+      context.message_length = max_message_length - 1;
     }
     static_cast<Derived *>(this)->TraceLog(std::string_view(context.message, context.message_length));
   }
@@ -1872,7 +1875,7 @@ private:
     static_cast<Derived *>(this)->FormatJNIArguments("FromReflectedField", context, field);
   }
 
-  jobject ToReflectedMethod(TraceInvokeContext<jobject> &context, jclass cls, jmethodID methodID, jboolean isStatic) {
+  void ToReflectedMethod(TraceInvokeContext<jobject> &context, jclass cls, jmethodID methodID, jboolean isStatic) {
     static_cast<Derived *>(this)->FormatJNIArguments("ToReflectedMethod", context, cls, methodID, isStatic);
   }
 
@@ -1884,19 +1887,19 @@ private:
     static_cast<Derived *>(this)->FormatJNIArguments("IsAssignableFrom", context, from_clazz, to_clazz);
   }
 
-  jobject ToReflectedField(TraceInvokeContext<jobject> &context, jclass cls, jfieldID fieldID, jboolean isStatic) {
+  void ToReflectedField(TraceInvokeContext<jobject> &context, jclass cls, jfieldID fieldID, jboolean isStatic) {
     static_cast<Derived *>(this)->FormatJNIArguments("ToReflectedField", context, cls, fieldID, isStatic);
   }
 
-  jint Throw(TraceInvokeContext<jint> &context, jthrowable obj) {
+  void Throw(TraceInvokeContext<jint> &context, jthrowable obj) {
     static_cast<Derived *>(this)->FormatJNIArguments("Throw", context, obj);
   }
 
-  jint ThrowNew(TraceInvokeContext<jint> &context, jclass clazz, const char *message) {
+  void ThrowNew(TraceInvokeContext<jint> &context, jclass clazz, const char *message) {
     static_cast<Derived *>(this)->FormatJNIArguments("ThrowNew", context, clazz, message);
   }
 
-  jthrowable ExceptionOccurred(TraceInvokeContext<jthrowable> &context) {
+  void ExceptionOccurred(TraceInvokeContext<jthrowable> &context) {
     static_cast<Derived *>(this)->FormatJNIArguments("ExceptionOccurred", context);
   }
 
@@ -1912,11 +1915,11 @@ private:
     static_cast<Derived *>(this)->FormatJNIArguments("FatalError", context, msg);
   }
 
-  jint PushLocalFrame(TraceInvokeContext<jint> &context, jint capacity) {
+  void PushLocalFrame(TraceInvokeContext<jint> &context, jint capacity) {
     static_cast<Derived *>(this)->FormatJNIArguments("PushLocalFrame", context, capacity);
   }
 
-  jobject PopLocalFrame(TraceInvokeContext<jobject, false> &context, jobject local) {
+  void PopLocalFrame(TraceInvokeContext<jobject, false> &context, jobject local) {
     static_cast<Derived *>(this)->FormatJNIArguments("PopLocalFrame", context, local);
   }
 
@@ -2628,11 +2631,11 @@ private:
     static_cast<Derived *>(this)->FormatJNIArguments("UnregisterNatives", context, clazz);
   }
 
-  jint MonitorEnter(TraceInvokeContext<jint> &context, jobject obj) {
+  void MonitorEnter(TraceInvokeContext<jint> &context, jobject obj) {
     static_cast<Derived *>(this)->FormatJNIArguments("MonitorEnter", context, obj);
   }
 
-  jint MonitorExit(TraceInvokeContext<jint> &context, jobject obj) {
+  void MonitorExit(TraceInvokeContext<jint> &context, jobject obj) {
     static_cast<Derived *>(this)->FormatJNIArguments("MonitorExit", context, obj);
   }
 
@@ -2656,7 +2659,7 @@ private:
     static_cast<Derived *>(this)->FormatJNIArguments("ReleasePrimitiveArrayCritical", context, array, carray, mode);
   }
 
-  const jchar *GetStringCritical(TraceInvokeContext<const jchar *> &context, jstring string, jboolean *isCopy) {
+  void GetStringCritical(TraceInvokeContext<const jchar *> &context, jstring string, jboolean *isCopy) {
     static_cast<Derived *>(this)->FormatJNIArguments("GetStringCritical", context, string, isCopy);
   }
 

@@ -20,6 +20,35 @@
 
 namespace fakelinker {
 
+static std::string FormatProt(int prot) {
+  std::string result(4, '\0');
+  result[0] = (prot & kMPRead) == kMPRead ? 'r' : '-';
+  result[1] = (prot & kMPWrite) == kMPWrite ? 'w' : '-';
+  result[2] = (prot & kMPExecute) == kMPExecute ? 'x' : '-';
+  if (prot & kMPShared) {
+    result[3] = 's';
+  } else if (prot & kMPPrivate) {
+    result[3] = 'p';
+  } else {
+    result[3] = '-';
+  }
+  return result;
+}
+
+static std::string FormatPageProtect(const PageProtect &pp) {
+  std::string result;
+  char tmp[18];
+  auto IntToHex = [&tmp](Address addr) -> const char * {
+    sprintf(tmp, "0x%08" SCNx64, addr);
+    return tmp;
+  };
+  result.append(IntToHex(pp.start)).append(" - ").append(IntToHex(pp.end));
+  result.append(" ").append(FormatProt(pp.old_protect));
+  result.append(" ").append(IntToHex(pp.file_offset));
+  result.append(" ").append(std::to_string(pp.inode));
+  return result;
+}
+
 MapsHelper::MapsHelper(const char *library_name) { GetLibraryProtect(library_name); }
 
 MapsHelper::~MapsHelper() { CloseMaps(); }
@@ -38,7 +67,7 @@ bool MapsHelper::GetMemoryProtect(void *address, uint64_t size) {
       continue;
     }
     if (start_address_ >= end) {
-      return !page_.empty();
+      return !pages_.empty();
     }
     PageProtect page;
     page.start = start_address_;
@@ -47,7 +76,7 @@ bool MapsHelper::GetMemoryProtect(void *address, uint64_t size) {
     page.old_protect = FormatProtect();
     page.inode = inode_;
     page.path = path_;
-    page_.push_back(page);
+    pages_.push_back(page);
   }
   return false;
 }
@@ -71,11 +100,12 @@ bool MapsHelper::ReadLibraryMap() {
       // Strictly check if library is correct, a library must have at least read-execute memory segment
       if ((protect & (kMPRead | kMPExecute)) == (kMPRead | kMPExecute)) {
         break;
-      } else {
-        started = false;
-        protect = 0;
-        page_.clear();
       }
+      // continue searching for the next mapping
+      started = false;
+      protect = 0;
+      pages_.clear();
+      continue;
     }
     if (inode_ == 0) {
       continue;
@@ -88,9 +118,9 @@ bool MapsHelper::ReadLibraryMap() {
     page.file_offset = file_offset_;
     page.inode = inode_;
     page.path = path_;
-    page_.push_back(page);
+    pages_.push_back(page);
   }
-  if (page_.empty()) {
+  if (pages_.empty()) {
     // File has been read completely
     return true;
   }
@@ -103,19 +133,19 @@ bool MapsHelper::GetLibraryProtect(const char *library_name) {
   }
   MakeLibraryName(library_name);
   do {
-    page_.clear();
+    pages_.clear();
   } while (!ReadLibraryMap());
-  if (!page_.empty()) {
+  if (!pages_.empty()) {
     LOGD("find library: %s\n %s", library_name, ToString().c_str());
   }
-  return !page_.empty();
+  return !pages_.empty();
 }
 
 bool MapsHelper::UnlockAddressProtect(void *address, uint64_t size) {
   if (!GetMemoryProtect(address, size)) {
     return false;
   }
-  PageProtect &page = page_[0];
+  PageProtect &page = pages_[0];
 
   if ((page.old_protect & kMPWrite) == kMPWrite) {
     page.new_protect = page.old_protect;
@@ -123,10 +153,12 @@ bool MapsHelper::UnlockAddressProtect(void *address, uint64_t size) {
   }
   page.new_protect = page.old_protect | kMPRead | kMPWrite;
   // only change rwx protect
-  if (mprotect(reinterpret_cast<void *>(page.start), page.end - page.start, page.new_protect & kMPRWX) == 0) {
-    return true;
+  if (int code = mprotect(reinterpret_cast<void *>(page.start), page.end - page.start, page.new_protect & kMPRWX)) {
+    LOGE("change protect memory failed: %s, new %s, error: %d", FormatPageProtect(page).c_str(),
+         FormatProt(page.new_protect).c_str(), code);
+    return false;
   }
-  return false;
+  return true;
 }
 
 Address MapsHelper::FindLibraryBase(const char *library_name) {
@@ -160,13 +192,13 @@ Address MapsHelper::FindLibraryBase(const char *library_name) {
 }
 
 bool MapsHelper::CheckAddressPageProtect(const Address address, uint64_t size, uint8_t prot) {
-  if (page_.empty()) {
+  if (pages_.empty()) {
     return false;
   }
   Address start = address;
   Address end = address + size;
   LOGI("check memory protect 0x%" PRIx64 " - 0x%" PRIx64, start, end);
-  for (PageProtect &pp : page_) {
+  for (PageProtect &pp : pages_) {
     if (pp.start > end || pp.end < start) {
       continue;
     }
@@ -182,12 +214,12 @@ bool MapsHelper::CheckAddressPageProtect(const Address address, uint64_t size, u
 }
 
 Address MapsHelper::GetLibraryBaseAddress() const {
-  if (page_.empty()) {
+  if (pages_.empty()) {
     return 0;
   }
   uint64_t minoffset = UINT64_MAX;
   Address start = 0;
-  for (const PageProtect &pp : page_) {
+  for (const PageProtect &pp : pages_) {
     if (pp.inode == 0) {
       continue;
     }
@@ -219,7 +251,7 @@ std::string MapsHelper::GetLibraryRealPath(const char *library_name) {
 }
 
 std::string MapsHelper::GetCurrentRealPath() const {
-  for (auto &page : page_) {
+  for (auto &page : pages_) {
     if (!page.path.empty() && page.inode != 0) {
       return page.path;
     }
@@ -231,43 +263,23 @@ std::string MapsHelper::ToString() const {
   std::string result = GetCurrentRealPath() + ":";
   char tmp[16];
 
-  auto IntToHex = [&tmp](Address addr) -> const char * {
-    sprintf(tmp, "0x%08" SCNx64, addr);
-    return tmp;
-  };
 
-  auto ProtToStr = [&tmp](int prot) -> const char * {
-    tmp[0] = (prot & kMPRead) == kMPRead ? 'r' : '-';
-    tmp[1] = (prot & kMPWrite) == kMPWrite ? 'w' : '-';
-    tmp[2] = (prot & kMPExecute) == kMPExecute ? 'x' : '-';
-    if (prot & kMPShared) {
-      tmp[3] = 's';
-    } else if (prot & kMPPrivate) {
-      tmp[3] = 'p';
-    } else {
-      tmp[3] = '-';
-    }
-    tmp[4] = '\0';
-    return tmp;
-  };
-
-  for (const PageProtect &pp : page_) {
-    result.append("\n  ").append(IntToHex(pp.start)).append(" - ").append(IntToHex(pp.end));
-    result.append(" ").append(ProtToStr(pp.old_protect));
-    result.append(" ").append(IntToHex(pp.file_offset));
-    result.append(" ").append(std::to_string(pp.inode));
+  for (const PageProtect &pp : pages_) {
+    result.append("\n  ").append(FormatPageProtect(pp));
   }
   return result;
 }
 
 bool MapsHelper::UnlockPageProtect(MapsProt prot) {
-  if (page_.empty() || prot == MapsProt::kMPInvalid) {
+  if (pages_.empty() || prot == MapsProt::kMPInvalid) {
     return false;
   }
-  for (PageProtect &pp : page_) {
+  for (PageProtect &pp : pages_) {
     if ((pp.old_protect & prot) != prot) {
       pp.new_protect = pp.old_protect | prot;
-      if (mprotect(reinterpret_cast<void *>(pp.start), pp.end - pp.start, pp.new_protect & kMPRWX) < 0) {
+      if (int code = mprotect(reinterpret_cast<void *>(pp.start), pp.end - pp.start, pp.new_protect & kMPRWX)) {
+        LOGE("change protect memory failed: %s, new %s, error: %d", FormatPageProtect(pp).c_str(),
+             FormatProt(pp.new_protect).c_str(), code);
         return false;
       }
     } else {
@@ -278,12 +290,14 @@ bool MapsHelper::UnlockPageProtect(MapsProt prot) {
 }
 
 bool MapsHelper::RecoveryPageProtect() {
-  if (page_.empty()) {
+  if (pages_.empty()) {
     return false;
   }
-  for (PageProtect &pp : page_) {
+  for (PageProtect &pp : pages_) {
     if (pp.old_protect != pp.new_protect) {
-      if (mprotect(reinterpret_cast<void *>(pp.start), pp.end - pp.start, pp.old_protect & kMPRWX) < 0) {
+      if (int code = mprotect(reinterpret_cast<void *>(pp.start), pp.end - pp.start, pp.old_protect & kMPRWX)) {
+        LOGE("change protect memory failed: %s, new %s, error: %d", FormatPageProtect(pp).c_str(),
+             FormatProt(pp.new_protect).c_str(), code);
         return false;
       }
       pp.new_protect = pp.old_protect;
@@ -375,12 +389,13 @@ bool MapsHelper::MakeLibraryName(const char *library_name) {
  *
  */
 bool MapsHelper::VerifyLibraryMap() {
-  for (auto &page : page_) {
+  for (auto &page : pages_) {
     // ARM libraries found under emulator have no executable permissions
     if ((page.old_protect & (kMPExecute | kMPWrite)) != 0) {
       return true;
     }
   }
+  pages_.clear();
   return false;
 }
 

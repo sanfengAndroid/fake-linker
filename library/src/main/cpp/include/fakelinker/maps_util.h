@@ -66,17 +66,17 @@ public:
 
   bool RecoveryPageProtect();
 
-  operator bool() const { return !page_.empty(); }
+  operator bool() const { return !pages_.empty(); }
 
-  bool empty() const { return page_.empty(); }
+  bool empty() const { return pages_.empty(); }
 
-  const_iterator begin() const { return page_.begin(); }
+  const_iterator begin() const { return pages_.begin(); }
 
-  const_iterator end() const { return page_.end(); }
+  const_iterator end() const { return pages_.end(); }
 
-  iterator begin() { return page_.begin(); }
+  iterator begin() { return pages_.begin(); }
 
-  iterator end() { return page_.end(); }
+  iterator end() { return pages_.end(); }
 
 private:
   bool GetMapsLine();
@@ -107,7 +107,7 @@ private:
   Address end_address_ = 0;
   uint64_t file_offset_ = 0;
   int32_t inode_ = 0;
-  std::vector<PageProtect> page_;
+  std::vector<PageProtect> pages_;
   DISALLOW_COPY_AND_ASSIGN(MapsHelper);
 };
 } // namespace fakelinker
